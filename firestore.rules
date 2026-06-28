@@ -39,25 +39,35 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // ── bookings ─────────────────────────────────────────────
+    // เปลี่ยนเฉพาะ status + returnImageUrl (สำหรับสมาชิกคืนอุปกรณ์)
+    function onlyReturnChanged() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'returnImageUrl'])
+             && request.resource.data.status == 'pending_return';
+    }
+
+    // ── bookings (login อ่านได้หมด — ใช้ทำปฏิทินรวม) ─────────
     match /bookings/{id} {
-      allow read:   if isSignedIn() && (isAdmin()
-                       || resource.data.userId == request.auth.uid
-                       || resource.data.responsibleUserId == request.auth.uid);
+      allow read:   if isSignedIn();
       // สร้างของตัวเอง สถานะเริ่มต้องเป็น pending
       allow create: if isSignedIn()
                        && request.resource.data.userId == request.auth.uid
                        && request.resource.data.status == 'pending';
-      // อนุมัติ/ปฏิเสธ/คืน/ลบ → admin (guest booking ผ่าน Admin SDK)
-      allow update, delete: if isAdmin();
+      // admin จัดการได้ทุกอย่าง / เจ้าของคืนอุปกรณ์ได้ (status→pending_return + แนบรูป)
+      allow update: if isAdmin()
+                       || (isSignedIn() && resource.data.userId == request.auth.uid && onlyReturnChanged());
+      allow delete: if isAdmin();
     }
 
     // ── tasks ────────────────────────────────────────────────
     match /tasks/{id} {
-      allow read:  if isSignedIn() && (isAdmin()
-                      || resource.data.assignedToId == request.auth.uid
-                      || resource.data.assignedById == request.auth.uid);
-      allow write: if isAdmin();
+      allow read:          if isSignedIn() && (isAdmin()
+                              || resource.data.assignedToId == request.auth.uid
+                              || resource.data.assignedById == request.auth.uid);
+      allow create, delete: if isAdmin();
+      // admin แก้ได้ทุกอย่าง / ผู้รับมอบหมายแก้ได้เฉพาะ status
+      allow update:         if isAdmin()
+                              || (isSignedIn() && resource.data.assignedToId == request.auth.uid
+                                  && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
     }
 
     // ── feeds ────────────────────────────────────────────────
