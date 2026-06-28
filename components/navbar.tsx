@@ -31,8 +31,6 @@ const ADMIN_LINKS: NavLink[] = [
   { href: "/users", label: "จัดการสมาชิก", icon: "👥" },
 ];
 
-const SUPER_EXTRA: NavLink[] = [{ href: "/visitors", label: "ผู้เข้าชม", icon: "👁️" }];
-
 export default function Navbar() {
   const { role, profile, signOut } = useAuth();
   const pathname = usePathname();
@@ -40,8 +38,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
 
   const isAdmin = role === "admin" || role === "super_admin";
-  let links = isAdmin ? [...ADMIN_LINKS] : MEMBER_LINKS;
-  if (role === "super_admin") links = [...ADMIN_LINKS, ...SUPER_EXTRA];
+  const links = isAdmin ? ADMIN_LINKS : MEMBER_LINKS;
 
   async function handleLogout() {
     await signOut();
