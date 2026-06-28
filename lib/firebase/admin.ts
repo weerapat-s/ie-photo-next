@@ -29,6 +29,9 @@ function initAdmin(): App {
 
 const adminApp = initAdmin();
 
+// database จริงเป็น named database "default" — ต้องระบุ id ให้ตรง
+const databaseId = process.env.FIREBASE_DATABASE_ID || "default";
+
 export const adminAuth: Auth = getAuth(adminApp);
-export const adminDb: Firestore = getFirestore(adminApp);
+export const adminDb: Firestore = getFirestore(adminApp, databaseId);
 export const adminStorage: Storage = getStorage(adminApp);

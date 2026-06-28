@@ -18,7 +18,10 @@ const firebaseConfig = {
 // กัน re-initialize ตอน hot-reload (Next.js dev)
 const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
+// database จริงเป็น named database "default" — ต้องระบุ id ให้ตรง
+const databaseId = process.env.NEXT_PUBLIC_FIREBASE_DATABASE_ID || "default";
+
 export const auth: Auth = getAuth(app);
-export const db: Firestore = getFirestore(app);
+export const db: Firestore = getFirestore(app, databaseId);
 export const storage: FirebaseStorage = getStorage(app);
 export default app;

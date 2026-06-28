@@ -1,0 +1,71 @@
+rules_version = '2';
+
+// IE-Photo Firestore Security Rules — ตาม MIGRATION_PLAN.md §3
+// role อ่านจาก custom claim (request.auth.token.role) ที่ตั้งผ่าน Admin SDK
+// Admin SDK (seed/migration/Next API routes) bypass rules ทั้งหมด
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    function role()       { return request.auth.token.role; }
+    function isAdmin()    { return isSignedIn() && (role() == 'admin' || role() == 'super_admin'); }
+
+    // เปลี่ยนเฉพาะ likedBy/likeCount (สำหรับกดไลก์ feed)
+    function onlyLikeChanged() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'likeCount']);
+    }
+
+    // ── users ────────────────────────────────────────────────
+    match /users/{uid} {
+      allow read:   if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      // สมัครใหม่: สร้าง doc ของตัวเอง role ต้องเป็น member เท่านั้น
+      allow create: if isSignedIn() && request.auth.uid == uid
+                       && request.resource.data.role == 'member';
+      // แก้ profile ตัวเองได้ แต่ห้ามเปลี่ยน role เอง (ต้องผ่าน Admin SDK)
+      allow update: if isSignedIn() && request.auth.uid == uid
+                       && request.resource.data.role == resource.data.role;
+      // ลบ / เปลี่ยน role → Admin SDK เท่านั้น
+    }
+
+    // ── equipments ───────────────────────────────────────────
+    match /equipments/{id} {
+      allow read:  if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ── studios (อ่านสาธารณะ — guest ดูได้) ──────────────────
+    match /studios/{id} {
+      allow read:  if true;
+      allow write: if isAdmin();
+    }
+
+    // ── bookings ─────────────────────────────────────────────
+    match /bookings/{id} {
+      allow read:   if isSignedIn() && (isAdmin()
+                       || resource.data.userId == request.auth.uid
+                       || resource.data.responsibleUserId == request.auth.uid);
+      // สร้างของตัวเอง สถานะเริ่มต้องเป็น pending
+      allow create: if isSignedIn()
+                       && request.resource.data.userId == request.auth.uid
+                       && request.resource.data.status == 'pending';
+      // อนุมัติ/ปฏิเสธ/คืน/ลบ → admin (guest booking ผ่าน Admin SDK)
+      allow update, delete: if isAdmin();
+    }
+
+    // ── tasks ────────────────────────────────────────────────
+    match /tasks/{id} {
+      allow read:  if isSignedIn() && (isAdmin()
+                      || resource.data.assignedToId == request.auth.uid
+                      || resource.data.assignedById == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    // ── feeds ────────────────────────────────────────────────
+    match /feeds/{id} {
+      allow read:           if isSignedIn();
+      allow create, delete: if isAdmin();
+      // admin แก้ได้ทุกอย่าง / สมาชิกแก้ได้เฉพาะกดไลก์
+      allow update:         if isAdmin() || (isSignedIn() && onlyLikeChanged());
+    }
+  }
+}
