@@ -14,19 +14,19 @@ Next.js + Firebase rewrite ของ IE-Photo Booking System
 
 ---
 
-## 🚀 ทำให้ใช้งานได้จริง (เหลือ 3 ขั้น — ต้องเป็นคุณทำ)
+## 🚀 ทำให้ใช้งานได้จริง
 
-### 1. เปิด Email/Password
+> ✅ **Firestore rules deploy แล้ว** (ผ่าน `scripts/deploy-rules.cjs`)
+
+### 1. เปิด Email/Password  ← จำเป็น
 Firebase Console → **Authentication** → Sign-in method → เปิด **Email/Password** → Save
 
-### 2. Deploy Rules (Firestore + Storage)
-```bash
-cd C:\xampp\htdocs\ie-photo-next
-npx firebase login            # ยืนยัน Google ในเบราว์เซอร์
-npx firebase deploy --only firestore:rules,storage
-```
-มี `firebase.json` + `.firebaserc` ตั้งค่าไว้แล้ว (ชี้ named database `default`)
-*หรือ* paste `firestore.rules` / `storage.rules` ใน Console เอง (เลือก database `default`)
+### 2. เปิด Storage แล้ว deploy storage rules  ← จำเป็นสำหรับอัปโหลดรูป
+1. Console → **Build → Storage** → Get started → region `asia-southeast3`
+2. ```bash
+   node --env-file=.env.local scripts/deploy-rules.cjs
+   ```
+   (รันซ้ำได้ — จะ deploy ทั้ง Firestore + Storage rules)
 
 ### 3. สมัครคนแรก แล้วตั้งเป็น super_admin
 1. เปิดแอป → สมัครด้วยอีเมล @kmitl.ac.th → ตั้งชื่อในหน้าโปรไฟล์
