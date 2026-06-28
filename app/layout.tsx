@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Kanit } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/lib/firebase/auth-context";
 
 const kanit = Kanit({
   variable: "--font-kanit",
@@ -20,8 +21,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="th" className={`${kanit.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-[family-name:var(--font-kanit)]">
-        {children}
+      <body className="min-h-full flex flex-col bg-neutral-50 font-[family-name:var(--font-kanit)]">
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

@@ -1,0 +1,130 @@
+"use client";
+// app/(auth)/register/page.tsx — สมัครสมาชิกด้วยอีเมล @kmitl.ac.th
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase/client";
+
+export default function RegisterPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const emailValid = !email || email.toLowerCase().endsWith("@kmitl.ac.th");
+  const canSubmit = email && emailValid && password.length >= 6 && password === confirm && !loading;
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    if (!emailValid) return setError("อนุญาตเฉพาะอีเมล @kmitl.ac.th เท่านั้น");
+    if (password.length < 6) return setError("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
+    if (password !== confirm) return setError("รหัสผ่านทั้งสองช่องไม่ตรงกัน");
+
+    setLoading(true);
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      const idToken = await cred.user.getIdToken();
+      const res = await fetch("/api/auth/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken, studentId: email.split("@")[0] }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "ตั้งค่าบัญชีไม่สำเร็จ");
+      }
+      await cred.user.getIdToken(true); // refresh claim
+      router.push("/profile?first_login=1");
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code === "auth/email-already-in-use") setError("อีเมลนี้ถูกใช้สมัครแล้ว");
+      else if (code === "auth/weak-password") setError("รหัสผ่านอ่อนเกินไป");
+      else setError((err as Error).message || "สมัครไม่สำเร็จ");
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="flex-1 flex items-center justify-center p-6">
+      <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 text-2xl text-white">
+            📷
+          </div>
+          <h1 className="text-xl font-semibold">สมัครสมาชิก</h1>
+          <p className="text-sm text-neutral-500">IE-Photo Booking System</p>
+        </div>
+
+        {error && (
+          <div className="mb-4 rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">⚠️ {error}</div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium">อีเมล KMITL</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="6XXXXXXX@kmitl.ac.th"
+              autoComplete="username"
+              className={`w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 ${
+                emailValid ? "border-neutral-300 focus:ring-orange-300" : "border-red-400 focus:ring-red-300"
+              }`}
+              required
+            />
+            {!emailValid && <p className="mt-1 text-xs text-red-500">ต้องเป็นอีเมล @kmitl.ac.th</p>}
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">รหัสผ่าน</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="อย่างน้อย 6 ตัวอักษร"
+              autoComplete="new-password"
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-300"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">ยืนยันรหัสผ่าน</label>
+            <input
+              type="password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              placeholder="กรอกรหัสผ่านอีกครั้ง"
+              autoComplete="new-password"
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-300"
+              required
+            />
+            {confirm && password !== confirm && (
+              <p className="mt-1 text-xs text-red-500">รหัสผ่านไม่ตรงกัน</p>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="w-full rounded-lg bg-orange-500 py-2.5 text-sm font-medium text-white transition hover:bg-orange-600 disabled:opacity-50"
+          >
+            {loading ? "กำลังสมัคร…" : "สมัครสมาชิก"}
+          </button>
+        </form>
+
+        <p className="mt-5 text-center text-sm text-neutral-500">
+          มีบัญชีแล้ว?{" "}
+          <Link href="/login" className="font-semibold text-orange-600">
+            เข้าสู่ระบบ
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+}

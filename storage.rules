@@ -1,0 +1,31 @@
+rules_version = '2';
+
+// IE-Photo Firebase Storage Rules — ตาม MIGRATION_PLAN.md §2
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() { return request.auth != null; }
+    function isImage()    { return request.resource.contentType.matches('image/.*'); }
+
+    // profiles/{uid}.* — เจ้าของอัปโหลดรูปตัวเองได้, login อ่านได้
+    match /profiles/{fileName} {
+      allow read:  if isSignedIn();
+      allow write: if isSignedIn()
+                      && fileName.matches(request.auth.uid + '\\..*')
+                      && isImage()
+                      && request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // booking_forms/** — สมาชิก login แนบเอกสารได้ (รูป/pdf), login อ่าน
+    match /booking_forms/{fileName} {
+      allow read:  if isSignedIn();
+      allow write: if isSignedIn() && request.resource.size < 8 * 1024 * 1024;
+    }
+
+    // returns/** — login แนบรูปคืนของได้, login อ่าน
+    match /returns/{fileName} {
+      allow read:  if isSignedIn();
+      allow write: if isSignedIn() && isImage() && request.resource.size < 8 * 1024 * 1024;
+    }
+  }
+}

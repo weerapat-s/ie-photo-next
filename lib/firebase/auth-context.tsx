@@ -1,0 +1,73 @@
+"use client";
+// lib/firebase/auth-context.tsx — สถานะ auth ทั่วทั้งแอป
+import { createContext, useContext, useEffect, useState } from "react";
+import { onAuthStateChanged, signOut as fbSignOut, type User } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "./client";
+import type { Role, UserDoc, WithId } from "@/lib/types";
+
+interface AuthState {
+  user: User | null;
+  profile: WithId<UserDoc> | null;
+  role: Role | null;
+  loading: boolean;
+  refresh: () => Promise<void>;
+  signOut: () => Promise<void>;
+}
+
+const Ctx = createContext<AuthState>({
+  user: null,
+  profile: null,
+  role: null,
+  loading: true,
+  refresh: async () => {},
+  signOut: async () => {},
+});
+
+export const useAuth = () => useContext(Ctx);
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<WithId<UserDoc> | null>(null);
+  const [role, setRole] = useState<Role | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  async function load(u: User | null, forceTokenRefresh = false) {
+    if (!u) {
+      setUser(null);
+      setProfile(null);
+      setRole(null);
+      setLoading(false);
+      return;
+    }
+    // role จาก custom claim
+    const token = await u.getIdTokenResult(forceTokenRefresh);
+    setRole((token.claims.role as Role) ?? "member");
+    // profile จาก Firestore (เผื่อ rules ยังไม่ deploy ก็ไม่ให้พัง)
+    try {
+      const snap = await getDoc(doc(db, "users", u.uid));
+      setProfile(snap.exists() ? ({ id: u.uid, ...(snap.data() as UserDoc) }) : null);
+    } catch {
+      setProfile(null);
+    }
+    setUser(u);
+    setLoading(false);
+  }
+
+  useEffect(() => onAuthStateChanged(auth, (u) => load(u)), []);
+
+  const value: AuthState = {
+    user,
+    profile,
+    role,
+    loading,
+    refresh: async () => {
+      if (auth.currentUser) await load(auth.currentUser, true);
+    },
+    signOut: async () => {
+      await fbSignOut(auth);
+    },
+  };
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
