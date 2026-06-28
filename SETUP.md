@@ -1,76 +1,52 @@
 # IE-Photo Next — คู่มือตั้งค่า
 
 Next.js + Firebase rewrite ของ IE-Photo Booking System
-ดูแผนเต็มที่ [`../IE-Photo-WEB/MIGRATION_PLAN.md`](../IE-Photo-WEB/MIGRATION_PLAN.md)
+แผนเต็ม: [`../IE-Photo-WEB/MIGRATION_PLAN.md`](../IE-Photo-WEB/MIGRATION_PLAN.md)
 
 ---
 
-## ✅ Phase 0 — เสร็จแล้ว
-- [x] Next.js 16 + TypeScript + Tailwind v4 + Turbopack
-- [x] Firebase SDK (client + admin) ติดตั้ง + config module
-- [x] shadcn/ui
-- [x] TypeScript types ของทุก collection (`lib/types.ts`)
-- [x] หน้า landing แสดงสถานะการตั้งค่า
-- [x] build ผ่าน + dev server รันได้ (`localhost:3000`)
+## ✅ สร้างเสร็จครบทั้ง 7 Phase (0–6)
+- **Phase 0–2:** scaffold, Firebase, Auth (สมัคร/ล็อกอิน/role), navbar, guards, profile
+- **Phase 3:** ฟีด, ยืมอุปกรณ์, การจองของฉัน+คืน, งานของฉัน, ปฏิทิน, จองสตูดิโอ
+- **Phase 4:** จัดการการจอง(อนุมัติ/คืน), คลังอุปกรณ์, สมาชิก, งาน, แดชบอร์ด
+- **Phase 5:** จองสตูดิโอ + แอดมินแก้ไขข้อมูลห้อง
+- **Phase 6:** อีเมลแจ้งผล (Resend), deploy config
 
 ---
 
-## 🔧 สิ่งที่ต้องทำต่อ (action ของคุณ) เพื่อปลด Phase 1
+## 🚀 ทำให้ใช้งานได้จริง (เหลือ 3 ขั้น — ต้องเป็นคุณทำ)
 
-### 1. สร้าง Firebase Project
-1. ไปที่ https://console.firebase.google.com → **Add project**
-2. ตั้งชื่อ เช่น `ie-photo-booking` → สร้าง (ปิด Google Analytics ก็ได้)
+### 1. เปิด Email/Password
+Firebase Console → **Authentication** → Sign-in method → เปิด **Email/Password** → Save
 
-### 2. เปิด services 3 ตัว
-- **Authentication** → Get started → เปิด **Email/Password**
-- **Firestore Database** → Create database → เลือก region `asia-southeast1` (สิงคโปร์ ใกล้ไทยสุด) → Production mode
-- **Storage** → Get started → region เดียวกัน
-
-### 3. เอา Client config (ฝั่ง browser)
-1. Project Settings (⚙️) → **General** → เลื่อนลง **Your apps** → คลิกไอคอน Web `</>`
-2. ตั้งชื่อ app → Register → จะได้ `firebaseConfig` มา
-3. copy ค่าใส่ `.env.local`:
-   ```
-   NEXT_PUBLIC_FIREBASE_API_KEY=...
-   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
-   NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
-   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
-   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
-   NEXT_PUBLIC_FIREBASE_APP_ID=...
-   ```
-
-### 4. เอา Admin config (ฝั่ง server — ความลับ)
-1. Project Settings → **Service accounts** → **Generate new private key** → ได้ไฟล์ JSON
-2. เปิดไฟล์ JSON copy ค่าใส่ `.env.local`:
-   ```
-   FIREBASE_PROJECT_ID=        ← project_id
-   FIREBASE_CLIENT_EMAIL=      ← client_email
-   FIREBASE_PRIVATE_KEY="..."  ← private_key (ทั้งก้อน คง \n ไว้)
-   ```
-
-### 5. เช็คว่าครบ
+### 2. Deploy Rules (Firestore + Storage)
 ```bash
-npm run dev
+cd C:\xampp\htdocs\ie-photo-next
+npx firebase login            # ยืนยัน Google ในเบราว์เซอร์
+npx firebase deploy --only firestore:rules,storage
 ```
-เปิด http://localhost:3000 → ทุกบรรทัดควรเป็น 🟢 พร้อม
+มี `firebase.json` + `.firebaserc` ตั้งค่าไว้แล้ว (ชี้ named database `default`)
+*หรือ* paste `firestore.rules` / `storage.rules` ใน Console เอง (เลือก database `default`)
+
+### 3. สมัครคนแรก แล้วตั้งเป็น super_admin
+1. เปิดแอป → สมัครด้วยอีเมล @kmitl.ac.th → ตั้งชื่อในหน้าโปรไฟล์
+2. ตั้งตัวเองเป็น super_admin:
+```bash
+node --env-file=.env.local scripts/set-role.cjs <อีเมลคุณ> super_admin
+```
+3. logout/login ใหม่ → จะเห็นเมนูแอดมินครบ
 
 ---
 
-## คำสั่งที่ใช้บ่อย
+## คำสั่ง
 ```bash
-npm run dev      # dev server (localhost:3000)
-npm run build    # production build
-npm run start    # รัน production build
+npm run dev                                          # dev (localhost:3000)
+npm run build                                        # production build
+node --env-file=.env.local scripts/seed.cjs          # seed อุปกรณ์/สตูดิโอ (idempotent)
+node --env-file=.env.local scripts/set-role.cjs <email> <role>
 ```
 
-## โครงสร้าง
-```
-app/            หน้าเว็บ (App Router)
-components/ui/  shadcn components
-lib/
-  firebase/
-    client.ts   Firebase client SDK (browser)
-    admin.ts    Firebase admin SDK (server เท่านั้น)
-  types.ts      TypeScript types ของ Firestore collections
-  utils.ts      shadcn helper (cn)
-```
+## หมายเหตุสำคัญ
+- Firestore เป็น **named database `default`** (ไม่ใช่ `(default)`) — code ทุกที่ชี้ id นี้แล้ว
+- ถ้าจะ deploy ขึ้น Vercel: ใส่ env ทั้งหมดจาก `.env.local` ใน Vercel project settings
+- อีเมล (Resend) เป็น optional — ใส่ `RESEND_API_KEY` ใน `.env.local` เมื่อพร้อม (ไม่ใส่ก็ทำงานได้ แค่ไม่ส่งเมล)
