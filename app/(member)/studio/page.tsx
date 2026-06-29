@@ -5,7 +5,7 @@ import { collection, query, orderBy, addDoc, doc, updateDoc, Timestamp, serverTi
 import { db } from "@/lib/firebase/client";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useCollection } from "@/lib/hooks";
-import { PageHeader, Card, Badge, Spinner, Button, Modal, Field, inputClass } from "@/components/ui";
+import { PageHeader, Badge, Spinner, Button, Modal, Field, inputClass } from "@/components/ui";
 import type { StudioDoc, WithId } from "@/lib/types";
 
 export default function StudioPage() {
@@ -29,7 +29,12 @@ export default function StudioPage() {
       ) : (
         <div className="grid gap-5 md:grid-cols-2">
           {studios.map((s) => (
-            <Card key={s.id} className={s.theme === "dark" ? "bg-neutral-900 text-white" : ""}>
+            <div
+              key={s.id}
+              className={`rounded-2xl border p-5 shadow-sm ${
+                s.theme === "dark" ? "border-neutral-800 bg-neutral-900 text-white" : "border-neutral-200 bg-white"
+              }`}
+            >
               <div className="mb-3 flex items-start justify-between">
                 <div>
                   <h3 className="text-lg font-semibold">{s.name}</h3>
@@ -81,7 +86,7 @@ export default function StudioPage() {
               >
                 จองห้องนี้
               </Button>
-            </Card>
+            </div>
           ))}
         </div>
       )}
