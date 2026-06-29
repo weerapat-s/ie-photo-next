@@ -18,10 +18,9 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-      const token = await cred.user.getIdTokenResult();
-      const role = token.claims.role as string | undefined;
-      router.push(role === "admin" || role === "super_admin" ? "/dashboard" : "/feed");
+      await signInWithEmailAndPassword(auth, email, password);
+      // role อ่านจาก Firestore doc (auth-context) → ให้หน้าแรก redirect ตาม role
+      router.push("/");
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
       if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found")

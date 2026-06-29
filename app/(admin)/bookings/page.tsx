@@ -4,7 +4,7 @@ import { useState } from "react";
 import {
   collection, query, orderBy, doc, writeBatch, addDoc, serverTimestamp,
 } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase/client";
+import { db } from "@/lib/firebase/client";
 import { useCollection } from "@/lib/hooks";
 import { PageHeader, Card, Badge, Spinner, Button, Modal, EmptyState } from "@/components/ui";
 import { fmtDateTime, BOOKING_STATUS } from "@/lib/format";
@@ -36,17 +36,6 @@ export default function AdminBookingsPage() {
       batch.update(doc(db, "equipments", b.itemId), { status: "borrowed" });
     }
     await batch.commit();
-
-    // แจ้งผลทางอีเมล (เงียบถ้ายังไม่ตั้ง Resend)
-    if (b.userId) {
-      auth.currentUser?.getIdToken().then((token) =>
-        fetch("/api/notify/booking", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ userId: b.userId, userName: b.userName, itemName: b.itemName, approved: status === "approved" }),
-        }).catch(() => {})
-      );
-    }
 
     if (status === "approved") {
       await addDoc(collection(db, "feeds"), {

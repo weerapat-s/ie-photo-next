@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase/client";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase/client";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -27,17 +28,18 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
-      const idToken = await cred.user.getIdToken();
-      const res = await fetch("/api/auth/setup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken, studentId: email.split("@")[0] }),
+      // สร้าง user doc (rules อนุญาตให้สร้าง doc ตัวเอง role=member)
+      await setDoc(doc(db, "users", cred.user.uid), {
+        studentId: email.split("@")[0],
+        firstName: "",
+        lastName: "",
+        email,
+        phone: "",
+        role: "member",
+        profileImageUrl: null,
+        profileCompleted: false,
+        createdAt: serverTimestamp(),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "ตั้งค่าบัญชีไม่สำเร็จ");
-      }
-      await cred.user.getIdToken(true); // refresh claim
       router.push("/profile?first_login=1");
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;

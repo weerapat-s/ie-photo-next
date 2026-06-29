@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function load(u: User | null, forceTokenRefresh = false) {
+  async function load(u: User | null) {
     if (!u) {
       setUser(null);
       setProfile(null);
@@ -40,15 +40,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       return;
     }
-    // role จาก custom claim
-    const token = await u.getIdTokenResult(forceTokenRefresh);
-    setRole((token.claims.role as Role) ?? "member");
-    // profile จาก Firestore (เผื่อ rules ยังไม่ deploy ก็ไม่ให้พัง)
+    // role เก็บใน Firestore user doc (ไม่ใช้ custom claim — static app)
     try {
       const snap = await getDoc(doc(db, "users", u.uid));
-      setProfile(snap.exists() ? ({ id: u.uid, ...(snap.data() as UserDoc) }) : null);
+      if (snap.exists()) {
+        const data = snap.data() as UserDoc;
+        setProfile({ id: u.uid, ...data });
+        setRole(data.role ?? "member");
+      } else {
+        setProfile(null);
+        setRole("member");
+      }
     } catch {
       setProfile(null);
+      setRole("member");
     }
     setUser(u);
     setLoading(false);
@@ -62,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     role,
     loading,
     refresh: async () => {
-      if (auth.currentUser) await load(auth.currentUser, true);
+      if (auth.currentUser) await load(auth.currentUser);
     },
     signOut: async () => {
       await fbSignOut(auth);

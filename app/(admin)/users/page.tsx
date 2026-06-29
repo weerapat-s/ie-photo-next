@@ -1,8 +1,8 @@
 "use client";
 // app/(admin)/users/page.tsx — จัดการสมาชิก (role + ลบ)
 import { useState } from "react";
-import { collection, query, orderBy } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase/client";
+import { collection, query, orderBy, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase/client";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useCollection } from "@/lib/hooks";
 import { PageHeader, Card, Badge, Spinner, Button, EmptyState } from "@/components/ui";
@@ -29,30 +29,27 @@ export default function UsersPage() {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
 
-  async function callApi(path: string, body: object) {
+  async function changeRole(uid: string, role: Role) {
     setErr("");
     setMsg("");
-    const token = await auth.currentUser?.getIdToken();
-    const res = await fetch(path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setErr(data.error || "เกิดข้อผิดพลาด");
-      return false;
+    try {
+      await updateDoc(doc(db, "users", uid), { role });
+      setMsg("เปลี่ยนบทบาทเรียบร้อย");
+    } catch {
+      setErr("เปลี่ยนบทบาทไม่สำเร็จ");
     }
-    return true;
-  }
-
-  async function changeRole(uid: string, role: Role) {
-    if (await callApi("/api/admin/set-role", { uid, role })) setMsg("เปลี่ยนบทบาทเรียบร้อย (ผู้ใช้ต้อง login ใหม่)");
   }
 
   async function deleteUser(uid: string, label: string) {
-    if (!confirm(`ลบบัญชี ${label}?`)) return;
-    if (await callApi("/api/admin/delete-user", { uid })) setMsg("ลบบัญชีเรียบร้อย");
+    if (!confirm(`ลบ ${label} ออกจากระบบ?`)) return;
+    setErr("");
+    setMsg("");
+    try {
+      await deleteDoc(doc(db, "users", uid));
+      setMsg("ลบออกจากระบบเรียบร้อย");
+    } catch {
+      setErr("ลบไม่สำเร็จ");
+    }
   }
 
   return (
