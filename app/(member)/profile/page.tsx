@@ -84,7 +84,7 @@ export default function ProfilePage() {
       {msg && <div className="mb-4 rounded-lg bg-green-50 px-4 py-2.5 text-sm text-green-700">✅ {msg}</div>}
       {err && <div className="mb-4 rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">⚠️ {err}</div>}
 
-      <form onSubmit={handleSave} className="rounded-2xl border border-neutral-200 bg-white p-6">
+      <form onSubmit={handleSave} className="glass-card rounded-3xl p-6">
         <div className="mb-5 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -110,7 +110,7 @@ export default function ProfilePage() {
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               placeholder="สมชาย"
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-300"
+              className="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm"
             />
           </div>
           <div>
@@ -119,7 +119,7 @@ export default function ProfilePage() {
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               placeholder="ใจดี"
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-300"
+              className="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm"
             />
           </div>
         </div>
@@ -137,7 +137,7 @@ export default function ProfilePage() {
         <button
           type="submit"
           disabled={saving}
-          className="w-full rounded-lg bg-orange-500 py-2.5 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-50"
+          className="btn-grad w-full rounded-full py-3 text-sm font-semibold disabled:opacity-50"
         >
           {saving ? "กำลังบันทึก…" : "บันทึกข้อมูล"}
         </button>

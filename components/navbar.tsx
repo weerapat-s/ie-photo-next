@@ -46,10 +46,10 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-neutral-200 bg-white/90 backdrop-blur">
+    <nav className="glass-nav sticky top-0 z-50">
       <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2.5">
-        <Link href={isAdmin ? "/dashboard" : "/feed"} className="flex items-center gap-1.5 font-semibold">
-          <span className="text-lg">📷</span> IE-PHOTO
+        <Link href={isAdmin ? "/dashboard" : "/feed"} className="flex items-center gap-1.5 text-lg font-extrabold">
+          <span>📷</span> <span className="text-grad">IE-PHOTO</span>
         </Link>
 
         {/* desktop links */}
@@ -76,7 +76,7 @@ export default function Navbar() {
           </Link>
           <button
             onClick={handleLogout}
-            className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-100"
+            className="rounded-full border border-white/70 bg-white/50 px-3.5 py-1.5 text-sm backdrop-blur transition hover:bg-white/80"
           >
             ออกจากระบบ
           </button>
@@ -90,7 +90,7 @@ export default function Navbar() {
 
       {/* mobile menu */}
       {open && (
-        <div className="border-t border-neutral-200 bg-white px-4 py-2 lg:hidden">
+        <div className="glass-nav border-t px-4 py-2 lg:hidden">
           {links.map((l) => (
             <Link
               key={l.href}
@@ -116,7 +116,7 @@ export default function Navbar() {
           </a>
           <button
             onClick={handleLogout}
-            className="mt-1 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded-full border border-white/70 bg-white/50 px-3 py-2 text-sm"
           >
             ออกจากระบบ
           </button>

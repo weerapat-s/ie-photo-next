@@ -31,8 +31,10 @@ export default function StudioPage() {
           {studios.map((s) => (
             <div
               key={s.id}
-              className={`rounded-2xl border p-5 shadow-sm ${
-                s.theme === "dark" ? "border-neutral-800 bg-neutral-900 text-white" : "border-neutral-200 bg-white"
+              className={`rounded-3xl p-6 ${
+                s.theme === "dark"
+                  ? "border border-white/10 bg-neutral-900 text-white shadow-[0_24px_60px_rgba(7,17,31,.28)]"
+                  : "glass-card"
               }`}
             >
               <div className="mb-3 flex items-start justify-between">

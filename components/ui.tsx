@@ -14,9 +14,7 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
 }
 
 export function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm ${className}`}>{children}</div>
-  );
+  return <div className={`glass-card rounded-3xl p-5 ${className}`}>{children}</div>;
 }
 
 export function Badge({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -51,14 +49,14 @@ export function Button({
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "outline" | "danger" | "ghost" }) {
   const styles = {
-    primary: "bg-orange-500 text-white hover:bg-orange-600",
-    outline: "border border-neutral-300 hover:bg-neutral-100",
-    danger: "bg-red-500 text-white hover:bg-red-600",
-    ghost: "hover:bg-neutral-100",
+    primary: "btn-grad",
+    outline: "border border-white/70 bg-white/50 backdrop-blur hover:bg-white/80 text-[var(--ink)]",
+    danger: "bg-red-500 text-white hover:bg-red-600 shadow-[0_8px_22px_rgba(239,68,68,.3)]",
+    ghost: "hover:bg-white/60",
   }[variant];
   return (
     <button
-      className={`rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 ${styles} ${className}`}
+      className={`rounded-full px-4 py-2 text-sm font-semibold transition disabled:opacity-50 ${styles} ${className}`}
       {...props}
     >
       {children}
@@ -70,7 +68,7 @@ export function LinkButton({ href, children, className = "" }: { href: string; c
   return (
     <Link
       href={href}
-      className={`inline-flex items-center gap-1 rounded-lg bg-orange-500 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-orange-600 ${className}`}
+      className={`btn-grad inline-flex items-center gap-1 rounded-full px-4 py-2 text-sm font-semibold ${className}`}
     >
       {children}
     </Link>
@@ -97,7 +95,7 @@ export function Modal({
       onClick={onClose}
     >
       <div
-        className={`w-full ${maxWidth} max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl`}
+        className={`glass-card w-full ${maxWidth} max-h-[90vh] overflow-y-auto rounded-3xl p-6`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
@@ -123,5 +121,4 @@ export function Field({ label, children, required }: { label: string; children: 
   );
 }
 
-export const inputClass =
-  "w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-300";
+export const inputClass = "glass-input w-full rounded-xl px-3.5 py-2.5 text-sm";

@@ -33,9 +33,9 @@ export default function LoginPage() {
 
   return (
     <div className="flex-1 flex items-center justify-center p-6">
-      <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
+      <div className="glass-card w-full max-w-sm rounded-3xl p-8">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 text-2xl text-white">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--orange)] to-[var(--pink)] text-2xl text-white shadow-[0_10px_26px_rgba(255,91,31,.35)]">
             📷
           </div>
           <h1 className="text-xl font-semibold">เข้าสู่ระบบ</h1>
@@ -55,7 +55,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="6XXXXXXX@kmitl.ac.th"
               autoComplete="username"
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-300"
+              className="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm"
               required
             />
           </div>
@@ -67,14 +67,14 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="รหัสผ่านของคุณ"
               autoComplete="current-password"
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-300"
+              className="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm"
               required
             />
           </div>
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-orange-500 py-2.5 text-sm font-medium text-white transition hover:bg-orange-600 disabled:opacity-50"
+            className="btn-grad w-full rounded-full py-3 text-sm font-semibold disabled:opacity-50"
           >
             {loading ? "กำลังเข้าสู่ระบบ…" : "เข้าสู่ระบบ"}
           </button>

@@ -52,9 +52,9 @@ export default function RegisterPage() {
 
   return (
     <div className="flex-1 flex items-center justify-center p-6">
-      <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
+      <div className="glass-card w-full max-w-sm rounded-3xl p-8">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 text-2xl text-white">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--orange)] to-[var(--pink)] text-2xl text-white shadow-[0_10px_26px_rgba(255,91,31,.35)]">
             📷
           </div>
           <h1 className="text-xl font-semibold">สมัครสมาชิก</h1>
@@ -74,9 +74,7 @@ export default function RegisterPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="6XXXXXXX@kmitl.ac.th"
               autoComplete="username"
-              className={`w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2 ${
-                emailValid ? "border-neutral-300 focus:ring-orange-300" : "border-red-400 focus:ring-red-300"
-              }`}
+              className={`glass-input w-full rounded-xl px-3.5 py-2.5 text-sm ${emailValid ? "" : "!border-red-400"}`}
               required
             />
             {!emailValid && <p className="mt-1 text-xs text-red-500">ต้องเป็นอีเมล @kmitl.ac.th</p>}
@@ -90,7 +88,7 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="อย่างน้อย 6 ตัวอักษร"
               autoComplete="new-password"
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-300"
+              className="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm"
               required
             />
           </div>
@@ -103,7 +101,7 @@ export default function RegisterPage() {
               onChange={(e) => setConfirm(e.target.value)}
               placeholder="กรอกรหัสผ่านอีกครั้ง"
               autoComplete="new-password"
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-300"
+              className="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm"
               required
             />
             {confirm && password !== confirm && (
@@ -114,7 +112,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={!canSubmit}
-            className="w-full rounded-lg bg-orange-500 py-2.5 text-sm font-medium text-white transition hover:bg-orange-600 disabled:opacity-50"
+            className="btn-grad w-full rounded-full py-3 text-sm font-semibold disabled:opacity-50"
           >
             {loading ? "กำลังสมัคร…" : "สมัครสมาชิก"}
           </button>

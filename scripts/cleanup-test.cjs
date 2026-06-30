@@ -4,8 +4,9 @@ const { getDb, getAuthAdmin } = require("./lib-admin.cjs");
 (async () => {
   const db = getDb();
   const auth = getAuthAdmin();
+  const email = process.argv[2] || "test-ui@kmitl.ac.th";
   let uid = null;
-  try { uid = (await auth.getUserByEmail("test-ui@kmitl.ac.th")).uid; } catch {}
+  try { uid = (await auth.getUserByEmail(email)).uid; } catch {}
 
   let n = 0;
   // bookings + feeds ของ test user

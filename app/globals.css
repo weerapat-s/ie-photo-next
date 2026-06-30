@@ -121,10 +121,89 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
   html {
     @apply font-sans;
   }
+}
+
+/* ═══ IE-Photo glass theme (จาก iephoto.online) ═══════════════════════ */
+:root {
+  --orange: #ff5b1f;
+  --orange-light: #ff8d61;
+  --pink: #ff2f75;
+  --app-bg: #edf1f6;
+  --ink: #07111f;
+  --muted: #64748b;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body {
+  background: var(--app-bg);
+  color: var(--ink);
+  min-height: 100%;
+  position: relative;
+}
+
+/* ambient glow ส้ม/ชมพู ลอยพื้นหลัง */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(40rem 40rem at 12% -5%, rgba(255, 91, 31, 0.18), transparent 60%),
+    radial-gradient(38rem 38rem at 100% 8%, rgba(255, 47, 117, 0.16), transparent 60%),
+    radial-gradient(45rem 45rem at 60% 110%, rgba(255, 141, 97, 0.14), transparent 60%);
+}
+
+/* การ์ดกระจกฝ้า */
+.glass-card {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.28));
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  box-shadow:
+    0 20px 50px rgba(7, 17, 31, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.9);
+}
+
+/* navbar กระจก */
+.glass-nav {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.45));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+/* ปุ่ม gradient ส้ม→ชมพู */
+.btn-grad {
+  background: linear-gradient(135deg, var(--orange), var(--pink));
+  color: #fff;
+  box-shadow: 0 10px 26px rgba(255, 91, 31, 0.35);
+  transition: transform 0.4s var(--ease), box-shadow 0.4s var(--ease), opacity 0.2s;
+}
+.btn-grad:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(255, 47, 117, 0.4);
+}
+
+/* ข้อความ gradient */
+.text-grad {
+  background: linear-gradient(135deg, var(--orange), var(--pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* input บนพื้นกระจก */
+.glass-input {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.glass-input:focus {
+  outline: none;
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px rgba(255, 91, 31, 0.18);
 }
