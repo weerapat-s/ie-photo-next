@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { doc, updateDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase/client";
+import { db } from "@/lib/firebase/client";
+import { compressImageToDataUrl } from "@/lib/image";
 import { useAuth } from "@/lib/firebase/auth-context";
 
 export default function ProfilePage() {
@@ -49,10 +49,8 @@ export default function ProfilePage() {
     try {
       let imageUrl = profile?.profileImageUrl ?? null;
       if (imageFile) {
-        const ext = imageFile.name.split(".").pop() || "jpg";
-        const r = ref(storage, `profiles/${user.uid}.${ext}`);
-        await uploadBytes(r, imageFile);
-        imageUrl = await getDownloadURL(r);
+        // ย่อ+บีบอัดเป็น data URL เล็กๆ เก็บใน Firestore — อัปทันที ไม่ต้องใช้ Storage
+        imageUrl = await compressImageToDataUrl(imageFile);
       }
       await updateDoc(doc(db, "users", user.uid), {
         firstName: firstName.trim(),
