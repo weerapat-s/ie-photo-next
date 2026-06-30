@@ -34,7 +34,7 @@ export function bookingDecisionEmail(name: string, itemName: string, approved: b
         <h2 style="color:#F2531C">IE-Photo Booking</h2>
         <p>สวัสดีคุณ ${name || ""}</p>
         <p>การจอง <strong>${itemName}</strong> ของคุณ${status}</p>
-        ${approved ? "<p>กรุณามารับ/ใช้งานตามวันเวลาที่จองไว้</p>" : "<p>หากมีข้อสงสัยกรุณาติดต่อเลขาชุมนุม 096-954-5290</p>"}
+        ${approved ? "<p>กรุณามารับ/ใช้งานตามวันเวลาที่จองไว้</p>" : "<p>หากมีข้อสงสัยกรุณาติดต่อเลขาชุมนุม 062-148-1739</p>"}
         <hr style="border:none;border-top:1px solid #eee;margin:20px 0">
         <p style="color:#999;font-size:12px">IE-Photo KMITL · ระบบจองอุปกรณ์และสตูดิโอ</p>
       </div>`,

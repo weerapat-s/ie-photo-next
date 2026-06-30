@@ -18,7 +18,7 @@ if (!email || !VALID.includes(role)) {
   await auth.setCustomUserClaims(user.uid, { role });
   await db.collection("users").doc(user.uid).set({ role }, { merge: true });
   console.log(`✓ ตั้ง ${email} เป็น "${role}" แล้ว (uid: ${user.uid})`);
-  console.log("  → ผู้ใช้ต้อง logout/login ใหม่ เพื่อให้ claim ใหม่มีผล");
+  console.log("  → ผู้ใช้แค่ refresh หน้าเว็บ (role อ่านจาก Firestore doc ทุกครั้งที่โหลด)");
   process.exit(0);
 })().catch((e) => {
   console.error("✗ FAILED:", e.message);

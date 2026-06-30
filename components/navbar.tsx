@@ -68,8 +68,8 @@ export default function Navbar() {
         </div>
 
         <div className="ml-auto hidden items-center gap-2 lg:flex">
-          <a href="tel:0969545290" className="text-sm font-medium text-green-600">
-            📞 096-954-5290
+          <a href="tel:0621481739" className="text-sm font-medium text-green-600">
+            📞 062-148-1739
           </a>
           <Link href="/profile" className="rounded-lg px-2.5 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100">
             {profile?.firstName || "โปรไฟล์"}
@@ -111,8 +111,8 @@ export default function Navbar() {
           >
             <span>👤</span> โปรไฟล์
           </Link>
-          <a href="tel:0969545290" className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-green-600">
-            <span>📞</span> 096-954-5290
+          <a href="tel:0621481739" className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-green-600">
+            <span>📞</span> 062-148-1739
           </a>
           <button
             onClick={handleLogout}

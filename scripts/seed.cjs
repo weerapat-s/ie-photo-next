@@ -29,7 +29,7 @@ const studios = [
       "มีอุปกรณ์เสริม: Reflector, Stand",
     ],
     openHours: "จ–ศ 08:00–20:00 น. / ส–อา 09:00–17:00 น.",
-    contactPhone: "096-954-5290",
+    contactPhone: "062-148-1739",
     theme: "dark",
   },
   {
@@ -45,7 +45,7 @@ const studios = [
       "เหมาะงาน minimal, clean-look",
     ],
     openHours: "จ–ศ 08:00–20:00 น. / ส–อา 09:00–17:00 น.",
-    contactPhone: "096-954-5290",
+    contactPhone: "062-148-1739",
     theme: "light",
   },
 ];
