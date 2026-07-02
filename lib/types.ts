@@ -21,6 +21,12 @@ export type BookingStatus =
 
 export type TaskStatus = "pending" | "in_progress" | "completed" | "cancelled";
 
+// เก็บ subscription object ที่ browser คืนมาจาก PushManager.subscribe().toJSON()
+export interface PushSubscriptionData {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+}
+
 // ── users/{uid} ───────────────────────────────────────────────
 export interface UserDoc {
   studentId: string;
@@ -32,6 +38,7 @@ export interface UserDoc {
   profileImageUrl: string | null;
   profileCompleted: boolean;
   createdAt: Timestamp;
+  pushSubscription?: PushSubscriptionData | null;
 }
 
 // ── equipments/{id} ───────────────────────────────────────────
@@ -74,6 +81,7 @@ export interface BookingDoc {
   responsibleUserName: string | null; // denormalized
   consentToken: string | null;
   createdAt: Timestamp;
+  reminderSentAt?: Timestamp | null; // กันแจ้งเตือนซ้ำ — ตั้งโดย scripts/send-notifications.cjs
 }
 
 // ── tasks/{id} ────────────────────────────────────────────────
@@ -88,6 +96,7 @@ export interface TaskDoc {
   status: TaskStatus;
   dueDate: Timestamp | null;
   createdAt: Timestamp;
+  reminderSentAt?: Timestamp | null; // กันแจ้งเตือนซ้ำ — ตั้งโดย scripts/send-notifications.cjs
 }
 
 // ── feeds/{id} (รวม feed_likes ด้วย likedBy[]) ─────────────────

@@ -6,6 +6,7 @@ import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { compressImageToDataUrl } from "@/lib/image";
 import { useAuth } from "@/lib/firebase/auth-context";
+import NotificationToggle from "@/components/notification-toggle";
 
 export default function ProfilePage() {
   const { user, profile, refresh } = useAuth();
@@ -140,6 +141,10 @@ export default function ProfilePage() {
           {saving ? "กำลังบันทึก…" : "บันทึกข้อมูล"}
         </button>
       </form>
+
+      <div className="mt-4">
+        <NotificationToggle />
+      </div>
     </div>
   );
 }

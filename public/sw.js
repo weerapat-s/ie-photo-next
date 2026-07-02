@@ -52,3 +52,39 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
+
+// ── Web Push — แสดง notification แม้แอพปิดอยู่ ─────────────────────────────
+self.addEventListener("push", (event) => {
+  let data = { title: "IE-Photo", body: "มีการแจ้งเตือนใหม่", url: "/" };
+  try {
+    if (event.data) data = { ...data, ...event.data.json() };
+  } catch {
+    /* ใช้ default ถ้า parse ไม่ได้ */
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url: data.url },
+      tag: data.tag || undefined,
+    })
+  );
+});
+
+// คลิก notification → เปิด/โฟกัสแท็บแอป ไปที่ url ที่กำหนด
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if (client.url.includes(self.location.origin) && "focus" in client) {
+          client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(targetUrl);
+    })
+  );
+});
