@@ -7,6 +7,23 @@ Next.js + Firebase rewrite ของ IE-Photo Booking System
 
 ---
 
+## 🏃 เริ่มเร็ว (สำหรับคนมาทำ UI)
+
+```bash
+git clone <repo-url>
+cd ie-photo-next
+cp .env.local.example .env.local   # ค่า Firebase client ใส่มาให้แล้ว ใช้ได้เลย ไม่ต้องขอ key
+npm install
+npm run dev                        # http://localhost:3000
+```
+
+ไม่ต้องมี Firebase Admin key ก็ทำ UI ได้ครบ (หน้าเว็บทั้งหมดใช้ client SDK คุมสิทธิ์ด้วย Security Rules)
+Admin key ใน `.env.local.example` เว้นว่างไว้ตั้งใจ — ใช้เฉพาะตอนรัน `scripts/*.cjs` (seed/set-role/migration) เท่านั้น ถ้าจำเป็นจริงๆ ขอไฟล์จากเจ้าของโปรเจกต์โดยตรง **ห้าม commit ไฟล์นั้นเข้า git เด็ดขาด**
+
+โครงสร้างหน้าเว็บ: ดูที่ `app/(member)/` (หน้าสมาชิก) และ `app/(admin)/` (หน้าแอดมิน) — component ใช้ร่วมกันอยู่ที่ `components/ui.tsx`, ธีม glass อยู่ใน `app/globals.css`
+
+---
+
 ## ✅ สร้างเสร็จครบทั้ง 7 Phase (0–6) + ย้าย region
 
 - **Phase 0–2:** scaffold, Firebase, Auth (สมัคร/ล็อกอิน/role), navbar, guards, profile
