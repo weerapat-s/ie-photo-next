@@ -10,7 +10,7 @@ import type { FeedDoc } from "@/lib/types";
 
 export default function FeedPage() {
   const { user, profile } = useAuth();
-  const { data: feeds, loading } = useCollection<FeedDoc>(
+  const { data: feeds, loading, error } = useCollection<FeedDoc>(
     () => query(collection(db, "feeds"), orderBy("createdAt", "desc")),
     []
   );
@@ -32,6 +32,8 @@ export default function FeedPage() {
 
       {loading ? (
         <Spinner />
+      ) : error ? (
+        <EmptyState icon="⚠️" text="โหลดข้อมูลไม่สำเร็จ กรุณารีเฟรชหน้า" />
       ) : feeds.length === 0 ? (
         <EmptyState icon="📰" text="ยังไม่มีกิจกรรมในขณะนี้" />
       ) : (

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { collection, query, where, orderBy, addDoc, Timestamp, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { compressImageToDataUrl } from "@/lib/image";
+import { findBookingConflicts } from "@/lib/booking";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useCollection } from "@/lib/hooks";
 import { PageHeader, Card, Spinner, Button, Field, inputClass, EmptyState } from "@/components/ui";
@@ -15,7 +16,7 @@ export default function BorrowPage() {
   const { user, profile } = useAuth();
   const router = useRouter();
 
-  const { data: equipments, loading } = useCollection<EquipmentDoc>(
+  const { data: equipments, loading, error: loadError } = useCollection<EquipmentDoc>(
     () => query(collection(db, "equipments"), where("status", "==", "available"), orderBy("type")),
     []
   );
@@ -47,18 +48,34 @@ export default function BorrowPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!user) return;
+    if (!user || busy) return;
     setErr("");
     if (!file) return setErr("กรุณาแนบเอกสารขออนุญาต");
-    if (new Date(end) <= new Date(start)) return setErr("เวลาคืนต้องอยู่หลังเวลายืม");
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    if (endDate <= startDate) return setErr("เวลาคืนต้องอยู่หลังเวลายืม");
+    if (startDate.getTime() < Date.now() - 60_000) return setErr("ไม่สามารถจองเวลาในอดีตได้");
     setBusy(true);
     try {
+      const items = equipments.filter((eq) => selected.has(eq.id));
+
+      // เช็คการจองซ้อน — อุปกรณ์ชิ้นเดียวกันถูกจอง (pending/approved) ช่วงเวลาทับกันไหม
+      const conflictNames: string[] = [];
+      for (const eq of items) {
+        const conflicts = await findBookingConflicts(eq.id, startDate, endDate);
+        if (conflicts.length) conflictNames.push(eq.name);
+      }
+      if (conflictNames.length) {
+        setErr(`ช่วงเวลานี้ถูกจองแล้ว: ${conflictNames.join(", ")} — กรุณาเลือกเวลาอื่น`);
+        setBusy(false);
+        return;
+      }
+
       // ย่อ+บีบอัดเอกสารเป็น data URL เก็บใน Firestore ตรง (ไม่ต้องใช้ Storage)
       // ใช้ครั้งเดียว แชร์กับทุกชิ้นที่เลือก
       const formImageUrl = await compressImageToDataUrl(file, 1400, 0.75);
 
       const userName = `${profile?.firstName ?? ""} ${profile?.lastName ?? ""}`.trim() || user.email || "";
-      const items = equipments.filter((eq) => selected.has(eq.id));
       await Promise.all(
         items.map((eq) =>
           addDoc(collection(db, "bookings"), {
@@ -100,6 +117,8 @@ export default function BorrowPage() {
           <h3 className="mb-3 font-medium">เลือกอุปกรณ์ {selected.size > 0 && `(${selected.size} ชิ้น)`}</h3>
           {loading ? (
             <Spinner />
+          ) : loadError ? (
+            <EmptyState icon="⚠️" text="โหลดรายการอุปกรณ์ไม่สำเร็จ กรุณารีเฟรชหน้า" />
           ) : equipments.length === 0 ? (
             <EmptyState text="ไม่มีอุปกรณ์ว่างในขณะนี้" />
           ) : (

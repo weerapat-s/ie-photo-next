@@ -12,7 +12,7 @@ import type { BookingDoc, WithId } from "@/lib/types";
 
 export default function MyBookingsPage() {
   const { user } = useAuth();
-  const { data: bookings, loading } = useCollection<BookingDoc>(
+  const { data: bookings, loading, error } = useCollection<BookingDoc>(
     () =>
       user ? query(collection(db, "bookings"), where("userId", "==", user.uid), orderBy("createdAt", "desc")) : null,
     [user?.uid]
@@ -25,6 +25,8 @@ export default function MyBookingsPage() {
 
       {loading ? (
         <Spinner />
+      ) : error ? (
+        <EmptyState icon="⚠️" text="โหลดข้อมูลไม่สำเร็จ กรุณารีเฟรชหน้า" />
       ) : bookings.length === 0 ? (
         <EmptyState text="ยังไม่มีการจอง" />
       ) : (

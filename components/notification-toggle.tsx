@@ -57,7 +57,7 @@ export default function NotificationToggle() {
         </div>
         <button
           onClick={toggle}
-          disabled={busy || permission === "denied"}
+          disabled={busy || (!subscribed && permission === "denied")}
           className={`relative h-7 w-12 flex-shrink-0 rounded-full transition disabled:opacity-40 ${
             subscribed ? "bg-orange-500" : "bg-neutral-300"
           }`}

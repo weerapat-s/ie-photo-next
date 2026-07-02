@@ -9,7 +9,7 @@ import type { BookingDoc, WithId } from "@/lib/types";
 
 export default function CalendarPage() {
   // แสดงเฉพาะ pending/approved (ตารางจริงที่ใช้ห้อง/อุปกรณ์)
-  const { data: bookings, loading } = useCollection<BookingDoc>(
+  const { data: bookings, loading, error } = useCollection<BookingDoc>(
     () => query(collection(db, "bookings"), where("status", "in", ["pending", "approved"]), orderBy("startAt")),
     []
   );
@@ -27,6 +27,8 @@ export default function CalendarPage() {
 
       {loading ? (
         <Spinner />
+      ) : error ? (
+        <EmptyState icon="⚠️" text="โหลดข้อมูลไม่สำเร็จ กรุณารีเฟรชหน้า" />
       ) : bookings.length === 0 ? (
         <EmptyState icon="📅" text="ยังไม่มีการจองที่กำลังจะมาถึง" />
       ) : (

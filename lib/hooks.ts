@@ -32,7 +32,8 @@ export function useCollection<T>(
         setLoading(false);
         setError(false);
       },
-      () => {
+      (e) => {
+        console.error("useCollection query failed:", e.message);
         setError(true);
         setLoading(false);
       }

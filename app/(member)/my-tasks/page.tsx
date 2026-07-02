@@ -10,7 +10,7 @@ import type { TaskDoc } from "@/lib/types";
 
 export default function MyTasksPage() {
   const { user } = useAuth();
-  const { data: tasks, loading } = useCollection<TaskDoc>(
+  const { data: tasks, loading, error } = useCollection<TaskDoc>(
     () =>
       user ? query(collection(db, "tasks"), where("assignedToId", "==", user.uid), orderBy("createdAt", "desc")) : null,
     [user?.uid]
@@ -26,6 +26,8 @@ export default function MyTasksPage() {
 
       {loading ? (
         <Spinner />
+      ) : error ? (
+        <EmptyState icon="⚠️" text="โหลดข้อมูลไม่สำเร็จ กรุณารีเฟรชหน้า" />
       ) : tasks.length === 0 ? (
         <EmptyState icon="✅" text="ยังไม่มีงานที่ได้รับมอบหมาย" />
       ) : (

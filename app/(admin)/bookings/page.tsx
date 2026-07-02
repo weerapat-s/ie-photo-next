@@ -30,6 +30,26 @@ export default function AdminBookingsPage() {
 
   // อนุมัติ/ปฏิเสธ + sync สถานะอุปกรณ์ + สร้าง feed
   async function decide(b: WithId<BookingDoc>, status: "approved" | "rejected") {
+    // เตือนถ้ามีการจองที่ "อนุมัติแล้ว" ของ item เดียวกัน ช่วงเวลาทับกัน
+    if (status === "approved") {
+      const overlap = bookings.find(
+        (o) =>
+          o.id !== b.id &&
+          o.itemId === b.itemId &&
+          o.status === "approved" &&
+          o.startAt.toMillis() < b.endAt.toMillis() &&
+          o.endAt.toMillis() > b.startAt.toMillis()
+      );
+      if (
+        overlap &&
+        !confirm(
+          `⚠️ "${b.itemName}" มีการจองที่อนุมัติแล้วช่วงเวลาทับกัน (ของ ${overlap.userName})\nยืนยันอนุมัติซ้อนหรือไม่?`
+        )
+      ) {
+        return;
+      }
+    }
+
     const batch = writeBatch(db);
     batch.update(doc(db, "bookings", b.id), { status });
     if (status === "approved" && b.bookingType === "equipment") {

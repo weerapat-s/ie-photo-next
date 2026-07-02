@@ -2,9 +2,9 @@
 // lib/firebase/auth-context.tsx — สถานะ auth ทั่วทั้งแอป
 // เร็ว: user doc ใช้ onSnapshot → snapshot แรกมาจาก IndexedDB cache แทบทันที
 // แล้วค่อย sync จากเซิร์ฟเวอร์เบื้องหลัง (role เปลี่ยนก็อัปเดตสดโดยไม่ต้อง refresh)
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { onAuthStateChanged, signOut as fbSignOut, type User } from "firebase/auth";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "./client";
 import type { Role, UserDoc, WithId } from "@/lib/types";
 
@@ -33,6 +33,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<WithId<UserDoc> | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
+  // กัน heal ซ้ำ: จำ uid ที่พยายามสร้าง doc ซ่อมไปแล้ว
+  const healedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let unsubDoc: (() => void) | null = null;
@@ -64,6 +66,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } else {
             setProfile(null);
             setRole("member");
+            // ซ่อมบัญชีค้าง: auth มีแต่ user doc หาย (สมัครค้าง/โดนลบ doc)
+            // → สร้าง doc member ให้ใหม่ ไม่งั้นหน้าโปรไฟล์บันทึกไม่ได้ตลอดไป
+            // (เช็ค fromCache กันเคส snapshot แรกจาก cache ยังไม่เห็น doc บนเซิร์ฟเวอร์)
+            if (!snap.metadata.fromCache && !healedRef.current.has(u.uid)) {
+              healedRef.current.add(u.uid);
+              setDoc(doc(db, "users", u.uid), {
+                studentId: (u.email || "").split("@")[0],
+                firstName: "",
+                lastName: "",
+                email: u.email || "",
+                phone: "",
+                role: "member",
+                profileImageUrl: null,
+                profileCompleted: false,
+                createdAt: serverTimestamp(),
+              }).catch(() => {});
+            }
           }
           setLoading(false);
         },

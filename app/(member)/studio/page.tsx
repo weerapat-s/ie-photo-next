@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { collection, query, orderBy, addDoc, doc, updateDoc, Timestamp, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
+import { findBookingConflicts } from "@/lib/booking";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useCollection } from "@/lib/hooks";
 import { PageHeader, Badge, Spinner, Button, Modal, Field, inputClass } from "@/components/ui";
@@ -134,12 +135,24 @@ function BookingModal({
   }, []);
 
   async function submit() {
+    if (busy) return;
     setErr("");
     if (!start || !end) return setErr("กรุณาเลือกวันเวลา");
-    if (new Date(end) <= new Date(start)) return setErr("เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่ม");
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    if (endDate <= startDate) return setErr("เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่ม");
+    if (startDate.getTime() < Date.now() - 60_000) return setErr("ไม่สามารถจองเวลาในอดีตได้");
     if (!reason.trim()) return setErr("กรุณาระบุวัตถุประสงค์");
     setBusy(true);
     try {
+      // เช็คการจองซ้อน — ห้องนี้ถูกจอง (pending/approved) ช่วงเวลาทับกันไหม
+      const conflicts = await findBookingConflicts(studio.id, startDate, endDate);
+      if (conflicts.length) {
+        setErr("ช่วงเวลานี้มีคนจองแล้ว กรุณาเลือกเวลาอื่น");
+        setBusy(false);
+        return;
+      }
+
       await addDoc(collection(db, "bookings"), {
         bookingType: "studio",
         itemId: studio.id,
@@ -163,7 +176,7 @@ function BookingModal({
       });
       setDone(true);
     } catch {
-      setErr("จองไม่สำเร็จ — ตรวจว่า deploy Security Rules แล้วหรือยัง");
+      setErr("จองไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
       setBusy(false);
     }
   }

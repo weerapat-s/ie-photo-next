@@ -20,6 +20,7 @@ export default function RegisterPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return; // กัน double-submit
     setError("");
     if (!emailValid) return setError("อนุญาตเฉพาะอีเมล @kmitl.ac.th เท่านั้น");
     if (password.length < 6) return setError("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
