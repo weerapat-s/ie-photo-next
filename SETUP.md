@@ -32,8 +32,11 @@ Next.js + Firebase rewrite ของ IE-Photo Booking System
 - **รหัสผ่านเดิม** — สมาชิกที่มีอยู่ก่อนย้ายต้องกด **"ลืมรหัสผ่าน?"** ในหน้า login ครั้งเดียวเพื่อตั้งรหัสใหม่
   (มีปุ่มนี้ในหน้า login แล้ว)
 
-**โปรเจกต์ `ie-photo` เดิม** ยังไม่ได้ลบ/ปิด — แต่ข้อมูลจะ**ไม่ sync กัน**อีกต่อไปหลังจากจุดย้าย
-ถ้าไม่ใช้แล้วควรลบ hosting/project เดิมทิ้งเพื่อกันความสับสน (ผู้ใช้เข้าผิด URL แล้วเจอข้อมูลเก่า)
+**โปรเจกต์ `ie-photo` เดิม** ถูกปิดการใช้งานแล้ว (2026-07-02): Hosting disabled (`ie-photo.web.app` = 404),
+Firestore data ลบหมด, Auth users ลบหมด — ทำผ่าน service account ทั้งหมด **เหลือขั้นตอนเดียวที่ต้องทำเอง**:
+ลบ GCP project ทิ้งจริงที่ https://console.cloud.google.com/iam-admin/settings?project=ie-photo
+(service account ไม่มีสิทธิ์ลบ project ตัวเอง ต้องสิทธิ์ Owner ผ่าน Console เท่านั้น — ไม่เร่งด่วน เพราะ
+ไซต์ปิดและข้อมูลลบหมดแล้ว ไม่มีความเสี่ยงเรื่องข้อมูลค้าง)
 
 ---
 
@@ -41,13 +44,9 @@ Next.js + Firebase rewrite ของ IE-Photo Booking System
 
 ### 1. Email/Password — ✅ เปิดแล้วที่ iephoto
 ### 2. Firestore rules — ✅ deploy แล้ว (`scripts/deploy-rules.cjs`)
-### 3. Storage — ⏳ ยังไม่เปิด (ไม่บล็อกฟีเจอร์หลัก — รูปโปรไฟล์ใช้ data URL แทนอยู่แล้ว)
-
-ถ้าต้องการเปิดอัปโหลดเอกสารยืม/รูปคืนของ (ไฟล์ใหญ่กว่า):
-1. Console → **Build → Storage** → Get started → region `asia-southeast1`
-2. ```bash
-   node scripts/deploy-rules.cjs "C:\path\to\iephoto-serviceAccount.json"
-   ```
+### 3. Storage — ❌ ไม่ใช้เลย (2026-07-02) — ทุกไฟล์ (รูปโปรไฟล์/เอกสารยืม/รูปคืนของ) ถูกย่อ+บีบอัด
+   เป็น data URL เก็บใน Firestore โดยตรง (`lib/image.ts`) แอปนี้ไม่ต้องพึ่ง Storage bucket เลย
+   ⚠️ trade-off: ฟอร์มยืมอุปกรณ์รับเฉพาะไฟล์รูปภาพ (ตัด PDF ออก เพราะบีบอัดแบบ canvas ทำกับ PDF ไม่ได้)
 
 ### 4. ตั้งแอดมินเพิ่ม
 ```bash
