@@ -1,18 +1,20 @@
 // scripts/deploy-rules.cjs — deploy firestore.rules + storage.rules ผ่าน Firebase Rules REST API
 // (ใช้ service account — ไม่ต้อง firebase login)
 // รัน: node --env-file=.env.local scripts/deploy-rules.cjs
+//   หรือ: node scripts/deploy-rules.cjs <path/to/serviceAccount.json>  (ระบุโปรเจกต์เอง)
 const { GoogleAuth } = require("google-auth-library");
 const fs = require("fs");
 const path = require("path");
 
-const PROJECT = process.env.FIREBASE_PROJECT_ID;
+const saPath = process.argv[2];
+const sa = saPath ? require(saPath) : null;
+const PROJECT = sa ? sa.project_id : process.env.FIREBASE_PROJECT_ID;
+const CLIENT_EMAIL = sa ? sa.client_email : process.env.FIREBASE_CLIENT_EMAIL;
+const PRIVATE_KEY = sa ? sa.private_key : (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n");
 
 async function main() {
   const auth = new GoogleAuth({
-    credentials: {
-      client_email: process.env.FIREBASE_CLIENT_EMAIL,
-      private_key: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
-    },
+    credentials: { client_email: CLIENT_EMAIL, private_key: PRIVATE_KEY },
     scopes: ["https://www.googleapis.com/auth/cloud-platform", "https://www.googleapis.com/auth/firebase"],
   });
   const client = await auth.getClient();

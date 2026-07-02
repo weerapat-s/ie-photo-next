@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 
 export default function LoginPage() {
@@ -11,7 +11,24 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  async function handleReset() {
+    setError("");
+    setInfo("");
+    if (!email) return setError("กรุณากรอกอีเมลก่อนกด \"ลืมรหัสผ่าน\"");
+    setResetting(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setInfo("ส่งลิงก์ตั้งรหัสผ่านใหม่ไปที่อีเมลแล้ว กรุณาตรวจสอบกล่องจดหมาย");
+    } catch {
+      setInfo("ถ้าอีเมลนี้มีในระบบ จะได้รับลิงก์ตั้งรหัสผ่านใหม่ในไม่ช้า");
+    } finally {
+      setResetting(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,6 +61,9 @@ export default function LoginPage() {
 
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">⚠️ {error}</div>
+        )}
+        {info && (
+          <div className="mb-4 rounded-lg bg-green-50 px-4 py-2.5 text-sm text-green-700">✅ {info}</div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -79,6 +99,15 @@ export default function LoginPage() {
             {loading ? "กำลังเข้าสู่ระบบ…" : "เข้าสู่ระบบ"}
           </button>
         </form>
+
+        <button
+          type="button"
+          onClick={handleReset}
+          disabled={resetting}
+          className="mt-3 w-full text-center text-sm text-neutral-500 underline disabled:opacity-50"
+        >
+          {resetting ? "กำลังส่ง…" : "ลืมรหัสผ่าน?"}
+        </button>
 
         <p className="mt-5 text-center text-sm text-neutral-500">
           ยังไม่มีบัญชี?{" "}
