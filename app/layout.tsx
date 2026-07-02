@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Kanit } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/firebase/auth-context";
+import SwRegister from "@/components/sw-register";
 
 const kanit = Kanit({
   variable: "--font-kanit",
@@ -13,6 +14,24 @@ const kanit = Kanit({
 export const metadata: Metadata = {
   title: "IE-Photo Booking System",
   description: "ระบบจองอุปกรณ์ถ่ายภาพและสตูดิโอ IE-Photo KMITL",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/icon-32.png",
+    apple: "/icons/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "IE-Photo",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#ff5b1f",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -27,8 +46,12 @@ export default function RootLayout({
         <link rel="preconnect" href="https://firestore.googleapis.com" />
         <link rel="preconnect" href="https://identitytoolkit.googleapis.com" />
         <link rel="preconnect" href="https://securetoken.googleapis.com" />
+        {/* iOS Safari รุ่นเก่าต้องการ tag นี้แบบมี apple- prefix โดยเฉพาะ
+            (metadata API ของ Next.js เรนเดอร์แค่ mobile-web-app-capable เฉยๆ) */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
       <body className="min-h-full flex flex-col bg-neutral-50 font-[family-name:var(--font-kanit)]">
+        <SwRegister />
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
