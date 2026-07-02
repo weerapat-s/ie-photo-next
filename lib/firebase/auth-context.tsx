@@ -1,8 +1,10 @@
 "use client";
 // lib/firebase/auth-context.tsx — สถานะ auth ทั่วทั้งแอป
+// เร็ว: user doc ใช้ onSnapshot → snapshot แรกมาจาก IndexedDB cache แทบทันที
+// แล้วค่อย sync จากเซิร์ฟเวอร์เบื้องหลัง (role เปลี่ยนก็อัปเดตสดโดยไม่ต้อง refresh)
 import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signOut as fbSignOut, type User } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "./client";
 import type { Role, UserDoc, WithId } from "@/lib/types";
 
@@ -32,43 +34,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function load(u: User | null) {
-    if (!u) {
-      setUser(null);
-      setProfile(null);
-      setRole(null);
-      setLoading(false);
-      return;
-    }
-    // role เก็บใน Firestore user doc (ไม่ใช้ custom claim — static app)
-    try {
-      const snap = await getDoc(doc(db, "users", u.uid));
-      if (snap.exists()) {
-        const data = snap.data() as UserDoc;
-        setProfile({ id: u.uid, ...data });
-        setRole(data.role ?? "member");
-      } else {
-        setProfile(null);
-        setRole("member");
-      }
-    } catch {
-      setProfile(null);
-      setRole("member");
-    }
-    setUser(u);
-    setLoading(false);
-  }
+  useEffect(() => {
+    let unsubDoc: (() => void) | null = null;
 
-  useEffect(() => onAuthStateChanged(auth, (u) => load(u)), []);
+    const unsubAuth = onAuthStateChanged(auth, (u) => {
+      // เลิก subscribe doc ของ user คนก่อน
+      if (unsubDoc) {
+        unsubDoc();
+        unsubDoc = null;
+      }
+
+      if (!u) {
+        setUser(null);
+        setProfile(null);
+        setRole(null);
+        setLoading(false);
+        return;
+      }
+
+      setUser(u);
+      // realtime + cache-first: snapshot แรกมาจาก cache (เร็ว) แล้วตามด้วย server
+      unsubDoc = onSnapshot(
+        doc(db, "users", u.uid),
+        (snap) => {
+          if (snap.exists()) {
+            const data = snap.data() as UserDoc;
+            setProfile({ id: u.uid, ...data });
+            setRole(data.role ?? "member");
+          } else {
+            setProfile(null);
+            setRole("member");
+          }
+          setLoading(false);
+        },
+        () => {
+          setProfile(null);
+          setRole("member");
+          setLoading(false);
+        }
+      );
+    });
+
+    return () => {
+      unsubAuth();
+      if (unsubDoc) unsubDoc();
+    };
+  }, []);
 
   const value: AuthState = {
     user,
     profile,
     role,
     loading,
-    refresh: async () => {
-      if (auth.currentUser) await load(auth.currentUser);
-    },
+    // onSnapshot อัปเดตเองอยู่แล้ว — คงไว้เพื่อ backward compat
+    refresh: async () => {},
     signOut: async () => {
       await fbSignOut(auth);
     },
