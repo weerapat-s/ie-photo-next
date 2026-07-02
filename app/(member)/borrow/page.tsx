@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { collection, query, where, orderBy, addDoc, Timestamp, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase/client";
+import { db } from "@/lib/firebase/client";
+import { compressImageToDataUrl } from "@/lib/image";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useCollection } from "@/lib/hooks";
 import { PageHeader, Card, Spinner, Button, Field, inputClass, EmptyState } from "@/components/ui";
@@ -53,12 +53,9 @@ export default function BorrowPage() {
     if (new Date(end) <= new Date(start)) return setErr("เวลาคืนต้องอยู่หลังเวลายืม");
     setBusy(true);
     try {
-      // upload เอกสารครั้งเดียว ใช้ร่วมทุกชิ้น
-      const ext = file.name.split(".").pop() || "jpg";
-      const path = `booking_forms/${user.uid}_${Date.now()}.${ext}`;
-      const r = ref(storage, path);
-      await uploadBytes(r, file);
-      const formImageUrl = await getDownloadURL(r);
+      // ย่อ+บีบอัดเอกสารเป็น data URL เก็บใน Firestore ตรง (ไม่ต้องใช้ Storage)
+      // ใช้ครั้งเดียว แชร์กับทุกชิ้นที่เลือก
+      const formImageUrl = await compressImageToDataUrl(file, 1400, 0.75);
 
       const userName = `${profile?.firstName ?? ""} ${profile?.lastName ?? ""}`.trim() || user.email || "";
       const items = equipments.filter((eq) => selected.has(eq.id));
@@ -89,7 +86,7 @@ export default function BorrowPage() {
       );
       router.push("/my-bookings");
     } catch {
-      setErr("ส่งคำขอไม่สำเร็จ — ตรวจว่า deploy Rules แล้วหรือยัง");
+      setErr("ส่งคำขอไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
       setBusy(false);
     }
   }
@@ -135,10 +132,10 @@ export default function BorrowPage() {
           <Field label="วัตถุประสงค์" required>
             <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} className={inputClass} />
           </Field>
-          <Field label="เอกสารขออนุญาต (JPG, PNG, PDF)" required>
+          <Field label="เอกสารขออนุญาต — ถ่ายรูปหรือแนบภาพ (JPG, PNG)" required>
             <input
               type="file"
-              accept="image/*,.pdf"
+              accept="image/*"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               className="block w-full text-sm"
             />

@@ -2,8 +2,8 @@
 // app/(member)/my-bookings/page.tsx — การจองของฉัน + คืนอุปกรณ์
 import { useState } from "react";
 import { collection, query, where, orderBy, doc, updateDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase/client";
+import { db } from "@/lib/firebase/client";
+import { compressImageToDataUrl } from "@/lib/image";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useCollection } from "@/lib/hooks";
 import { PageHeader, Card, Badge, Spinner, Button, Modal, EmptyState } from "@/components/ui";
@@ -84,13 +84,11 @@ function ReturnModal({ booking, onClose }: { booking: WithId<BookingDoc>; onClos
     setBusy(true);
     setErr("");
     try {
-      const ext = file.name.split(".").pop() || "jpg";
-      const r = ref(storage, `returns/${booking.id}_${Date.now()}.${ext}`);
-      await uploadBytes(r, file);
-      const url = await getDownloadURL(r);
+      // ย่อ+บีบอัดเป็น data URL เก็บใน Firestore ตรง (ไม่ต้องใช้ Storage)
+      const returnImageUrl = await compressImageToDataUrl(file, 1000, 0.75);
       await updateDoc(doc(db, "bookings", booking.id), {
         status: "pending_return",
-        returnImageUrl: url,
+        returnImageUrl,
       });
       onClose();
     } catch {
