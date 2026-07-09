@@ -68,6 +68,14 @@ export default function Navbar() {
         </div>
 
         <div className="ml-auto hidden items-center gap-2 lg:flex">
+          <a
+            href="https://immich.ienas.site/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg px-2.5 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100"
+          >
+            🖼️ ภาพกิจกรรม
+          </a>
           <a href="tel:0621481739" className="text-sm font-medium text-green-600">
             📞 062-148-1739
           </a>
@@ -111,6 +119,15 @@ export default function Navbar() {
           >
             <span>👤</span> โปรไฟล์
           </Link>
+          <a
+            href="https://immich.ienas.site/"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-neutral-700"
+          >
+            <span>🖼️</span> ภาพกิจกรรมที่ผ่านมา
+          </a>
           <a href="tel:0621481739" className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-green-600">
             <span>📞</span> 062-148-1739
           </a>
