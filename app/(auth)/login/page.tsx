@@ -115,6 +115,16 @@ export default function LoginPage() {
             สมัครสมาชิกใหม่
           </Link>
         </p>
+
+        <div className="mt-4 border-t border-white/60 pt-4 text-center">
+          <p className="text-sm text-neutral-500">บุคคลภายนอกต้องการจองสตูดิโอ?</p>
+          <Link
+            href="/book"
+            className="mt-1 inline-block text-sm font-semibold text-orange-600 hover:underline"
+          >
+            🎬 จองได้เลยไม่ต้องเข้าสู่ระบบ →
+          </Link>
+        </div>
       </div>
     </div>
   );

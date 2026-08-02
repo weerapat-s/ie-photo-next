@@ -113,9 +113,11 @@ export default function AdminBookingsPage() {
                     <span>{b.bookingType === "studio" ? "🎬" : "📷"}</span>
                     <span className="font-medium">{b.itemName}</span>
                     <Badge className={BOOKING_STATUS[b.status].cls}>{BOOKING_STATUS[b.status].label}</Badge>
+                    {!b.userId && <Badge className="bg-amber-100 text-amber-700">บุคคลภายนอก</Badge>}
                   </div>
                   <p className="mt-1 text-sm text-neutral-600">
                     👤 {b.userName} {b.userPhone && `· 📞 ${b.userPhone}`}
+                    {b.guestEmail && ` · ✉️ ${b.guestEmail}`}
                   </p>
                   <p className="text-sm text-neutral-500">
                     {fmtDateTime(b.startAt)} → {fmtDateTime(b.endAt)}

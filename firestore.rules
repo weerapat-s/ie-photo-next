@@ -39,12 +39,36 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // จองสตูดิโอโดยไม่ล็อกอิน (หน้า /book) — อนุญาตแคบที่สุดเท่าที่ทำได้
+    // อ่านไม่ได้ / แก้ไม่ได้ / ลบไม่ได้ สร้างได้อย่างเดียว และต้องผ่านเงื่อนไขทุกข้อ
+    function isValidGuestBooking() {
+      let d = request.resource.data;
+      return d.bookingType == 'studio'
+             && d.status == 'pending'
+             && d.userId == null
+             && exists(/databases/$(database)/documents/studios/$(d.itemId))
+             && d.guestName is string  && d.guestName.size() > 0 && d.guestName.size() <= 100
+             && d.guestEmail is string && d.guestEmail.matches('.+@.+[.].+') && d.guestEmail.size() <= 120
+             && d.userName is string   && d.userName.size() > 0 && d.userName.size() <= 100
+             && d.userPhone is string  && d.userPhone.size() >= 9 && d.userPhone.size() <= 20
+             && d.usageReason is string && d.usageReason.size() > 0 && d.usageReason.size() <= 500
+             && d.startAt is timestamp && d.endAt is timestamp
+             && d.endAt > d.startAt
+             && d.startAt > request.time - duration.value(5, 'm')
+             // กันยัดรูป base64 ขนาดใหญ่เข้ามาทาง guest form
+             && d.formImageUrl == null
+             && d.returnImageUrl == null
+             && d.responsibleUserId == null
+             && d.consentToken == null;
+    }
+
     // ── bookings ─────────────────────────────────────────────
     match /bookings/{id} {
       allow read:   if isSignedIn();
-      allow create: if isSignedIn()
-                       && request.resource.data.userId == request.auth.uid
-                       && request.resource.data.status == 'pending';
+      allow create: if (isSignedIn()
+                        && request.resource.data.userId == request.auth.uid
+                        && request.resource.data.status == 'pending')
+                       || (request.auth == null && isValidGuestBooking());
       allow update: if isAdmin()
                        || (isSignedIn() && resource.data.userId == request.auth.uid && onlyReturnChanged());
       allow delete: if isAdmin();

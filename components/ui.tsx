@@ -95,7 +95,7 @@ export function Modal({
       onClick={onClose}
     >
       <div
-        className={`glass-card w-full ${maxWidth} max-h-[90vh] overflow-y-auto rounded-3xl p-6`}
+        className={`w-full ${maxWidth} max-h-[90vh] overflow-y-auto rounded-3xl border border-white/70 bg-white/95 p-6 shadow-[0_30px_80px_rgba(7,17,31,.25)] backdrop-blur-xl`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
