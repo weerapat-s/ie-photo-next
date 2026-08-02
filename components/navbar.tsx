@@ -74,7 +74,7 @@ export default function Navbar() {
 
         <div className="ml-auto hidden shrink-0 items-center gap-1 lg:flex">
           <a
-            href="https://immich.ienas.site/"
+            href="https://nextcloud.ienas.site/s/z6gZY5wcSiCoXBg"
             target="_blank"
             rel="noopener noreferrer"
             title="ภาพกิจกรรมที่ผ่านมา"
@@ -129,7 +129,7 @@ export default function Navbar() {
             <span>👤</span> โปรไฟล์
           </Link>
           <a
-            href="https://immich.ienas.site/"
+            href="https://nextcloud.ienas.site/s/z6gZY5wcSiCoXBg"
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => setOpen(false)}
