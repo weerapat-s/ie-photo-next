@@ -14,7 +14,7 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
 }
 
 export function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <div className={`glass-card rounded-3xl p-5 ${className}`}>{children}</div>;
+  return <div className={`glass-card animate-in rounded-3xl p-5 ${className}`}>{children}</div>;
 }
 
 export function Badge({ children, className = "" }: { children: React.ReactNode; className?: string }) {

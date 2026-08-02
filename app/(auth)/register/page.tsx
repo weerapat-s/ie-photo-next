@@ -53,7 +53,7 @@ export default function RegisterPage() {
 
   return (
     <div className="flex-1 flex items-center justify-center p-6">
-      <div className="glass-card w-full max-w-sm rounded-3xl p-8">
+      <div className="glass-card animate-in w-full max-w-sm rounded-3xl p-8">
         <div className="mb-6 text-center">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--orange)] to-[var(--pink)] text-2xl text-white shadow-[0_10px_26px_rgba(255,91,31,.35)]">
             📷

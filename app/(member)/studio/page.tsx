@@ -32,9 +32,9 @@ export default function StudioPage() {
           {studios.map((s) => (
             <div
               key={s.id}
-              className={`rounded-3xl p-6 ${
+              className={`animate-in rounded-3xl p-6 transition-transform duration-400 hover:-translate-y-1 ${
                 s.theme === "dark"
-                  ? "border border-white/10 bg-neutral-900 text-white shadow-[0_24px_60px_rgba(7,17,31,.28)]"
+                  ? "border border-white/10 bg-neutral-900 text-white shadow-[0_24px_60px_rgba(7,17,31,.28)] hover:shadow-[0_30px_70px_rgba(7,17,31,.35)]"
                   : "glass-card"
               }`}
             >
