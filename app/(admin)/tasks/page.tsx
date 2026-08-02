@@ -61,10 +61,10 @@ export default function AdminTasksPage() {
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="มอบหมายให้" required>
-              <select value={assignee} onChange={(e) => setAssignee(e.target.value)} className={inputClass}>
-                <option value="">— เลือกสมาชิก —</option>
+              <select value={assignee} onChange={(e) => setAssignee(e.target.value)} className={`${inputClass} bg-slate-900`}>
+                <option value="" className="bg-slate-900 text-slate-400">— เลือกสมาชิก —</option>
                 {users.map((u) => (
-                  <option key={u.id} value={u.id}>
+                  <option key={u.id} value={u.id} className="bg-slate-900 text-slate-200">
                     {`${u.firstName} ${u.lastName}`.trim() || u.studentId}
                   </option>
                 ))}
@@ -89,9 +89,9 @@ export default function AdminTasksPage() {
           {tasks.map((t) => (
             <Card key={t.id} className="flex flex-wrap items-start gap-3">
               <div className="min-w-0 flex-1">
-                <p className="font-medium">{t.title}</p>
-                {t.description && <p className="text-sm text-neutral-600">{t.description}</p>}
-                <p className="mt-1 text-xs text-neutral-400">
+                <p className="font-medium text-slate-100">{t.title}</p>
+                {t.description && <p className="text-sm text-slate-300">{t.description}</p>}
+                <p className="mt-1 text-xs text-slate-400">
                   → {t.assignedToName} {t.dueDate && `· กำหนด ${fmtDate(t.dueDate)}`}
                 </p>
               </div>
@@ -102,7 +102,7 @@ export default function AdminTasksPage() {
                     ✓
                   </Button>
                 )}
-                <Button variant="ghost" onClick={() => confirm("ลบงานนี้?") && deleteDoc(doc(db, "tasks", t.id))} className="text-red-500">
+                <Button variant="ghost" onClick={() => confirm("ลบงานนี้?") && deleteDoc(doc(db, "tasks", t.id))} className="text-red-400 hover:text-red-300 hover:bg-red-500/10">
                   🗑️
                 </Button>
               </div>

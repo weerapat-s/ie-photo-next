@@ -63,8 +63,10 @@ export default function Navbar() {
             <Link
               key={l.href}
               href={l.href}
-              className={`shrink-0 whitespace-nowrap rounded-lg px-2 py-1.5 text-sm transition hover:bg-neutral-100 ${
-                pathname === l.href ? "font-semibold text-orange-600" : "text-neutral-600"
+              className={`shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm transition ${
+                pathname === l.href
+                  ? "font-semibold text-orange-400 bg-orange-500/10 border border-orange-500/20 shadow-[0_0_12px_rgba(255,91,31,0.2)]"
+                  : "text-slate-300 hover:bg-slate-800/60 hover:text-slate-100"
               }`}
             >
               {l.label}
@@ -78,53 +80,55 @@ export default function Navbar() {
             target="_blank"
             rel="noopener noreferrer"
             title="ภาพกิจกรรมที่ผ่านมา"
-            className="rounded-lg p-2 text-base text-neutral-600 hover:bg-neutral-100"
+            className="rounded-lg p-2 text-base text-slate-300 hover:bg-slate-800/60 hover:text-slate-100 transition"
           >
             🖼️
           </a>
-          <a href="tel:0621481739" title="โทร 062-148-1739" className="rounded-lg p-2 text-base text-green-600 hover:bg-neutral-100">
+          <a href="tel:0621481739" title="โทร 062-148-1739" className="rounded-lg p-2 text-base text-emerald-400 hover:bg-slate-800/60 transition">
             📞
           </a>
           <Link
             href="/profile"
-            className="max-w-[7rem] truncate rounded-lg px-2.5 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100"
+            className="max-w-[7rem] truncate rounded-lg px-2.5 py-1.5 text-sm text-slate-300 hover:bg-slate-800/60 hover:text-slate-100 transition"
           >
             {profile?.firstName || "โปรไฟล์"}
           </Link>
           <button
             onClick={handleLogout}
-            className="shrink-0 rounded-full border border-white/70 bg-white/50 px-3 py-1.5 text-sm backdrop-blur transition hover:bg-white/80"
+            className="shrink-0 rounded-full border border-slate-700/80 bg-slate-800/60 px-3 py-1.5 text-sm text-slate-200 backdrop-blur transition hover:bg-slate-700/80 hover:border-slate-600"
           >
             ออกจากระบบ
           </button>
         </div>
 
         {/* mobile toggle */}
-        <button onClick={() => setOpen(!open)} className="ml-auto rounded-lg p-2 text-xl lg:hidden">
+        <button onClick={() => setOpen(!open)} className="ml-auto rounded-lg p-2 text-xl text-slate-200 lg:hidden">
           {open ? "✕" : "☰"}
         </button>
       </div>
 
       {/* mobile menu */}
       {open && (
-        <div className="glass-nav border-t px-4 py-2 lg:hidden">
+        <div className="glass-nav border-t border-slate-800/80 px-4 py-3 lg:hidden">
           {links.map((l) => (
             <Link
               key={l.href}
               href={l.href}
               onClick={() => setOpen(false)}
-              className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm ${
-                pathname === l.href ? "bg-orange-50 font-semibold text-orange-600" : "text-neutral-700"
+              className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm transition ${
+                pathname === l.href
+                  ? "bg-orange-500/15 font-semibold text-orange-400 border border-orange-500/20"
+                  : "text-slate-300 hover:bg-slate-800/60"
               }`}
             >
               <span>{l.icon}</span> {l.label}
             </Link>
           ))}
-          <div className="my-2 border-t border-neutral-100" />
+          <div className="my-2 border-t border-slate-800/80" />
           <Link
             href="/profile"
             onClick={() => setOpen(false)}
-            className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-neutral-700"
+            className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-slate-800/60"
           >
             <span>👤</span> โปรไฟล์
           </Link>
@@ -133,16 +137,16 @@ export default function Navbar() {
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => setOpen(false)}
-            className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-neutral-700"
+            className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-slate-800/60"
           >
             <span>🖼️</span> ภาพกิจกรรมที่ผ่านมา
           </a>
-          <a href="tel:0621481739" className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-green-600">
+          <a href="tel:0621481739" className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-emerald-400">
             <span>📞</span> 062-148-1739
           </a>
           <button
             onClick={handleLogout}
-            className="mt-1 w-full rounded-full border border-white/70 bg-white/50 px-3 py-2 text-sm"
+            className="mt-2 w-full rounded-full border border-slate-700/80 bg-slate-800/60 px-3 py-2 text-sm text-slate-200"
           >
             ออกจากระบบ
           </button>

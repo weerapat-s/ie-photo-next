@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ff5b1f",
+  themeColor: "#090d16",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -40,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="th" className={`${kanit.variable} h-full antialiased`}>
+    <html lang="th" className={`${kanit.variable} h-full antialiased dark`}>
       <head>
         {/* เปิด TLS connection ล่วงหน้า — API call แรกไปถึง Firebase เร็วขึ้น */}
         <link rel="preconnect" href="https://firestore.googleapis.com" />
@@ -50,7 +50,7 @@ export default function RootLayout({
             (metadata API ของ Next.js เรนเดอร์แค่ mobile-web-app-capable เฉยๆ) */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
-      <body className="min-h-full flex flex-col bg-neutral-50 font-[family-name:var(--font-kanit)]">
+      <body className="min-h-full flex flex-col font-[family-name:var(--font-kanit)] text-slate-100">
         <SwRegister />
         <AuthProvider>{children}</AuthProvider>
       </body>

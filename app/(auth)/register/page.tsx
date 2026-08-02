@@ -52,23 +52,23 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center p-6">
-      <div className="glass-card animate-in w-full max-w-sm rounded-3xl p-8">
+    <div className="flex-1 flex items-center justify-center p-6 min-h-screen">
+      <div className="glass-card animate-in w-full max-w-sm rounded-3xl p-8 shadow-[0_25px_60px_rgba(0,0,0,0.7),0_0_30px_rgba(255,91,31,0.15)]">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--orange)] to-[var(--pink)] text-2xl text-white shadow-[0_10px_26px_rgba(255,91,31,.35)]">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--orange)] to-[var(--pink)] text-2xl text-white shadow-[0_10px_30px_rgba(255,91,31,.45)]">
             📷
           </div>
-          <h1 className="text-xl font-semibold">สมัครสมาชิก</h1>
-          <p className="text-sm text-neutral-500">IE-Photo Booking System</p>
+          <h1 className="text-xl font-semibold text-slate-100">สมัครสมาชิก</h1>
+          <p className="text-sm text-slate-400">IE-Photo Booking System</p>
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">⚠️ {error}</div>
+          <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm text-red-400">⚠️ {error}</div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium">อีเมล KMITL</label>
+            <label className="mb-1 block text-sm font-medium text-slate-300">อีเมล KMITL</label>
             <input
               type="email"
               value={email}
@@ -78,11 +78,11 @@ export default function RegisterPage() {
               className={`glass-input w-full rounded-xl px-3.5 py-2.5 text-sm ${emailValid ? "" : "!border-red-400"}`}
               required
             />
-            {!emailValid && <p className="mt-1 text-xs text-red-500">ต้องเป็นอีเมล @kmitl.ac.th</p>}
+            {!emailValid && <p className="mt-1 text-xs text-red-400">ต้องเป็นอีเมล @kmitl.ac.th</p>}
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">รหัสผ่าน</label>
+            <label className="mb-1 block text-sm font-medium text-slate-300">รหัสผ่าน</label>
             <input
               type="password"
               value={password}
@@ -95,7 +95,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">ยืนยันรหัสผ่าน</label>
+            <label className="mb-1 block text-sm font-medium text-slate-300">ยืนยันรหัสผ่าน</label>
             <input
               type="password"
               value={confirm}
@@ -106,7 +106,7 @@ export default function RegisterPage() {
               required
             />
             {confirm && password !== confirm && (
-              <p className="mt-1 text-xs text-red-500">รหัสผ่านไม่ตรงกัน</p>
+              <p className="mt-1 text-xs text-red-400">รหัสผ่านไม่ตรงกัน</p>
             )}
           </div>
 
@@ -119,9 +119,9 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        <p className="mt-5 text-center text-sm text-neutral-500">
+        <p className="mt-5 text-center text-sm text-slate-400">
           มีบัญชีแล้ว?{" "}
-          <Link href="/login" className="font-semibold text-orange-600">
+          <Link href="/login" className="font-semibold text-orange-400 hover:underline">
             เข้าสู่ระบบ
           </Link>
         </p>

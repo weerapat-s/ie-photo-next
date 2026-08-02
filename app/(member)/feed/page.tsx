@@ -42,12 +42,12 @@ export default function FeedPage() {
             const liked = !!user && f.likedBy?.includes(user.uid);
             return (
               <Card key={f.id}>
-                <p className="text-sm">{f.message}</p>
+                <p className="text-sm text-slate-200">{f.message}</p>
                 {f.formImageUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={f.formImageUrl} alt="" className="mt-2 max-h-60 w-full rounded-lg object-cover" />
+                  <img src={f.formImageUrl} alt="" className="mt-2 max-h-60 w-full rounded-xl object-cover border border-white/10" />
                 )}
-                <div className="mt-3 flex items-center justify-between text-xs text-neutral-400">
+                <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
                   <span>{fmtDateTime(f.createdAt)}</span>
                   <div className="flex items-center gap-2">
                     {f.bookingStatus && (
@@ -55,7 +55,7 @@ export default function FeedPage() {
                         {BOOKING_STATUS[f.bookingStatus].label}
                       </span>
                     )}
-                    <button onClick={() => toggleLike(f.id, liked)} className="flex items-center gap-1">
+                    <button onClick={() => toggleLike(f.id, liked)} className="flex items-center gap-1 hover:text-slate-200 transition">
                       <span>{liked ? "❤️" : "🤍"}</span>
                       {f.likeCount ?? 0}
                     </button>

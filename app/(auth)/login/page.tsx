@@ -49,26 +49,26 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center p-6">
-      <div className="glass-card animate-in w-full max-w-sm rounded-3xl p-8">
+    <div className="flex-1 flex items-center justify-center p-6 min-h-screen">
+      <div className="glass-card animate-in w-full max-w-sm rounded-3xl p-8 shadow-[0_25px_60px_rgba(0,0,0,0.7),0_0_30px_rgba(255,91,31,0.15)]">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--orange)] to-[var(--pink)] text-2xl text-white shadow-[0_10px_26px_rgba(255,91,31,.35)]">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--orange)] to-[var(--pink)] text-2xl text-white shadow-[0_10px_30px_rgba(255,91,31,.45)]">
             📷
           </div>
-          <h1 className="text-xl font-semibold">เข้าสู่ระบบ</h1>
-          <p className="text-sm text-neutral-500">ยินดีต้อนรับกลับสู่ IE-Photo</p>
+          <h1 className="text-xl font-semibold text-slate-100">เข้าสู่ระบบ</h1>
+          <p className="text-sm text-slate-400">ยินดีต้อนรับกลับสู่ IE-Photo</p>
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">⚠️ {error}</div>
+          <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm text-red-400">⚠️ {error}</div>
         )}
         {info && (
-          <div className="mb-4 rounded-lg bg-green-50 px-4 py-2.5 text-sm text-green-700">✅ {info}</div>
+          <div className="mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5 text-sm text-emerald-400">✅ {info}</div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium">อีเมล</label>
+            <label className="mb-1 block text-sm font-medium text-slate-300">อีเมล</label>
             <input
               type="email"
               value={email}
@@ -80,7 +80,7 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">รหัสผ่าน</label>
+            <label className="mb-1 block text-sm font-medium text-slate-300">รหัสผ่าน</label>
             <input
               type="password"
               value={password}
@@ -104,23 +104,23 @@ export default function LoginPage() {
           type="button"
           onClick={handleReset}
           disabled={resetting}
-          className="mt-3 w-full text-center text-sm text-neutral-500 underline disabled:opacity-50"
+          className="mt-3 w-full text-center text-sm text-slate-400 hover:text-slate-200 underline disabled:opacity-50"
         >
           {resetting ? "กำลังส่ง…" : "ลืมรหัสผ่าน?"}
         </button>
 
-        <p className="mt-5 text-center text-sm text-neutral-500">
+        <p className="mt-5 text-center text-sm text-slate-400">
           ยังไม่มีบัญชี?{" "}
-          <Link href="/register" className="font-semibold text-orange-600">
+          <Link href="/register" className="font-semibold text-orange-400 hover:underline">
             สมัครสมาชิกใหม่
           </Link>
         </p>
 
-        <div className="mt-4 border-t border-white/60 pt-4 text-center">
-          <p className="text-sm text-neutral-500">บุคคลภายนอกต้องการจองสตูดิโอ?</p>
+        <div className="mt-4 border-t border-slate-800/80 pt-4 text-center">
+          <p className="text-sm text-slate-400">บุคคลภายนอกต้องการจองสตูดิโอ?</p>
           <Link
             href="/book"
-            className="mt-1 inline-block text-sm font-semibold text-orange-600 hover:underline"
+            className="mt-1 inline-block text-sm font-semibold text-orange-400 hover:underline"
           >
             🎬 จองได้เลยไม่ต้องเข้าสู่ระบบ →
           </Link>

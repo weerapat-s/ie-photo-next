@@ -90,8 +90,10 @@ export default function AdminBookingsPage() {
           <button
             key={f.key}
             onClick={() => setFilter(f.key)}
-            className={`rounded-full px-3 py-1 text-sm ${
-              filter === f.key ? "bg-orange-500 text-white" : "bg-neutral-100 text-neutral-600"
+            className={`rounded-full px-3.5 py-1.5 text-sm transition ${
+              filter === f.key
+                ? "bg-orange-500 text-white shadow-[0_0_15px_rgba(255,91,31,0.4)] font-medium"
+                : "bg-slate-800/80 text-slate-300 hover:bg-slate-700/80 border border-slate-700/50"
             }`}
           >
             {f.label}
@@ -111,18 +113,18 @@ export default function AdminBookingsPage() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span>{b.bookingType === "studio" ? "🎬" : "📷"}</span>
-                    <span className="font-medium">{b.itemName}</span>
+                    <span className="font-medium text-slate-100">{b.itemName}</span>
                     <Badge className={BOOKING_STATUS[b.status].cls}>{BOOKING_STATUS[b.status].label}</Badge>
-                    {!b.userId && <Badge className="bg-amber-100 text-amber-700">บุคคลภายนอก</Badge>}
+                    {!b.userId && <Badge className="bg-amber-500/20 text-amber-300 border border-amber-500/30">บุคคลภายนอก</Badge>}
                   </div>
-                  <p className="mt-1 text-sm text-neutral-600">
+                  <p className="mt-1 text-sm text-slate-300">
                     👤 {b.userName} {b.userPhone && `· 📞 ${b.userPhone}`}
                     {b.guestEmail && ` · ✉️ ${b.guestEmail}`}
                   </p>
-                  <p className="text-sm text-neutral-500">
+                  <p className="text-sm text-slate-400">
                     {fmtDateTime(b.startAt)} → {fmtDateTime(b.endAt)}
                   </p>
-                  {b.usageReason && <p className="mt-1 text-sm text-neutral-600">📝 {b.usageReason}</p>}
+                  {b.usageReason && <p className="mt-1 text-sm text-slate-300">📝 {b.usageReason}</p>}
                 </div>
 
                 <div className="flex flex-col items-end gap-2">
@@ -160,8 +162,8 @@ export default function AdminBookingsPage() {
         {viewImg && (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={viewImg} alt="evidence" className="max-h-[70vh] w-full rounded-lg object-contain" />
-            <a href={viewImg} target="_blank" rel="noreferrer" className="mt-3 block text-center text-sm text-orange-600">
+            <img src={viewImg} alt="evidence" className="max-h-[70vh] w-full rounded-xl border border-white/10 object-contain" />
+            <a href={viewImg} target="_blank" rel="noreferrer" className="mt-3 block text-center text-sm text-orange-400 hover:underline">
               เปิดในแท็บใหม่ ↗
             </a>
           </>

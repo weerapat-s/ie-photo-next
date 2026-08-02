@@ -9,9 +9,9 @@ import { PageHeader, Card, Badge, Spinner, Button, EmptyState } from "@/componen
 import type { UserDoc, Role } from "@/lib/types";
 
 const ROLE_BADGE: Record<Role, string> = {
-  super_admin: "bg-purple-100 text-purple-700",
-  admin: "bg-green-100 text-green-700",
-  member: "bg-neutral-100 text-neutral-600",
+  super_admin: "bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-[0_0_12px_rgba(168,85,247,0.2)]",
+  admin: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.2)]",
+  member: "bg-slate-800 text-slate-300 border border-slate-700/60",
 };
 const ROLE_LABEL: Record<Role, string> = {
   super_admin: "⭐ Super Admin",
@@ -56,8 +56,8 @@ export default function UsersPage() {
     <div>
       <PageHeader title="จัดการสมาชิก" subtitle="เปลี่ยนบทบาท · ลบบัญชี" />
 
-      {msg && <div className="mb-3 rounded-lg bg-green-50 px-4 py-2.5 text-sm text-green-700">✅ {msg}</div>}
-      {err && <div className="mb-3 rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">⚠️ {err}</div>}
+      {msg && <div className="mb-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5 text-sm text-emerald-400">✅ {msg}</div>}
+      {err && <div className="mb-3 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm text-red-400">⚠️ {err}</div>}
 
       {loading ? (
         <Spinner />
@@ -71,16 +71,16 @@ export default function UsersPage() {
             return (
               <Card key={u.id} className="flex flex-wrap items-center gap-3 p-3">
                 <div className="min-w-0">
-                  <p className="font-medium">
-                    {u.firstName || u.lastName ? `${u.firstName} ${u.lastName}`.trim() : <span className="text-neutral-400">ยังไม่ได้กรอกชื่อ</span>}
-                    {isMe && <span className="ml-1 text-xs text-neutral-400">(คุณ)</span>}
+                  <p className="font-medium text-slate-100">
+                    {u.firstName || u.lastName ? `${u.firstName} ${u.lastName}`.trim() : <span className="text-slate-500">ยังไม่ได้กรอกชื่อ</span>}
+                    {isMe && <span className="ml-1 text-xs text-slate-400">(คุณ)</span>}
                   </p>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-xs text-slate-400">
                     {u.studentId} · {u.email}
                     {u.phone && (
                       <>
                         {" · "}
-                        <a href={`tel:${u.phone}`} className="text-green-600">
+                        <a href={`tel:${u.phone}`} className="text-emerald-400 hover:underline">
                           📞 {u.phone}
                         </a>
                       </>
@@ -93,13 +93,13 @@ export default function UsersPage() {
                     <select
                       defaultValue={u.role}
                       onChange={(e) => changeRole(u.id, e.target.value as Role)}
-                      className="rounded-lg border border-neutral-300 px-2 py-1.5 pr-7 text-sm"
+                      className="rounded-xl border border-slate-700/80 bg-slate-800/80 text-slate-200 px-2.5 py-1.5 pr-7 text-sm outline-none focus:border-orange-500"
                     >
-                      <option value="member">Member</option>
-                      <option value="admin">Admin</option>
-                      {isSuper && <option value="super_admin">Super Admin</option>}
+                      <option value="member" className="bg-slate-900 text-slate-200">Member</option>
+                      <option value="admin" className="bg-slate-900 text-slate-200">Admin</option>
+                      {isSuper && <option value="super_admin" className="bg-slate-900 text-slate-200">Super Admin</option>}
                     </select>
-                    <Button variant="ghost" onClick={() => deleteUser(u.id, u.studentId)} className="text-red-500">
+                    <Button variant="ghost" onClick={() => deleteUser(u.id, u.studentId)} className="text-red-400 hover:text-red-300 hover:bg-red-500/10">
                       🗑️
                     </Button>
                   </div>

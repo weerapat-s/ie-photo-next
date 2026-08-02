@@ -49,72 +49,25 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --background: #090d16;
+  --foreground: #f1f5f9;
+  --card: #111827;
+  --card-foreground: #f1f5f9;
+  --popover: #111827;
+  --popover-foreground: #f1f5f9;
+  --primary: #ff5b1f;
+  --primary-foreground: #ffffff;
+  --secondary: #1e293b;
+  --secondary-foreground: #f1f5f9;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #1e293b;
+  --accent-foreground: #f1f5f9;
+  --destructive: #ef4444;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #ff5b1f;
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
 }
 
 @layer base {
@@ -126,14 +79,14 @@
   }
 }
 
-/* ═══ IE-Photo glass theme (จาก iephoto.online) ═══════════════════════ */
+/* ═══ IE-Photo Dark Neon Theme (inspired by modern trading platforms) ═══════════════════════ */
 :root {
   --orange: #ff5b1f;
   --orange-light: #ff8d61;
   --pink: #ff2f75;
-  --app-bg: #edf1f6;
-  --ink: #07111f;
-  --muted: #64748b;
+  --app-bg: #090d16;
+  --ink: #f1f5f9;
+  --muted: #94a3b8;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -144,7 +97,7 @@ body {
   position: relative;
 }
 
-/* ambient glow ส้ม/ชมพู ลอยพื้นหลัง */
+/* ambient neon glow ส้ม/ชมพู ลอยพื้นหลัง */
 body::before {
   content: "";
   position: fixed;
@@ -152,74 +105,92 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(40rem 40rem at 12% -5%, rgba(255, 91, 31, 0.18), transparent 60%),
-    radial-gradient(38rem 38rem at 100% 8%, rgba(255, 47, 117, 0.16), transparent 60%),
-    radial-gradient(45rem 45rem at 60% 110%, rgba(255, 141, 97, 0.14), transparent 60%);
+    radial-gradient(45rem 45rem at 15% -10%, rgba(255, 91, 31, 0.16), transparent 65%),
+    radial-gradient(40rem 40rem at 85% 15%, rgba(255, 47, 117, 0.14), transparent 65%),
+    radial-gradient(50rem 50rem at 50% 115%, rgba(255, 141, 97, 0.1), transparent 70%);
 }
 
-/* การ์ดกระจกฝ้า */
+/* การ์ดกระจกเข้ม neon glow */
 .glass-card {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.28));
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  background: linear-gradient(145deg, rgba(22, 30, 46, 0.75), rgba(13, 18, 28, 0.65));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
   box-shadow:
-    0 20px 50px rgba(7, 17, 31, 0.08),
-    inset 0 1px 1px rgba(255, 255, 255, 0.9);
-  transition: transform 0.4s var(--ease), box-shadow 0.4s var(--ease);
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    inset 0 1px 1px rgba(255, 255, 255, 0.08);
+  transition: transform 0.4s var(--ease), box-shadow 0.4s var(--ease), border-color 0.4s var(--ease);
 }
 .glass-card:hover {
-  transform: translateY(-4px) scale(1.01);
+  transform: translateY(-3px) scale(1.005);
+  border-color: rgba(255, 91, 31, 0.3);
   box-shadow:
-    0 30px 70px rgba(7, 17, 31, 0.14),
-    inset 0 1px 1px rgba(255, 255, 255, 0.9);
+    0 25px 60px rgba(0, 0, 0, 0.6),
+    0 0 25px rgba(255, 91, 31, 0.15),
+    inset 0 1px 1px rgba(255, 255, 255, 0.12);
+}
+
+/* การ์ดเน้นพิเศษ (glow card) */
+.glow-card {
+  background: linear-gradient(145deg, rgba(28, 38, 58, 0.85), rgba(16, 23, 36, 0.75));
+  border: 1px solid rgba(255, 91, 31, 0.35);
+  backdrop-filter: blur(16px) saturate(180%);
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.6),
+    0 0 30px rgba(255, 91, 31, 0.2),
+    inset 0 1px 1px rgba(255, 255, 255, 0.15);
 }
 
 /* เข้าฉากตอน mount — fade+float ขึ้น */
 @keyframes fadeUpFloat {
-  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  from { opacity: 0; transform: translateY(20px) scale(0.98); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 .animate-in {
-  animation: fadeUpFloat 0.6s var(--ease) both;
+  animation: fadeUpFloat 0.5s var(--ease) both;
 }
 
-/* navbar กระจก */
+/* navbar กระจกเข้ม */
 .glass-nav {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.45));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(12px) saturate(160%);
-  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  background: rgba(11, 15, 25, 0.82);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
 }
 
-/* ปุ่ม gradient ส้ม→ชมพู */
+/* ปุ่ม gradient ส้ม→ชมพู พร้อม neon glow */
 .btn-grad {
   background: linear-gradient(135deg, var(--orange), var(--pink));
-  color: #fff;
-  box-shadow: 0 10px 26px rgba(255, 91, 31, 0.35);
-  transition: transform 0.4s var(--ease), box-shadow 0.4s var(--ease), opacity 0.2s;
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(255, 91, 31, 0.4), 0 0 12px rgba(255, 47, 117, 0.25);
+  transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease), opacity 0.2s;
 }
 .btn-grad:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 14px 32px rgba(255, 47, 117, 0.4);
+  box-shadow: 0 12px 30px rgba(255, 91, 31, 0.55), 0 0 20px rgba(255, 47, 117, 0.4);
 }
 
 /* ข้อความ gradient */
 .text-grad {
-  background: linear-gradient(135deg, var(--orange), var(--pink));
+  background: linear-gradient(135deg, #ff7236, #ff4585);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-/* input บนพื้นกระจก */
+/* input บนพื้นกระจกเข้ม */
 .glass-input {
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  transition: border-color 0.3s, box-shadow 0.3s;
+  background: rgba(18, 25, 38, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+  transition: border-color 0.3s, box-shadow 0.3s, background-color 0.3s;
+}
+.glass-input::placeholder {
+  color: #64748b;
 }
 .glass-input:focus {
   outline: none;
+  background: rgba(22, 31, 48, 0.9);
   border-color: var(--orange);
-  box-shadow: 0 0 0 3px rgba(255, 91, 31, 0.18);
+  box-shadow: 0 0 0 3px rgba(255, 91, 31, 0.25), 0 0 15px rgba(255, 91, 31, 0.15);
 }

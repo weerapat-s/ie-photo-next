@@ -72,16 +72,16 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-md">
-      <h1 className="mb-1 text-2xl font-semibold">ข้อมูลส่วนตัว</h1>
-      <p className="mb-6 text-sm text-neutral-500">จัดการข้อมูลและรูปโปรไฟล์ของคุณ</p>
+      <h1 className="mb-1 text-2xl font-semibold text-slate-100">ข้อมูลส่วนตัว</h1>
+      <p className="mb-6 text-sm text-slate-400">จัดการข้อมูลและรูปโปรไฟล์ของคุณ</p>
 
       {firstLogin && (
-        <div className="mb-4 rounded-lg bg-orange-50 px-4 py-3 text-sm text-orange-700">
+        <div className="mb-4 rounded-xl bg-orange-500/10 border border-orange-500/20 px-4 py-3 text-sm text-orange-400">
           🎉 ยินดีต้อนรับ! กรุณาตั้งค่าโปรไฟล์ก่อนเริ่มใช้งาน
         </div>
       )}
-      {msg && <div className="mb-4 rounded-lg bg-green-50 px-4 py-2.5 text-sm text-green-700">✅ {msg}</div>}
-      {err && <div className="mb-4 rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">⚠️ {err}</div>}
+      {msg && <div className="mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5 text-sm text-emerald-400">✅ {msg}</div>}
+      {err && <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm text-red-400">⚠️ {err}</div>}
 
       <form onSubmit={handleSave} className="glass-card rounded-3xl p-6">
         <div className="mb-5 text-center">
@@ -89,22 +89,22 @@ export default function ProfilePage() {
           <img
             src={preview || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.email || "U")}&background=F2531C&color=fff&size=128`}
             alt="avatar"
-            className="mx-auto h-24 w-24 rounded-2xl object-cover"
+            className="mx-auto h-24 w-24 rounded-2xl object-cover border-2 border-orange-500/40 shadow-[0_0_20px_rgba(255,91,31,0.25)]"
           />
-          <label className="mt-2 inline-block cursor-pointer text-sm text-orange-600">
+          <label className="mt-2 inline-block cursor-pointer text-sm font-medium text-orange-400 hover:text-orange-300 transition">
             เปลี่ยนรูป
             <input type="file" accept="image/*" onChange={onPickImage} className="hidden" />
           </label>
         </div>
 
         <div className="mb-3">
-          <label className="mb-1 block text-sm font-medium">อีเมล</label>
-          <div className="rounded-lg bg-neutral-100 px-3 py-2 text-sm text-neutral-500">{user?.email}</div>
+          <label className="mb-1 block text-sm font-medium text-slate-300">อีเมล</label>
+          <div className="rounded-xl bg-slate-900/80 border border-slate-800 px-3.5 py-2.5 text-sm text-slate-400">{user?.email}</div>
         </div>
 
         <div className="mb-3 grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium">ชื่อจริง *</label>
+            <label className="mb-1 block text-sm font-medium text-slate-300">ชื่อจริง *</label>
             <input
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
@@ -113,7 +113,7 @@ export default function ProfilePage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">นามสกุล</label>
+            <label className="mb-1 block text-sm font-medium text-slate-300">นามสกุล</label>
             <input
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
@@ -124,12 +124,12 @@ export default function ProfilePage() {
         </div>
 
         <div className="mb-5">
-          <label className="mb-1 block text-sm font-medium">เบอร์โทรศัพท์</label>
+          <label className="mb-1 block text-sm font-medium text-slate-300">เบอร์โทรศัพท์</label>
           <input
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="0XXXXXXXXX"
-            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-300"
+            className="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm"
           />
         </div>
 

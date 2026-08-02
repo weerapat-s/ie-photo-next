@@ -32,25 +32,25 @@ export default function StudioPage() {
           {studios.map((s) => (
             <div
               key={s.id}
-              className={`animate-in rounded-3xl p-6 transition-transform duration-400 hover:-translate-y-1 ${
+              className={`animate-in rounded-3xl p-6 transition-all duration-400 hover:-translate-y-1 ${
                 s.theme === "dark"
-                  ? "border border-white/10 bg-neutral-900 text-white shadow-[0_24px_60px_rgba(7,17,31,.28)] hover:shadow-[0_30px_70px_rgba(7,17,31,.35)]"
-                  : "glass-card"
+                  ? "border border-orange-500/30 bg-[#0c121e] text-slate-100 shadow-[0_24px_60px_rgba(0,0,0,0.7),0_0_25px_rgba(255,91,31,0.15)]"
+                  : "glass-card text-slate-100"
               }`}
             >
               <div className="mb-3 flex items-start justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold">{s.name}</h3>
-                  <p className={`text-sm ${s.theme === "dark" ? "text-neutral-300" : "text-neutral-500"}`}>
+                  <h3 className="text-lg font-semibold text-slate-100">{s.name}</h3>
+                  <p className="text-sm text-slate-400">
                     {s.subtitle}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge className={s.status === "open" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>
+                  <Badge className={s.status === "open" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "bg-red-500/20 text-red-300 border border-red-500/30"}>
                     {s.status === "open" ? "เปิดให้จอง" : "ปิด"}
                   </Badge>
                   {isAdmin && (
-                    <button onClick={() => setEditing(s)} className="text-sm underline opacity-70 hover:opacity-100">
+                    <button onClick={() => setEditing(s)} className="text-sm underline text-slate-400 hover:text-slate-200">
                       ✏️ แก้ไข
                     </button>
                   )}
@@ -61,24 +61,22 @@ export default function StudioPage() {
                 {s.tags?.map((t) => (
                   <span
                     key={t}
-                    className={`rounded-full px-2 py-0.5 text-xs ${
-                      s.theme === "dark" ? "bg-white/10" : "bg-neutral-100"
-                    }`}
+                    className="rounded-full px-2.5 py-0.5 text-xs bg-slate-800/80 text-slate-300 border border-slate-700/60"
                   >
                     {t}
                   </span>
                 ))}
               </div>
 
-              <ul className="mb-4 space-y-1 text-sm">
+              <ul className="mb-4 space-y-1 text-sm text-slate-300">
                 {s.features?.map((f) => (
                   <li key={f} className="flex gap-1.5">
-                    <span className="text-orange-500">•</span> {f}
+                    <span className="text-orange-400">•</span> {f}
                   </li>
                 ))}
               </ul>
 
-              <div className={`mb-4 text-xs ${s.theme === "dark" ? "text-neutral-400" : "text-neutral-500"}`}>
+              <div className="mb-4 text-xs text-slate-400">
                 🕐 {s.openHours} &nbsp;·&nbsp; 📞 {s.contactPhone}
               </div>
 
@@ -186,14 +184,14 @@ function BookingModal({
       {done ? (
         <div className="py-4 text-center">
           <div className="mb-2 text-3xl">✅</div>
-          <p className="text-sm">ส่งคำขอจองเรียบร้อย รอแอดมินอนุมัติ</p>
+          <p className="text-sm text-slate-200">ส่งคำขอจองเรียบร้อย รอแอดมินอนุมัติ</p>
           <Button onClick={onClose} className="mt-4">
             ปิด
           </Button>
         </div>
       ) : (
         <>
-          {err && <div className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">⚠️ {err}</div>}
+          {err && <div className="mb-3 rounded-xl bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-400">⚠️ {err}</div>}
           <Field label="วันเวลาที่เริ่ม" required>
             <input type="datetime-local" min={nowLocal} value={start} onChange={(e) => setStart(e.target.value)} className={inputClass} />
           </Field>
@@ -245,7 +243,7 @@ function EditModal({ studio, onClose }: { studio: WithId<StudioDoc>; onClose: ()
 
   return (
     <Modal open onClose={onClose} title={`แก้ไข ${studio.name}`}>
-      {err && <div className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">⚠️ {err}</div>}
+      {err && <div className="mb-3 rounded-xl bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-400">⚠️ {err}</div>}
       <Field label="คำโปรย (subtitle)">
         <input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} className={inputClass} />
       </Field>
@@ -263,13 +261,13 @@ function EditModal({ studio, onClose }: { studio: WithId<StudioDoc>; onClose: ()
       </Field>
       <div className="mb-3 grid grid-cols-2 gap-3">
         <Field label="ธีม">
-          <select value={theme} onChange={(e) => setTheme(e.target.value as StudioDoc["theme"])} className={inputClass}>
+          <select value={theme} onChange={(e) => setTheme(e.target.value as StudioDoc["theme"])} className={`${inputClass} bg-slate-900`}>
             <option value="dark">Dark</option>
             <option value="light">Light</option>
           </select>
         </Field>
         <Field label="สถานะ">
-          <select value={status} onChange={(e) => setStatus(e.target.value as StudioDoc["status"])} className={inputClass}>
+          <select value={status} onChange={(e) => setStatus(e.target.value as StudioDoc["status"])} className={`${inputClass} bg-slate-900`}>
             <option value="open">เปิดให้จอง</option>
             <option value="closed">ปิด</option>
           </select>

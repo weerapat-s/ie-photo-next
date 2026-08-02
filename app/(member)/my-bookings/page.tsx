@@ -37,25 +37,25 @@ export default function MyBookingsPage() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span>{b.bookingType === "studio" ? "🎬" : "📷"}</span>
-                    <span className="font-medium">{b.itemName}</span>
+                    <span className="font-medium text-slate-100">{b.itemName}</span>
                   </div>
-                  <p className="mt-1 text-sm text-neutral-500">
+                  <p className="mt-1 text-sm text-slate-400">
                     {fmtDateTime(b.startAt)} → {fmtDateTime(b.endAt)}
                   </p>
-                  {b.usageReason && <p className="mt-1 text-sm text-neutral-600">{b.usageReason}</p>}
+                  {b.usageReason && <p className="mt-1 text-sm text-slate-300">{b.usageReason}</p>}
                 </div>
                 <Badge className={BOOKING_STATUS[b.status].cls}>{BOOKING_STATUS[b.status].label}</Badge>
               </div>
 
               {b.bookingType === "equipment" && b.status === "approved" && (
-                <div className="mt-3 border-t border-neutral-100 pt-3">
+                <div className="mt-3 border-t border-slate-800/80 pt-3">
                   <Button variant="outline" onClick={() => setReturning(b)}>
                     📸 คืนอุปกรณ์ (แนบรูป)
                   </Button>
                 </div>
               )}
               {b.status === "pending_return" && (
-                <p className="mt-2 text-xs text-purple-600">รอแอดมินตรวจรับคืน</p>
+                <p className="mt-2 text-xs text-purple-400">รอแอดมินตรวจรับคืน</p>
               )}
             </Card>
           ))}
@@ -101,12 +101,17 @@ function ReturnModal({ booking, onClose }: { booking: WithId<BookingDoc>; onClos
 
   return (
     <Modal open onClose={onClose} title={`คืน ${booking.itemName}`}>
-      {err && <div className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">⚠️ {err}</div>}
-      <p className="mb-3 text-sm text-neutral-500">ถ่ายรูปอุปกรณ์เป็นหลักฐานก่อนยืนยันการคืน</p>
-      <input type="file" accept="image/*" onChange={pick} className="mb-3 block w-full text-sm" />
+      {err && <div className="mb-3 rounded-xl bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-400">⚠️ {err}</div>}
+      <p className="mb-3 text-sm text-slate-400">ถ่ายรูปอุปกรณ์เป็นหลักฐานก่อนยืนยันการคืน</p>
+      <input
+        type="file"
+        accept="image/*"
+        onChange={pick}
+        className="mb-3 block w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer"
+      />
       {preview && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={preview} alt="preview" className="mb-3 max-h-48 w-full rounded-lg object-contain" />
+        <img src={preview} alt="preview" className="mb-3 max-h-48 w-full rounded-xl border border-white/10 object-contain" />
       )}
       <Button onClick={submit} disabled={!file || busy} className="w-full">
         {busy ? "กำลังส่ง…" : "ยืนยันการคืน"}

@@ -29,13 +29,13 @@ export default function PublicBookPage() {
           <div className="ml-auto flex items-center gap-1">
             <a
               href={`tel:${contactPhone.replace(/-/g, "")}`}
-              className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-green-600 hover:bg-neutral-100"
+              className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-emerald-400 hover:bg-slate-800/60"
             >
               📞 {contactPhone}
             </a>
             <Link
               href="/login"
-              className="rounded-full border border-white/70 bg-white/50 px-3.5 py-1.5 text-sm backdrop-blur transition hover:bg-white/80"
+              className="rounded-full border border-slate-700/80 bg-slate-800/60 px-3.5 py-1.5 text-sm text-slate-200 backdrop-blur transition hover:bg-slate-700/80 hover:border-slate-600"
             >
               เข้าสู่ระบบ
             </Link>
@@ -45,8 +45,8 @@ export default function PublicBookPage() {
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold">จองสตูดิโอ</h1>
-          <p className="mt-1.5 text-sm text-neutral-500">
+          <h1 className="text-3xl font-bold text-slate-100">จองสตูดิโอ</h1>
+          <p className="mt-1.5 text-sm text-slate-400">
             จองได้เลยไม่ต้องสมัครสมาชิก — กรอกข้อมูลติดต่อแล้วรอทีมงานยืนยัน
           </p>
         </div>
@@ -62,20 +62,20 @@ export default function PublicBookPage() {
             {studios.map((s) => (
               <div
                 key={s.id}
-                className={`animate-in rounded-3xl p-6 transition-transform duration-400 hover:-translate-y-1 ${
+                className={`animate-in rounded-3xl p-6 transition-all duration-400 hover:-translate-y-1 ${
                   s.theme === "dark"
-                    ? "border border-white/10 bg-neutral-900 text-white shadow-[0_24px_60px_rgba(7,17,31,.28)] hover:shadow-[0_30px_70px_rgba(7,17,31,.35)]"
-                    : "glass-card"
+                    ? "border border-orange-500/30 bg-[#0c121e] text-slate-100 shadow-[0_24px_60px_rgba(0,0,0,0.7),0_0_25px_rgba(255,91,31,0.15)]"
+                    : "glass-card text-slate-100"
                 }`}
               >
                 <div className="mb-3 flex items-start justify-between gap-2">
                   <div>
-                    <h3 className="text-lg font-semibold">{s.name}</h3>
-                    <p className={`text-sm ${s.theme === "dark" ? "text-neutral-300" : "text-neutral-500"}`}>
+                    <h3 className="text-lg font-semibold text-slate-100">{s.name}</h3>
+                    <p className="text-sm text-slate-400">
                       {s.subtitle}
                     </p>
                   </div>
-                  <Badge className={s.status === "open" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>
+                  <Badge className={s.status === "open" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "bg-red-500/20 text-red-300 border border-red-500/30"}>
                     {s.status === "open" ? "เปิดให้จอง" : "ปิด"}
                   </Badge>
                 </div>
@@ -84,24 +84,22 @@ export default function PublicBookPage() {
                   {s.tags?.map((t) => (
                     <span
                       key={t}
-                      className={`rounded-full px-2 py-0.5 text-xs ${
-                        s.theme === "dark" ? "bg-white/10" : "bg-neutral-100"
-                      }`}
+                      className="rounded-full px-2.5 py-0.5 text-xs bg-slate-800/80 text-slate-300 border border-slate-700/60"
                     >
                       {t}
                     </span>
                   ))}
                 </div>
 
-                <ul className="mb-4 space-y-1 text-sm">
+                <ul className="mb-4 space-y-1 text-sm text-slate-300">
                   {s.features?.map((f) => (
                     <li key={f} className="flex gap-1.5">
-                      <span className="text-orange-500">•</span> {f}
+                      <span className="text-orange-400">•</span> {f}
                     </li>
                   ))}
                 </ul>
 
-                <div className={`mb-4 text-xs ${s.theme === "dark" ? "text-neutral-400" : "text-neutral-500"}`}>
+                <div className="mb-4 text-xs text-slate-400">
                   🕐 {s.openHours} &nbsp;·&nbsp; 📞 {s.contactPhone}
                 </div>
 
@@ -113,9 +111,9 @@ export default function PublicBookPage() {
           </div>
         )}
 
-        <p className="mt-8 text-center text-sm text-neutral-500">
+        <p className="mt-8 text-center text-sm text-slate-400">
           เป็นสมาชิกชุมนุมอยู่แล้ว?{" "}
-          <Link href="/login" className="font-semibold text-orange-600">
+          <Link href="/login" className="font-semibold text-orange-400 hover:underline">
             เข้าสู่ระบบเพื่อดูการจองของคุณ
           </Link>
         </p>
@@ -158,8 +156,6 @@ function GuestBookingModal({ studio, onClose }: { studio: WithId<StudioDoc>; onC
 
     setBusy(true);
     try {
-      // หมายเหตุ: guest อ่าน bookings ไม่ได้ (ตาม rules) จึงเช็คซ้อนฝั่ง client ไม่ได้
-      // แอดมินจะเห็นคำเตือนตอนกดอนุมัติถ้าช่วงเวลาทับกับที่อนุมัติไปแล้ว
       await addDoc(collection(db, "bookings"), {
         bookingType: "studio",
         itemId: studio.id,
@@ -193,8 +189,8 @@ function GuestBookingModal({ studio, onClose }: { studio: WithId<StudioDoc>; onC
       {done ? (
         <div className="py-4 text-center">
           <div className="mb-2 text-3xl">✅</div>
-          <p className="text-sm">ส่งคำขอจองเรียบร้อย</p>
-          <p className="mt-1 text-sm text-neutral-500">
+          <p className="text-sm text-slate-200">ส่งคำขอจองเรียบร้อย</p>
+          <p className="mt-1 text-sm text-slate-400">
             ทีมงานจะติดต่อกลับที่เบอร์/อีเมลที่ให้ไว้เพื่อยืนยัน
           </p>
           <Button onClick={onClose} className="mt-4">
@@ -203,7 +199,7 @@ function GuestBookingModal({ studio, onClose }: { studio: WithId<StudioDoc>; onC
         </div>
       ) : (
         <>
-          {err && <div className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">⚠️ {err}</div>}
+          {err && <div className="mb-3 rounded-xl bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-400">⚠️ {err}</div>}
 
           <Field label="ชื่อ-นามสกุล" required>
             <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} placeholder="สมชาย ใจดี" maxLength={100} />
@@ -229,7 +225,7 @@ function GuestBookingModal({ studio, onClose }: { studio: WithId<StudioDoc>; onC
           <Button onClick={submit} disabled={busy} className="mt-2 w-full">
             {busy ? "กำลังส่ง…" : "ส่งคำขอจอง"}
           </Button>
-          <p className="mt-2 text-center text-xs text-neutral-400">
+          <p className="mt-2 text-center text-xs text-slate-400">
             ส่งแล้วรอทีมงานยืนยัน จะติดต่อกลับตามข้อมูลที่กรอก
           </p>
         </>

@@ -35,7 +35,7 @@ export default function CalendarPage() {
         <div className="space-y-5">
           {Object.entries(groups).map(([day, items]) => (
             <div key={day}>
-              <h3 className="mb-2 text-sm font-semibold text-neutral-500">{day}</h3>
+              <h3 className="mb-2 text-sm font-semibold text-slate-400">{day}</h3>
               <div className="space-y-2">
                 {items.map((b) => (
                   <Card key={b.id} className="p-3">
@@ -43,8 +43,8 @@ export default function CalendarPage() {
                       <div className="flex items-center gap-2">
                         <span>{b.bookingType === "studio" ? "🎬" : "📷"}</span>
                         <div>
-                          <p className="text-sm font-medium">{b.itemName}</p>
-                          <p className="text-xs text-neutral-500">
+                          <p className="text-sm font-medium text-slate-100">{b.itemName}</p>
+                          <p className="text-xs text-slate-400">
                             {fmtDateTime(b.startAt)} → {fmtDateTime(b.endAt)}
                           </p>
                         </div>

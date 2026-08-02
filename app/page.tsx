@@ -16,8 +16,8 @@ export default function Home() {
   }, [user, role, loading, router]);
 
   return (
-    <div className="flex flex-1 items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-orange-500" />
+    <div className="flex flex-1 items-center justify-center min-h-screen">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-orange-500 shadow-[0_0_15px_rgba(255,91,31,0.5)]" />
     </div>
   );
 }

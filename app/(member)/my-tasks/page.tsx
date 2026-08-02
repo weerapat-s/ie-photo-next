@@ -36,16 +36,16 @@ export default function MyTasksPage() {
             <Card key={t.id}>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-medium">{t.title}</p>
-                  {t.description && <p className="mt-1 text-sm text-neutral-600">{t.description}</p>}
-                  <p className="mt-1 text-xs text-neutral-400">
+                  <p className="font-medium text-slate-100">{t.title}</p>
+                  {t.description && <p className="mt-1 text-sm text-slate-300">{t.description}</p>}
+                  <p className="mt-1 text-xs text-slate-400">
                     มอบโดย {t.assignedByName} {t.dueDate && `· กำหนด ${fmtDate(t.dueDate)}`}
                   </p>
                 </div>
                 <Badge className={TASK_STATUS[t.status].cls}>{TASK_STATUS[t.status].label}</Badge>
               </div>
               {t.status !== "completed" && t.status !== "cancelled" && (
-                <div className="mt-3 flex gap-2 border-t border-neutral-100 pt-3">
+                <div className="mt-3 flex gap-2 border-t border-slate-800/80 pt-3">
                   {t.status === "pending" && (
                     <Button variant="outline" onClick={() => setStatus(t.id, "in_progress")}>
                       เริ่มทำ

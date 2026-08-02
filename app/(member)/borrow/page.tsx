@@ -114,7 +114,7 @@ export default function BorrowPage() {
 
       <form onSubmit={submit}>
         <Card className="mb-4">
-          <h3 className="mb-3 font-medium">เลือกอุปกรณ์ {selected.size > 0 && `(${selected.size} ชิ้น)`}</h3>
+          <h3 className="mb-3 font-medium text-slate-100">เลือกอุปกรณ์ {selected.size > 0 && `(${selected.size} ชิ้น)`}</h3>
           {loading ? (
             <Spinner />
           ) : loadError ? (
@@ -126,13 +126,15 @@ export default function BorrowPage() {
               {equipments.map((eq) => (
                 <label
                   key={eq.id}
-                  className={`flex cursor-pointer items-center gap-2 rounded-lg border p-2.5 text-sm ${
-                    selected.has(eq.id) ? "border-orange-400 bg-orange-50" : "border-neutral-200"
+                  className={`flex cursor-pointer items-center gap-2 rounded-xl border p-3 text-sm transition ${
+                    selected.has(eq.id)
+                      ? "border-orange-500/50 bg-orange-500/15 text-slate-100 shadow-[0_0_15px_rgba(255,91,31,0.2)]"
+                      : "border-slate-800/80 bg-slate-900/40 text-slate-300 hover:border-slate-700 hover:bg-slate-800/40"
                   }`}
                 >
-                  <input type="checkbox" checked={selected.has(eq.id)} onChange={() => toggle(eq.id)} />
+                  <input type="checkbox" checked={selected.has(eq.id)} onChange={() => toggle(eq.id)} className="accent-orange-500" />
                   <span>{eq.name}</span>
-                  <span className="ml-auto text-xs text-neutral-400">{EQUIPMENT_TYPE_LABEL[eq.type]}</span>
+                  <span className="ml-auto text-xs text-slate-400">{EQUIPMENT_TYPE_LABEL[eq.type]}</span>
                 </label>
               ))}
             </div>
@@ -156,17 +158,17 @@ export default function BorrowPage() {
               type="file"
               accept="image/*"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="block w-full text-sm"
+              className="block w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer"
             />
             {file ? (
-              <p className="mt-1 text-xs text-green-600">✅ แนบแล้ว: {file.name}</p>
+              <p className="mt-1 text-xs text-emerald-400">✅ แนบแล้ว: {file.name}</p>
             ) : (
-              <p className="mt-1 text-xs text-red-500">⚠️ ต้องแนบเอกสารก่อนส่งคำขอ</p>
+              <p className="mt-1 text-xs text-red-400">⚠️ ต้องแนบเอกสารก่อนส่งคำขอ</p>
             )}
           </Field>
         </Card>
 
-        {err && <div className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">⚠️ {err}</div>}
+        {err && <div className="mb-3 rounded-xl bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-400">⚠️ {err}</div>}
         <Button type="submit" disabled={!canSubmit} className="w-full">
           {busy ? "กำลังส่ง…" : "ส่งคำขอยืมอุปกรณ์"}
         </Button>
