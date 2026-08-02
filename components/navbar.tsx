@@ -47,18 +47,23 @@ export default function Navbar() {
 
   return (
     <nav className="glass-nav sticky top-0 z-50">
-      <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2.5">
-        <Link href={isAdmin ? "/dashboard" : "/feed"} className="flex items-center gap-1.5 text-lg font-extrabold">
-          <span>📷</span> <span className="text-grad">IE-PHOTO</span>
+      <div className="mx-auto flex max-w-6xl items-center gap-1.5 px-4 py-2.5">
+        <Link
+          href={isAdmin ? "/dashboard" : "/feed"}
+          className="flex shrink-0 items-center gap-1.5 text-lg font-extrabold"
+        >
+          <span>📷</span> <span className="hidden text-grad sm:inline">IE-PHOTO</span>
         </Link>
 
-        {/* desktop links */}
-        <div className="ml-4 hidden flex-1 items-center gap-0.5 lg:flex">
+        {/* desktop links — scroll แนวนอนแทนล้น/ตกบรรทัด */}
+        <div
+          className="ml-2 hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto lg:flex [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
           {links.map((l) => (
             <Link
               key={l.href}
               href={l.href}
-              className={`rounded-lg px-2.5 py-1.5 text-sm transition hover:bg-neutral-100 ${
+              className={`shrink-0 whitespace-nowrap rounded-lg px-2 py-1.5 text-sm transition hover:bg-neutral-100 ${
                 pathname === l.href ? "font-semibold text-orange-600" : "text-neutral-600"
               }`}
             >
@@ -67,24 +72,28 @@ export default function Navbar() {
           ))}
         </div>
 
-        <div className="ml-auto hidden items-center gap-2 lg:flex">
+        <div className="ml-auto hidden shrink-0 items-center gap-1 lg:flex">
           <a
             href="https://immich.ienas.site/"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg px-2.5 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100"
+            title="ภาพกิจกรรมที่ผ่านมา"
+            className="rounded-lg p-2 text-base text-neutral-600 hover:bg-neutral-100"
           >
-            🖼️ ภาพกิจกรรม
+            🖼️
           </a>
-          <a href="tel:0621481739" className="text-sm font-medium text-green-600">
-            📞 062-148-1739
+          <a href="tel:0621481739" title="โทร 062-148-1739" className="rounded-lg p-2 text-base text-green-600 hover:bg-neutral-100">
+            📞
           </a>
-          <Link href="/profile" className="rounded-lg px-2.5 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100">
+          <Link
+            href="/profile"
+            className="max-w-[7rem] truncate rounded-lg px-2.5 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100"
+          >
             {profile?.firstName || "โปรไฟล์"}
           </Link>
           <button
             onClick={handleLogout}
-            className="rounded-full border border-white/70 bg-white/50 px-3.5 py-1.5 text-sm backdrop-blur transition hover:bg-white/80"
+            className="shrink-0 rounded-full border border-white/70 bg-white/50 px-3 py-1.5 text-sm backdrop-blur transition hover:bg-white/80"
           >
             ออกจากระบบ
           </button>
