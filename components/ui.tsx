@@ -1,4 +1,6 @@
+"use client";
 // components/ui.tsx — shared UI primitives
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) {
@@ -88,19 +90,47 @@ export function Modal({
   children: React.ReactNode;
   maxWidth?: string;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef(onClose);
+
+  useEffect(() => {
+    closeRef.current = onClose;
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeRef.current();
+    };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKey);
+
+    // Focus container only once on mount/open
+    containerRef.current?.focus();
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   if (!open) return null;
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-      onClick={onClose}
+      onClick={() => closeRef.current()}
     >
       <div
-        className={`w-full ${maxWidth} max-h-[90vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#0d1320] p-6 text-slate-100 shadow-[0_30px_80px_rgba(0,0,0,.8),0_0_30px_rgba(255,91,31,0.1)] backdrop-blur-xl`}
+        ref={containerRef}
+        tabIndex={-1}
+        className={`w-full ${maxWidth} max-h-[90vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#0d1320] p-6 text-slate-100 shadow-[0_30px_80px_rgba(0,0,0,.8),0_0_30px_rgba(255,91,31,0.1)] backdrop-blur-xl outline-none`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-100">{title}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-200">
+          <button onClick={() => closeRef.current()} className="text-slate-400 hover:text-slate-200">
             ✕
           </button>
         </div>
@@ -122,4 +152,3 @@ export function Field({ label, children, required }: { label: string; children: 
 }
 
 export const inputClass = "glass-input w-full rounded-xl px-3.5 py-2.5 text-sm";
-

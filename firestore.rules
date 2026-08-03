@@ -4,92 +4,172 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ── helpers ────────────────────────────────────────────────
     function isSignedIn() { return request.auth != null; }
     function roleOf(uid)  { return get(/databases/$(database)/documents/users/$(uid)).data.role; }
-    function isAdmin()    { return isSignedIn() && roleOf(request.auth.uid) in ['admin', 'super_admin']; }
+    function isAdmin()    { return isSignedIn() && roleOf(request.auth.uid) in ['admin','super_admin']; }
+    function isSuper()    { return isSignedIn() && roleOf(request.auth.uid) == 'super_admin'; }
 
-    function onlyLikeChanged() {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'likeCount']);
-    }
-    function onlyReturnChanged() {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'returnImageUrl'])
-             && request.resource.data.status == 'pending_return';
-    }
+    // banned/{uid} คงอยู่แม้ user doc ถูกลบ → กัน self-heal สร้างบัญชีคืน
+    // ใส่เฉพาะ write path (read ไม่ใส่ เพื่อคุมค่า read + เพดาน document-access)
+    function notBanned()  { return !exists(/databases/$(database)/documents/banned/$(request.auth.uid)); }
+    function canWrite()   { return isSignedIn() && notBanned(); }
 
-    // ── users ────────────────────────────────────────────────
+    // ── users ──────────────────────────────────────────────────
     match /users/{uid} {
-      allow read:   if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if isSignedIn() && request.auth.uid == uid
-                       && request.resource.data.role == 'member';
-      // owner แก้ profile ตัวเอง (ห้ามแก้ role เอง) / admin แก้ได้ทุกอย่าง (เปลี่ยน role)
-      allow update: if isAdmin()
-                       || (request.auth.uid == uid && request.resource.data.role == resource.data.role);
-      allow delete: if isAdmin();
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+
+      allow create: if isSignedIn()
+                       && request.auth.uid == uid
+                       && request.resource.data.role == 'member'
+                       && !exists(/databases/$(database)/documents/banned/$(uid));
+
+      allow update: if
+        // เจ้าของ — เฉพาะฟิลด์โปรไฟล์ (แตะ role / disabled / studentId / email ไม่ได้)
+        (request.auth.uid == uid && notBanned()
+         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+              ['firstName','lastName','phone','profileImageUrl','profileCompleted',
+               'pushSubscription','pushSubscriptions']))
+        // แอดมิน — แก้ doc คนอื่นเท่านั้น, admin ธรรมดาห้ามแตะ super_admin ทั้งขาขึ้น/ขาลง
+        || (isAdmin() && notBanned() && request.auth.uid != uid
+            && (isSuper() || (resource.data.role != 'super_admin'
+                              && request.resource.data.role != 'super_admin')));
+
+      allow delete: if isAdmin() && notBanned()
+                       && (isSuper() || resource.data.role != 'super_admin');
     }
 
-    // ── equipments ───────────────────────────────────────────
+    // ── banned (เจ้าของต้องอ่าน doc ตัวเองได้ ไม่งั้น client ตรวจการถูกระงับไม่ได้) ──
+    match /banned/{uid} {
+      allow read:  if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow write: if isAdmin() && notBanned() && request.auth.uid != uid
+                      && (isSuper()
+                          || !exists(/databases/$(database)/documents/users/$(uid))
+                          || roleOf(uid) != 'super_admin');
+    }
+
+    // ── equipments / studios ───────────────────────────────────
     match /equipments/{id} {
       allow read:  if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isAdmin() && notBanned();
     }
-
-    // ── studios (อ่านสาธารณะ) ────────────────────────────────
     match /studios/{id} {
       allow read:  if true;
-      allow write: if isAdmin();
+      allow write: if isAdmin() && notBanned();
     }
 
-    // จองสตูดิโอโดยไม่ล็อกอิน (หน้า /book) — อนุญาตแคบที่สุดเท่าที่ทำได้
-    // อ่านไม่ได้ / แก้ไม่ได้ / ลบไม่ได้ สร้างได้อย่างเดียว และต้องผ่านเงื่อนไขทุกข้อ
-    function isValidGuestBooking() {
+    // ── slots — ตารางล้วน ไม่มีข้อมูลส่วนตัว อ่านสาธารณะเพื่อให้ guest เช็คเวลาซ้อนได้ ──
+    function validSlot() {
       let d = request.resource.data;
-      return d.bookingType == 'studio'
-             && d.status == 'pending'
-             && d.userId == null
-             && exists(/databases/$(database)/documents/studios/$(d.itemId))
-             && d.guestName is string  && d.guestName.size() > 0 && d.guestName.size() <= 100
-             && d.guestEmail is string && d.guestEmail.matches('.+@.+[.].+') && d.guestEmail.size() <= 120
-             && d.userName is string   && d.userName.size() > 0 && d.userName.size() <= 100
-             && d.userPhone is string  && d.userPhone.size() >= 9 && d.userPhone.size() <= 20
-             && d.usageReason is string && d.usageReason.size() > 0 && d.usageReason.size() <= 500
+      let f = ['bookingId','itemId','itemName','bookingType','startAt','endAt','status'];
+      return d.keys().hasOnly(f) && d.keys().hasAll(f)
+             && d.bookingId is string && d.bookingId.size() > 0 && d.bookingId.size() <= 60
+             && d.itemId    is string && d.itemId.size() > 0    && d.itemId.size() <= 60
+             && d.itemName  is string && d.itemName.size() > 0  && d.itemName.size() <= 200
+             && d.bookingType in ['equipment','studio']
              && d.startAt is timestamp && d.endAt is timestamp
              && d.endAt > d.startAt
-             && d.startAt > request.time - duration.value(5, 'm')
-             // กันยัดรูป base64 ขนาดใหญ่เข้ามาทาง guest form
+             && d.startAt > request.time - duration.value(5,'m')
+             && d.startAt < request.time + duration.value(90,'d')
+             && d.endAt   < d.startAt + duration.value(7,'d')
+             && d.status == 'pending';   // 'approved' ตั้งได้โดยแอดมินเท่านั้น
+    }
+
+    match /slots/{id} {
+      allow read:   if true;
+      allow create: if validSlot() && (request.auth == null || notBanned());
+      allow update, delete: if isAdmin() && notBanned();
+    }
+
+    // ── bookings ───────────────────────────────────────────────
+    function validBookingCore(d) {
+      return d.bookingType in ['equipment','studio']
+             && d.itemId   is string && d.itemId.size() > 0   && d.itemId.size() <= 60
+             && d.itemName is string && d.itemName.size() > 0 && d.itemName.size() <= 200
+             && d.usageReason is string && d.usageReason.size() > 0 && d.usageReason.size() <= 500
+             && d.userName  is string && d.userName.size() <= 100
+             && d.userPhone is string && d.userPhone.size() <= 20
+             && d.startAt is timestamp && d.endAt is timestamp
+             && d.endAt > d.startAt
+             && d.startAt > request.time - duration.value(5,'m')
+             && d.startAt < request.time + duration.value(90,'d')
+             && d.status == 'pending'
+             && d.returnImageUrl == null;
+    }
+
+    function validMemberBooking() {
+      let d = request.resource.data;
+      return validBookingCore(d)
+             && d.userId == request.auth.uid
+             && d.endAt < d.startAt + duration.value(7,'d')
+             && (d.formImageUrl == null
+                 || (d.formImageUrl is string && d.formImageUrl.size() <= 900000));
+    }
+
+    function validGuestBooking() {
+      let d = request.resource.data;
+      return validBookingCore(d)
+             && d.bookingType == 'studio'
+             && d.userId == null
+             && exists(/databases/$(database)/documents/studios/$(d.itemId))
+             && d.guestName  is string && d.guestName.size() > 0 && d.guestName.size() <= 100
+             && d.guestEmail is string && d.guestEmail.matches('.+@.+[.].+') && d.guestEmail.size() <= 120
+             && d.userName.size() > 0
+             && d.userPhone.size() >= 9
+             && d.endAt < d.startAt + duration.value(24,'h')
              && d.formImageUrl == null
-             && d.returnImageUrl == null
              && d.responsibleUserId == null
              && d.consentToken == null;
     }
 
-    // ── bookings ─────────────────────────────────────────────
+    function onlyReturnChanged() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','returnImageUrl'])
+             && request.resource.data.status == 'pending_return'
+             && resource.data.status == 'approved';
+    }
+
     match /bookings/{id} {
-      allow read:   if isSignedIn();
-      allow create: if (isSignedIn()
-                        && request.resource.data.userId == request.auth.uid
-                        && request.resource.data.status == 'pending')
-                       || (request.auth == null && isValidGuestBooking());
-      allow update: if isAdmin()
-                       || (isSignedIn() && resource.data.userId == request.auth.uid && onlyReturnChanged());
-      allow delete: if isAdmin();
+      allow read:   if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if (canWrite() && validMemberBooking())
+                       || (request.auth == null && validGuestBooking());
+      allow update: if (isAdmin() && notBanned())
+                       || (canWrite() && resource.data.userId == request.auth.uid && onlyReturnChanged());
+      allow delete: if isAdmin() && notBanned();
     }
 
-    // ── tasks ────────────────────────────────────────────────
+    // ── tasks ──────────────────────────────────────────────────
     match /tasks/{id} {
-      allow read:           if isSignedIn() && (isAdmin()
-                              || resource.data.assignedToId == request.auth.uid
-                              || resource.data.assignedById == request.auth.uid);
-      allow create, delete: if isAdmin();
-      allow update:         if isAdmin()
-                              || (isSignedIn() && resource.data.assignedToId == request.auth.uid
-                                  && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
+      allow read: if isSignedIn() && (isAdmin()
+                     || resource.data.assignedToId == request.auth.uid
+                     || resource.data.assignedById == request.auth.uid);
+      allow create, delete: if isAdmin() && notBanned();
+      allow update: if (isAdmin() && notBanned())
+                       || (canWrite() && resource.data.assignedToId == request.auth.uid
+                           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+                           && request.resource.data.status in ['pending','in_progress','completed']);
     }
 
-    // ── feeds ────────────────────────────────────────────────
+    // ── feeds ──────────────────────────────────────────────────
+    function likeDeltaOk() {
+      let before = resource.data;
+      let after  = request.resource.data;
+      let uid    = request.auth.uid;
+      return after.diff(before).affectedKeys().hasOnly(['likedBy','likeCount'])
+             && (
+                  ( after.likeCount == before.likeCount + 1
+                    && !(uid in before.likedBy) && (uid in after.likedBy)
+                    && after.likedBy.hasAll(before.likedBy)
+                    && after.likedBy.hasOnly(before.likedBy.concat([uid])) )
+               || ( after.likeCount == before.likeCount - 1
+                    && (uid in before.likedBy) && !(uid in after.likedBy)
+                    && before.likedBy.hasAll(after.likedBy) )
+             );
+    }
+
     match /feeds/{id} {
-      allow read:           if isSignedIn();
-      allow create, delete: if isAdmin();
-      allow update:         if isAdmin() || (isSignedIn() && onlyLikeChanged());
+      allow read: if isSignedIn();
+      allow create, delete: if isAdmin() && notBanned();
+      allow update: if (isAdmin() && notBanned()) || (canWrite() && likeDeltaOk());
     }
   }
 }

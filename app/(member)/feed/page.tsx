@@ -1,6 +1,6 @@
 "use client";
 // app/(member)/feed/page.tsx — ฟีดกิจกรรม + กดไลก์
-import { collection, query, orderBy, doc, updateDoc, arrayUnion, arrayRemove, increment } from "firebase/firestore";
+import { collection, query, orderBy, doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useCollection } from "@/lib/hooks";
@@ -15,11 +15,13 @@ export default function FeedPage() {
     []
   );
 
-  async function toggleLike(id: string, liked: boolean) {
+  async function toggleLike(f: FeedDoc & { id: string }, liked: boolean) {
     if (!user) return;
-    await updateDoc(doc(db, "feeds", id), {
+    const currentCount = f.likeCount ?? 0;
+    const newCount = liked ? currentCount - 1 : currentCount + 1;
+    await updateDoc(doc(db, "feeds", f.id), {
       likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid),
-      likeCount: increment(liked ? -1 : 1),
+      likeCount: newCount,
     });
   }
 
@@ -43,10 +45,6 @@ export default function FeedPage() {
             return (
               <Card key={f.id}>
                 <p className="text-sm text-slate-200">{f.message}</p>
-                {f.formImageUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={f.formImageUrl} alt="" className="mt-2 max-h-60 w-full rounded-xl object-cover border border-white/10" />
-                )}
                 <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
                   <span>{fmtDateTime(f.createdAt)}</span>
                   <div className="flex items-center gap-2">
@@ -55,7 +53,7 @@ export default function FeedPage() {
                         {BOOKING_STATUS[f.bookingStatus].label}
                       </span>
                     )}
-                    <button onClick={() => toggleLike(f.id, liked)} className="flex items-center gap-1 hover:text-slate-200 transition">
+                    <button onClick={() => toggleLike(f, liked)} className="flex items-center gap-1 hover:text-slate-200 transition">
                       <span>{liked ? "❤️" : "🤍"}</span>
                       {f.likeCount ?? 0}
                     </button>

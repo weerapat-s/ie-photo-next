@@ -2,7 +2,8 @@
   "firestore": [
     {
       "database": "default",
-      "rules": "firestore.rules"
+      "rules": "firestore.rules",
+      "indexes": "firestore.indexes.json"
     }
   ],
   "storage": {
@@ -14,6 +15,12 @@
     "trailingSlash": true,
     "cleanUrls": false,
     "headers": [
+      {
+        "source": "**",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache" }
+        ]
+      },
       {
         "source": "/_next/static/**",
         "headers": [

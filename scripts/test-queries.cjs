@@ -28,8 +28,8 @@ async function tryQuery(name, fn) {
   fail += !(await tryQuery("my-bookings: bookings where userId== orderBy createdAt desc", () =>
     db.collection("bookings").where("userId", "==", FAKE_UID).orderBy("createdAt", "desc").get()
   ));
-  fail += !(await tryQuery("calendar: bookings where status in [...] orderBy startAt", () =>
-    db.collection("bookings").where("status", "in", ["pending", "approved"]).orderBy("startAt").get()
+  fail += !(await tryQuery("calendar: slots orderBy startAt", () =>
+    db.collection("slots").orderBy("startAt").get()
   ));
   fail += !(await tryQuery("admin bookings: orderBy createdAt desc", () =>
     db.collection("bookings").orderBy("createdAt", "desc").get()
@@ -50,16 +50,34 @@ async function tryQuery(name, fn) {
     db.collection("studios").orderBy("name").get()
   ));
 
-  fail += !(await tryQuery("conflict check: bookings where itemId== AND status in [...]", () =>
-    db.collection("bookings").where("itemId", "==", "1").where("status", "in", ["pending", "approved"]).get()
+  fail += !(await tryQuery("conflict check: slots where itemId==", () =>
+    db.collection("slots").where("itemId", "==", "1").get()
   ));
 
   console.log("=== query ของ script แจ้งเตือน ===");
-  fail += !(await tryQuery("notify tasks: where dueDate <= now", () =>
-    db.collection("tasks").where("dueDate", "<=", new Date()).get()
+  const now = new Date();
+  const lowerBoundTask = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
+  const cutoffTask = new Date(now.getTime() + 24 * 3600 * 1000);
+
+  fail += !(await tryQuery("notify tasks: status in [...] AND dueDate > lower AND dueDate <= cutoff", () =>
+    db
+      .collection("tasks")
+      .where("status", "in", ["pending", "in_progress"])
+      .where("dueDate", ">", lowerBoundTask)
+      .where("dueDate", "<=", cutoffTask)
+      .get()
   ));
-  fail += !(await tryQuery("notify bookings: where startAt <= now", () =>
-    db.collection("bookings").where("startAt", "<=", new Date()).get()
+
+  const lowerBoundBooking = new Date(now.getTime() - 3600 * 1000);
+  const cutoffBooking = new Date(now.getTime() + 3 * 3600 * 1000);
+
+  fail += !(await tryQuery("notify bookings: status==approved AND startAt > lower AND startAt <= cutoff", () =>
+    db
+      .collection("bookings")
+      .where("status", "==", "approved")
+      .where("startAt", ">", lowerBoundBooking)
+      .where("startAt", "<=", cutoffBooking)
+      .get()
   ));
 
   console.log(fail ? `\n✗ พบ ${fail} query ที่มีปัญหา` : "\n✅ ทุก query ทำงานได้");

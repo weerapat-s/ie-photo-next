@@ -13,36 +13,51 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY
 );
 
-const TASK_WINDOW_MS = 24 * 3600 * 1000; // แจ้งงานที่ครบกำหนดภายใน 24 ชม. (รวมที่เลยกำหนดไปแล้วด้วย)
+const TASK_WINDOW_MS = 24 * 3600 * 1000; // แจ้งงานที่ครบกำหนดภายใน 24 ชม. (รวมที่เลยกำหนดไม่เกิน 7 วัน)
 const BOOKING_WINDOW_MS = 3 * 3600 * 1000; // แจ้งการจองที่จะเริ่มภายใน 3 ชม.
 
 async function sendTo(db, userId, payload) {
-  const userSnap = await db.collection("users").doc(userId).get();
-  const sub = userSnap.data()?.pushSubscription;
-  if (!sub) return "no-subscription";
-  try {
-    await webpush.sendNotification(sub, JSON.stringify(payload));
-    return "sent";
-  } catch (e) {
-    if (e.statusCode === 404 || e.statusCode === 410) {
-      // subscription หมดอายุ/ถูกยกเลิก — ล้างทิ้ง
-      await db.collection("users").doc(userId).update({ pushSubscription: null });
-      return "expired-cleared";
+  const ref = db.collection("users").doc(userId);
+  const u = (await ref.get()).data() || {};
+  const subs = Array.isArray(u.pushSubscriptions)
+    ? u.pushSubscriptions
+    : (u.pushSubscription ? [u.pushSubscription] : []);
+
+  if (!subs.length) return "no-subscription";
+  let okCount = 0;
+
+  for (const sub of subs) {
+    try {
+      await webpush.sendNotification(sub, JSON.stringify(payload));
+      okCount++;
+    } catch (e) {
+      if (e.statusCode === 404 || e.statusCode === 410) {
+        // subscription หมดอายุ/ถูกยกเลิก — ลบเฉพาะเครื่องนี้ออกจาก array
+        await ref.update({ pushSubscriptions: FieldValue.arrayRemove(sub) });
+      } else {
+        console.error(`  push failed for ${userId}:`, e.message);
+      }
     }
-    console.error(`  push failed for ${userId}:`, e.message);
-    return "error";
   }
+  return okCount > 0 ? "sent" : "all-failed";
 }
 
 async function notifyTasks(db) {
   const now = new Date();
   const cutoff = new Date(now.getTime() + TASK_WINDOW_MS);
-  const snap = await db.collection("tasks").where("dueDate", "<=", cutoff).get();
+  const lowerBound = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
+
+  // query ใส่ขอบล่าง + filter status เพื่อประสิทธิภาพ
+  const snap = await db
+    .collection("tasks")
+    .where("status", "in", ["pending", "in_progress"])
+    .where("dueDate", ">", lowerBound)
+    .where("dueDate", "<=", cutoff)
+    .get();
 
   let sent = 0;
   for (const d of snap.docs) {
     const t = d.data();
-    if (!["pending", "in_progress"].includes(t.status)) continue;
     if (t.reminderSentAt) continue;
     if (!t.assignedToId) continue;
 
@@ -54,9 +69,9 @@ async function notifyTasks(db) {
       tag: `task-${d.id}`,
     });
     console.log(`  task "${t.title}" → ${t.assignedToName}: ${result}`);
-    if (result === "sent" || result === "expired-cleared") {
+    if (result === "sent") {
       await d.ref.update({ reminderSentAt: FieldValue.serverTimestamp() });
-      if (result === "sent") sent++;
+      sent++;
     }
   }
   return sent;
@@ -65,12 +80,19 @@ async function notifyTasks(db) {
 async function notifyBookings(db) {
   const now = new Date();
   const cutoff = new Date(now.getTime() + BOOKING_WINDOW_MS);
-  const snap = await db.collection("bookings").where("startAt", "<=", cutoff).get();
+  const lowerBound = new Date(now.getTime() - 3600 * 1000);
+
+  // query ใส่ขอบล่าง + status == approved
+  const snap = await db
+    .collection("bookings")
+    .where("status", "==", "approved")
+    .where("startAt", ">", lowerBound)
+    .where("startAt", "<=", cutoff)
+    .get();
 
   let sent = 0;
   for (const d of snap.docs) {
     const b = d.data();
-    if (b.status !== "approved") continue;
     if (b.reminderSentAt) continue;
     if (!b.userId) continue;
     if (b.startAt.toDate() < now) continue; // เลยเวลาเริ่มไปแล้ว ไม่ต้องแจ้ง
@@ -88,9 +110,9 @@ async function notifyBookings(db) {
       tag: `booking-${d.id}`,
     });
     console.log(`  booking "${b.itemName}" → ${b.userName}: ${result}`);
-    if (result === "sent" || result === "expired-cleared") {
+    if (result === "sent") {
       await d.ref.update({ reminderSentAt: FieldValue.serverTimestamp() });
-      if (result === "sent") sent++;
+      sent++;
     }
   }
   return sent;

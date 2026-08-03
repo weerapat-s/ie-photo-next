@@ -9,13 +9,25 @@ export default function NotificationToggle() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [supported, setSupported] = useState(true);
+  const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default");
+  const [endpoint, setEndpoint] = useState<string | null>(null);
 
   useEffect(() => {
     setSupported(isPushSupported());
+    setPermission(getNotificationPermission());
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.ready
+        .then((r) => r.pushManager.getSubscription())
+        .then((s) => setEndpoint(s?.endpoint ?? null))
+        .catch(() => {});
+    }
   }, []);
 
-  const subscribed = !!profile?.pushSubscription;
-  const permission = getNotificationPermission();
+  // เช็คว่า endpoint เครื่องนี้ลงทะเบียนอยู่แล้วใน pushSubscriptions array หรือ pushSubscription แบบเดี่ยว (legacy)
+  const subscribed = !!endpoint && (
+    (profile?.pushSubscriptions?.some((s) => s.endpoint === endpoint) ?? false) ||
+    (profile?.pushSubscription?.endpoint === endpoint)
+  );
 
   async function toggle() {
     if (!user) return;
@@ -23,9 +35,17 @@ export default function NotificationToggle() {
     setBusy(true);
     if (subscribed) {
       await unsubscribeFromPush(user.uid);
+      setEndpoint(null);
     } else {
       const res = await subscribeToPush(user.uid);
       if (!res.ok) setErr(res.error || "เปิดการแจ้งเตือนไม่สำเร็จ");
+      else {
+        if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+          const r = await navigator.serviceWorker.ready;
+          const s = await r.pushManager.getSubscription();
+          setEndpoint(s?.endpoint ?? null);
+        }
+      }
     }
     setBusy(false);
   }

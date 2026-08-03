@@ -1,11 +1,11 @@
 "use client";
 // app/(member)/borrow/page.tsx — ยืมอุปกรณ์ (เลือกหลายชิ้น + แนบเอกสาร)
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { collection, query, where, orderBy, addDoc, Timestamp, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, orderBy, doc, writeBatch, Timestamp, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { compressImageToDataUrl } from "@/lib/image";
-import { findBookingConflicts } from "@/lib/booking";
+import { findSlotConflicts, slotPayload } from "@/lib/slots";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useCollection } from "@/lib/hooks";
 import { PageHeader, Card, Spinner, Button, Field, inputClass, EmptyState } from "@/components/ui";
@@ -35,6 +35,15 @@ export default function BorrowPage() {
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   }, []);
 
+  // sync selection: ลบ id ที่หายจาก equipments list (ถูกยืม/ถูกลบระหว่างกรอกฟอร์ม)
+  useEffect(() => {
+    setSelected((prev) => {
+      const ids = new Set(equipments.map((e) => e.id));
+      const next = new Set([...prev].filter((id) => ids.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [equipments]);
+
   function toggle(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -59,10 +68,17 @@ export default function BorrowPage() {
     try {
       const items = equipments.filter((eq) => selected.has(eq.id));
 
-      // เช็คการจองซ้อน — อุปกรณ์ชิ้นเดียวกันถูกจอง (pending/approved) ช่วงเวลาทับกันไหม
+      // #6 — ถ้าอุปกรณ์หลุดจาก list ระหว่างกรอก → แจ้ง error ชัดเจน
+      if (items.length === 0) {
+        setErr("อุปกรณ์ที่เลือกไม่พร้อมใช้งานแล้ว กรุณาเลือกใหม่");
+        setBusy(false);
+        return;
+      }
+
+      // เช็คการจองซ้อน — member นับทั้ง pending+approved ว่าชน
       const conflictNames: string[] = [];
       for (const eq of items) {
-        const conflicts = await findBookingConflicts(eq.id, startDate, endDate);
+        const conflicts = await findSlotConflicts(eq.id, startDate, endDate);
         if (conflicts.length) conflictNames.push(eq.name);
       }
       if (conflictNames.length) {
@@ -76,34 +92,46 @@ export default function BorrowPage() {
       const formImageUrl = await compressImageToDataUrl(file, 1400, 0.75);
 
       const userName = `${profile?.firstName ?? ""} ${profile?.lastName ?? ""}`.trim() || user.email || "";
-      await Promise.all(
-        items.map((eq) =>
-          addDoc(collection(db, "bookings"), {
-            bookingType: "equipment",
-            itemId: eq.id,
-            itemName: eq.name,
-            userId: user.uid,
-            userName,
-            userPhone: profile?.phone ?? "",
-            guestName: null,
-            guestEmail: null,
-            startAt: Timestamp.fromDate(new Date(start)),
-            endAt: Timestamp.fromDate(new Date(end)),
-            formImageUrl,
-            returnImageUrl: null,
-            usageReason: reason.trim(),
-            usageType: null,
-            status: "pending",
-            responsibleUserId: null,
-            responsibleUserName: null,
-            consentToken: null,
-            createdAt: serverTimestamp(),
-          })
-        )
-      );
+      const startTs = Timestamp.fromDate(startDate);
+      const endTs = Timestamp.fromDate(endDate);
+
+      // เขียนทั้งหมดใน batch เดียว (2N writes, ลิมิต 500 — เหลือเฟือ)
+      const batch = writeBatch(db);
+      for (const eq of items) {
+        const bRef = doc(collection(db, "bookings"));
+        batch.set(bRef, {
+          bookingType: "equipment",
+          itemId: eq.id,
+          itemName: eq.name,
+          userId: user.uid,
+          userName,
+          userPhone: profile?.phone ?? "",
+          guestName: null,
+          guestEmail: null,
+          startAt: startTs,
+          endAt: endTs,
+          formImageUrl,
+          returnImageUrl: null,
+          usageReason: reason.trim(),
+          usageType: null,
+          status: "pending",
+          responsibleUserId: null,
+          responsibleUserName: null,
+          consentToken: null,
+          createdAt: serverTimestamp(),
+        });
+        batch.set(doc(db, "slots", bRef.id), slotPayload({
+          bookingId: bRef.id, itemId: eq.id, itemName: eq.name,
+          bookingType: "equipment", startAt: startTs, endAt: endTs,
+        }));
+      }
+      await batch.commit();
       router.push("/my-bookings");
-    } catch {
-      setErr("ส่งคำขอไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+    } catch (error) {
+      const message = error instanceof Error && error.message === "IMAGE_TOO_LARGE"
+        ? "รูปมีขนาดใหญ่เกินไป กรุณาเลือกรูปที่เล็กลง"
+        : "ส่งคำขอไม่สำเร็จ กรุณาลองใหม่อีกครั้ง";
+      setErr(message);
       setBusy(false);
     }
   }

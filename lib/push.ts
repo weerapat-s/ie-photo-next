@@ -1,6 +1,6 @@
 "use client";
 // lib/push.ts — Web Push subscription helpers (ทำงานได้แม้ปิดแอพ ผ่าน service worker)
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { PushSubscriptionData } from "@/lib/types";
 
@@ -22,7 +22,7 @@ export function getNotificationPermission(): NotificationPermission | "unsupport
   return Notification.permission;
 }
 
-/** ขอสิทธิ์ + subscribe push + บันทึกลง Firestore user doc */
+/** ขอสิทธิ์ + subscribe push + บันทึกลง Firestore user doc ( pushSubscriptions array ) */
 export async function subscribeToPush(uid: string): Promise<{ ok: boolean; error?: string }> {
   if (!isPushSupported()) return { ok: false, error: "เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือน" };
   if (!VAPID_PUBLIC_KEY) return { ok: false, error: "ยังไม่ได้ตั้งค่า VAPID key" };
@@ -45,21 +45,32 @@ export async function subscribeToPush(uid: string): Promise<{ ok: boolean; error
       endpoint: json.endpoint!,
       keys: { p256dh: json.keys!.p256dh, auth: json.keys!.auth },
     };
-    await updateDoc(doc(db, "users", uid), { pushSubscription: data });
+    await updateDoc(doc(db, "users", uid), { pushSubscriptions: arrayUnion(data) });
     return { ok: true };
-  } catch {
+  } catch (e) {
+    console.error("subscribeToPush error:", e);
     return { ok: false, error: "เปิดการแจ้งเตือนไม่สำเร็จ" };
   }
 }
 
-/** ยกเลิก subscribe + ล้างค่าใน Firestore */
+/** ยกเลิก subscribe เครื่องนี้ + ลบออกจาก array ใน Firestore */
 export async function unsubscribeFromPush(uid: string): Promise<void> {
   try {
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.getSubscription();
-    if (sub) await sub.unsubscribe();
-  } catch {
-    // ไม่ critical
+    if (sub) {
+      const json = sub.toJSON();
+      const data: PushSubscriptionData = {
+        endpoint: json.endpoint!,
+        keys: { p256dh: json.keys!.p256dh, auth: json.keys!.auth },
+      };
+      await updateDoc(doc(db, "users", uid), {
+        pushSubscriptions: arrayRemove(data),
+        pushSubscription: null,
+      });
+      await sub.unsubscribe();
+    }
+  } catch (e) {
+    console.error("unsubscribeFromPush error:", e);
   }
-  await updateDoc(doc(db, "users", uid), { pushSubscription: null });
 }

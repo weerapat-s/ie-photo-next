@@ -1,9 +1,9 @@
 "use client";
 // app/(member)/studio/page.tsx — จองสตูดิโอ + แอดมินแก้ไขข้อมูลห้อง
 import { useMemo, useState } from "react";
-import { collection, query, orderBy, addDoc, doc, updateDoc, Timestamp, serverTimestamp } from "firebase/firestore";
+import { collection, query, orderBy, doc, updateDoc, writeBatch, Timestamp, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { findBookingConflicts } from "@/lib/booking";
+import { findSlotConflicts, slotPayload } from "@/lib/slots";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useCollection } from "@/lib/hooks";
 import { PageHeader, Badge, Spinner, Button, Modal, Field, inputClass } from "@/components/ui";
@@ -143,15 +143,20 @@ function BookingModal({
     if (!reason.trim()) return setErr("กรุณาระบุวัตถุประสงค์");
     setBusy(true);
     try {
-      // เช็คการจองซ้อน — ห้องนี้ถูกจอง (pending/approved) ช่วงเวลาทับกันไหม
-      const conflicts = await findBookingConflicts(studio.id, startDate, endDate);
+      // เช็คการจองซ้อน — member นับทั้ง pending+approved ว่าชน
+      const conflicts = await findSlotConflicts(studio.id, startDate, endDate);
       if (conflicts.length) {
         setErr("ช่วงเวลานี้มีคนจองแล้ว กรุณาเลือกเวลาอื่น");
         setBusy(false);
         return;
       }
 
-      await addDoc(collection(db, "bookings"), {
+      const startTs = Timestamp.fromDate(new Date(start));
+      const endTs = Timestamp.fromDate(new Date(end));
+      const bookingRef = doc(collection(db, "bookings"));
+      const slotRef = doc(db, "slots", bookingRef.id);
+      const batch = writeBatch(db);
+      batch.set(bookingRef, {
         bookingType: "studio",
         itemId: studio.id,
         itemName: studio.name,
@@ -160,8 +165,8 @@ function BookingModal({
         userPhone,
         guestName: null,
         guestEmail: null,
-        startAt: Timestamp.fromDate(new Date(start)),
-        endAt: Timestamp.fromDate(new Date(end)),
+        startAt: startTs,
+        endAt: endTs,
         formImageUrl: null,
         returnImageUrl: null,
         usageReason: reason.trim(),
@@ -172,6 +177,11 @@ function BookingModal({
         consentToken: null,
         createdAt: serverTimestamp(),
       });
+      batch.set(slotRef, slotPayload({
+        bookingId: bookingRef.id, itemId: studio.id, itemName: studio.name,
+        bookingType: "studio", startAt: startTs, endAt: endTs,
+      }));
+      await batch.commit();
       setDone(true);
     } catch {
       setErr("จองไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");

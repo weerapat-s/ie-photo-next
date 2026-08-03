@@ -37,8 +37,10 @@ export interface UserDoc {
   role: Role;
   profileImageUrl: string | null;
   profileCompleted: boolean;
+  disabled?: boolean;                                  // UI indicator (security ตัดจริงอยู่ที่ banned/{uid})
   createdAt: Timestamp;
-  pushSubscription?: PushSubscriptionData | null;
+  pushSubscription?: PushSubscriptionData | null;      // legacy — คงไว้ช่วง migrate
+  pushSubscriptions?: PushSubscriptionData[] | null;   // multi-device
 }
 
 // ── equipments/{id} ───────────────────────────────────────────
@@ -113,3 +115,17 @@ export interface FeedDoc {
 
 // helper: doc พร้อม id
 export type WithId<T> = T & { id: string };
+
+export type SlotStatus = "pending" | "approved";
+
+// ── slots/{id} — id เดียวกับ bookings/{id} เสมอ ──────────────
+// ข้อมูลตารางล้วน อ่านสาธารณะ ห้ามมีชื่อ/เบอร์/อีเมล/รูป
+export interface SlotDoc {
+  bookingId: string;
+  itemId: string;
+  itemName: string;
+  bookingType: BookingType;
+  startAt: Timestamp;
+  endAt: Timestamp;
+  status: SlotStatus;
+}

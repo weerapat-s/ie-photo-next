@@ -6,39 +6,69 @@ import { db } from "@/lib/firebase/client";
 import { useCollection } from "@/lib/hooks";
 import { PageHeader, Card, Badge, Spinner, Button, Modal, Field, inputClass, EmptyState } from "@/components/ui";
 import { EQUIPMENT_STATUS, EQUIPMENT_TYPE_LABEL } from "@/lib/format";
-import type { EquipmentDoc, EquipmentStatus, EquipmentType } from "@/lib/types";
+import type { EquipmentDoc, EquipmentStatus, EquipmentType, SlotDoc } from "@/lib/types";
 
 export default function InventoryPage() {
   const { data: items, loading } = useCollection<EquipmentDoc>(
     () => query(collection(db, "equipments"), orderBy("type")),
     []
   );
+  const { data: slots } = useCollection<SlotDoc>(
+    () => query(collection(db, "slots")),
+    []
+  );
+
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [type, setType] = useState<EquipmentType>("camera");
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
 
   async function add() {
     if (!name.trim()) return;
     setBusy(true);
-    await addDoc(collection(db, "equipments"), {
-      name: name.trim(),
-      type,
-      status: "available",
-      createdAt: serverTimestamp(),
-    });
-    setName("");
-    setType("camera");
-    setBusy(false);
-    setAdding(false);
+    setErr("");
+    try {
+      await addDoc(collection(db, "equipments"), {
+        name: name.trim(),
+        type,
+        status: "available",
+        createdAt: serverTimestamp(),
+      });
+      setName("");
+      setType("camera");
+      setAdding(false);
+    } catch {
+      setErr("เพิ่มอุปกรณ์ไม่สำเร็จ กรุณาลองใหม่");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function changeStatus(id: string, status: EquipmentStatus) {
-    await updateDoc(doc(db, "equipments", id), { status });
+    try {
+      await updateDoc(doc(db, "equipments", id), { status });
+    } catch {
+      alert("เปลี่ยนสถานะไม่สำเร็จ");
+    }
   }
 
-  async function remove(id: string) {
-    if (confirm("ลบอุปกรณ์นี้?")) await deleteDoc(doc(db, "equipments", id));
+  async function remove(eq: EquipmentDoc & { id: string }) {
+    const now = Date.now();
+    const activeSlots = slots.filter((s) => s.itemId === eq.id && s.endAt.toMillis() > now);
+    if (activeSlots.length) {
+      if (!confirm(`⚠️ "${eq.name}" มีการจองค้างอยู่ ${activeSlots.length} รายการ\nลบแล้วรายการเหล่านั้นจะกำพร้า ยืนยันลบ?`)) {
+        return;
+      }
+    } else {
+      if (!confirm(`ลบอุปกรณ์ "${eq.name}"?`)) return;
+    }
+
+    try {
+      await deleteDoc(doc(db, "equipments", eq.id));
+    } catch {
+      alert("ลบอุปกรณ์ไม่สำเร็จ");
+    }
   }
 
   return (
@@ -49,33 +79,51 @@ export default function InventoryPage() {
         action={<Button onClick={() => setAdding(true)}>+ เพิ่มอุปกรณ์</Button>}
       />
 
+      {err && (
+        <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm text-red-400">
+          ⚠️ {err}
+        </div>
+      )}
+
       {loading ? (
         <Spinner />
       ) : items.length === 0 ? (
         <EmptyState icon="📦" text="ยังไม่มีอุปกรณ์ในคลัง" />
       ) : (
         <div className="space-y-2">
-          {items.map((eq) => (
-            <Card key={eq.id} className="flex flex-wrap items-center gap-3 p-3">
-              <span className="text-sm text-slate-400">{EQUIPMENT_TYPE_LABEL[eq.type]}</span>
-              <span className="font-medium text-slate-100">{eq.name}</span>
-              <Badge className={EQUIPMENT_STATUS[eq.status].cls}>● {EQUIPMENT_STATUS[eq.status].label}</Badge>
-              <div className="ml-auto flex items-center gap-2">
-                <select
-                  value={eq.status}
-                  onChange={(e) => changeStatus(eq.id, e.target.value as EquipmentStatus)}
-                  className="rounded-xl border border-slate-700/80 bg-slate-800/80 text-slate-200 px-2.5 py-1.5 pr-7 text-sm outline-none focus:border-orange-500"
-                >
-                  <option value="available" className="bg-slate-900 text-slate-200">พร้อมใช้งาน</option>
-                  <option value="borrowed" className="bg-slate-900 text-slate-200">กำลังถูกยืม</option>
-                  <option value="maintenance" className="bg-slate-900 text-slate-200">ซ่อมบำรุง</option>
-                </select>
-                <Button variant="ghost" onClick={() => remove(eq.id)} className="text-red-400 hover:text-red-300 hover:bg-red-500/10">
-                  🗑️
-                </Button>
-              </div>
-            </Card>
-          ))}
+          {items.map((eq) => {
+            const st = EQUIPMENT_STATUS[eq.status] ?? EQUIPMENT_STATUS.available;
+            const now = Date.now();
+            const isCurrentlyBorrowed = slots.some(
+              (s) => s.itemId === eq.id && s.status === "approved" && s.startAt.toMillis() <= now && s.endAt.toMillis() > now
+            );
+
+            return (
+              <Card key={eq.id} className="flex flex-wrap items-center gap-3 p-3">
+                <span className="text-sm text-slate-400">{EQUIPMENT_TYPE_LABEL[eq.type]}</span>
+                <span className="font-medium text-slate-100">{eq.name}</span>
+                <Badge className={st.cls}>● {st.label}</Badge>
+                {isCurrentlyBorrowed && (
+                  <Badge className="bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    📷 ถูกยืมอยู่ในขณะนี้
+                  </Badge>
+                )}
+                <div className="ml-auto flex items-center gap-2">
+                  <select
+                    value={eq.status}
+                    onChange={(e) => changeStatus(eq.id, e.target.value as EquipmentStatus)}
+                    className="rounded-xl border border-slate-700/80 bg-slate-800/80 text-slate-200 px-2.5 py-1.5 pr-7 text-sm outline-none focus:border-orange-500"
+                  >
+                    <option value="available" className="bg-slate-900 text-slate-200">พร้อมใช้งาน</option>
+                    <option value="maintenance" className="bg-slate-900 text-slate-200">ซ่อมบำรุง</option>
+                  </select>
+                  <Button variant="ghost" onClick={() => remove(eq)} className="text-red-400 hover:text-red-300 hover:bg-red-500/10">
+                    🗑️
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
 

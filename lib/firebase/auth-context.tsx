@@ -35,16 +35,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   // กัน heal ซ้ำ: จำ uid ที่พยายามสร้าง doc ซ่อมไปแล้ว
   const healedRef = useRef<Set<string>>(new Set());
+  // กัน alert ซ้ำเมื่อ banned
+  const bannedNotifiedRef = useRef(false);
 
   useEffect(() => {
     let unsubDoc: (() => void) | null = null;
+    let unsubBanned: (() => void) | null = null;
 
     const unsubAuth = onAuthStateChanged(auth, (u) => {
       // เลิก subscribe doc ของ user คนก่อน
-      if (unsubDoc) {
-        unsubDoc();
-        unsubDoc = null;
-      }
+      if (unsubDoc) { unsubDoc(); unsubDoc = null; }
+      if (unsubBanned) { unsubBanned(); unsubBanned = null; }
+      bannedNotifiedRef.current = false;
 
       if (!u) {
         setUser(null);
@@ -55,6 +57,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setUser(u);
+
+      // ตรวจการถูกระงับ: subscribe banned/{uid} → force sign-out ถ้ามี doc
+      unsubBanned = onSnapshot(doc(db, "banned", u.uid), (snap) => {
+        if (!snap.exists() || bannedNotifiedRef.current) return;
+        bannedNotifiedRef.current = true;
+        fbSignOut(auth);
+        alert("บัญชีของคุณถูกระงับ กรุณาติดต่อแอดมิน");
+      }, () => {});
+
       // realtime + cache-first: snapshot แรกมาจาก cache (เร็ว) แล้วตามด้วย server
       unsubDoc = onSnapshot(
         doc(db, "users", u.uid),
@@ -68,6 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setRole("member");
             // ซ่อมบัญชีค้าง: auth มีแต่ user doc หาย (สมัครค้าง/โดนลบ doc)
             // → สร้าง doc member ให้ใหม่ ไม่งั้นหน้าโปรไฟล์บันทึกไม่ได้ตลอดไป
+            // ถ้าถูกแบน rules จะปฏิเสธ create อัตโนมัติ (banned/{uid} เช็คที่ rules)
             // (เช็ค fromCache กันเคส snapshot แรกจาก cache ยังไม่เห็น doc บนเซิร์ฟเวอร์)
             if (!snap.metadata.fromCache && !healedRef.current.has(u.uid)) {
               healedRef.current.add(u.uid);
@@ -97,6 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       unsubAuth();
       if (unsubDoc) unsubDoc();
+      if (unsubBanned) unsubBanned();
     };
   }, []);
 

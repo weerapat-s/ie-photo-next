@@ -3,8 +3,9 @@
 // อยู่นอก (member) group จึงไม่มี RequireAuth ครอบ
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { collection, query, orderBy, addDoc, Timestamp, serverTimestamp } from "firebase/firestore";
+import { collection, query, orderBy, doc, writeBatch, Timestamp, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
+import { findSlotConflicts, slotPayload } from "@/lib/slots";
 import { useCollection } from "@/lib/hooks";
 import { Badge, Spinner, Button, Modal, Field, inputClass, EmptyState } from "@/components/ui";
 import type { StudioDoc, WithId } from "@/lib/types";
@@ -156,7 +157,21 @@ function GuestBookingModal({ studio, onClose }: { studio: WithId<StudioDoc>; onC
 
     setBusy(true);
     try {
-      await addDoc(collection(db, "bookings"), {
+      const startTs = Timestamp.fromDate(startDate);
+      const endTs = Timestamp.fromDate(endDate);
+
+      // guest นับเฉพาะ slot ที่ "อนุมัติแล้ว" ว่าชน — กัน slot ปลอมบล็อกคนอื่น
+      const conflicts = await findSlotConflicts(studio.id, startDate, endDate, { onlyApproved: true });
+      if (conflicts.length) {
+        setErr("ช่วงเวลานี้มีการจองที่ยืนยันแล้ว กรุณาเลือกเวลาอื่น");
+        setBusy(false);
+        return;
+      }
+
+      const bookingRef = doc(collection(db, "bookings"));       // จอง id เองก่อนเขียน
+      const slotRef = doc(db, "slots", bookingRef.id);          // slot id = booking id
+      const batch = writeBatch(db);
+      batch.set(bookingRef, {
         bookingType: "studio",
         itemId: studio.id,
         itemName: studio.name,
@@ -165,8 +180,8 @@ function GuestBookingModal({ studio, onClose }: { studio: WithId<StudioDoc>; onC
         userPhone: phone.trim(),
         guestName: name.trim(),
         guestEmail: email.trim(),
-        startAt: Timestamp.fromDate(startDate),
-        endAt: Timestamp.fromDate(endDate),
+        startAt: startTs,
+        endAt: endTs,
         formImageUrl: null,
         returnImageUrl: null,
         usageReason: reason.trim(),
@@ -177,6 +192,11 @@ function GuestBookingModal({ studio, onClose }: { studio: WithId<StudioDoc>; onC
         consentToken: null,
         createdAt: serverTimestamp(),
       });
+      batch.set(slotRef, slotPayload({
+        bookingId: bookingRef.id, itemId: studio.id, itemName: studio.name,
+        bookingType: "studio", startAt: startTs, endAt: endTs,
+      }));
+      await batch.commit();
       setDone(true);
     } catch {
       setErr("ส่งคำขอไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
@@ -191,7 +211,7 @@ function GuestBookingModal({ studio, onClose }: { studio: WithId<StudioDoc>; onC
           <div className="mb-2 text-3xl">✅</div>
           <p className="text-sm text-slate-200">ส่งคำขอจองเรียบร้อย</p>
           <p className="mt-1 text-sm text-slate-400">
-            ทีมงานจะติดต่อกลับที่เบอร์/อีเมลที่ให้ไว้เพื่อยืนยัน
+            ยังไม่ยืนยันการจอง — ทีมงานจะตรวจสอบเวลาว่างแล้วติดต่อกลับที่เบอร์/อีเมลที่ให้ไว้
           </p>
           <Button onClick={onClose} className="mt-4">
             ปิด

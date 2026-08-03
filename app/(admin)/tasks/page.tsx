@@ -22,34 +22,47 @@ export default function AdminTasksPage() {
   const [assignee, setAssignee] = useState("");
   const [due, setDue] = useState("");
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
-    if (!user || !title.trim() || !assignee) return;
+    if (!user || !title.trim() || !assignee || busy) return;
     setBusy(true);
-    const target = users.find((u) => u.id === assignee);
-    await addDoc(collection(db, "tasks"), {
-      title: title.trim(),
-      description: desc.trim() || null,
-      assignedById: user.uid,
-      assignedByName: `${profile?.firstName ?? ""} ${profile?.lastName ?? ""}`.trim() || "แอดมิน",
-      assignedToId: assignee,
-      assignedToName: target ? `${target.firstName} ${target.lastName}`.trim() || target.studentId : "",
-      bookingId: null,
-      status: "pending",
-      dueDate: due ? Timestamp.fromDate(new Date(due)) : null,
-      createdAt: serverTimestamp(),
-    });
-    setTitle("");
-    setDesc("");
-    setAssignee("");
-    setDue("");
-    setBusy(false);
+    setErr("");
+    try {
+      const target = users.find((u) => u.id === assignee);
+      await addDoc(collection(db, "tasks"), {
+        title: title.trim(),
+        description: desc.trim() || null,
+        assignedById: user.uid,
+        assignedByName: `${profile?.firstName ?? ""} ${profile?.lastName ?? ""}`.trim() || "แอดมิน",
+        assignedToId: assignee,
+        assignedToName: target ? `${target.firstName} ${target.lastName}`.trim() || target.studentId : "",
+        bookingId: null,
+        status: "pending",
+        dueDate: due ? Timestamp.fromDate(new Date(due)) : null,
+        createdAt: serverTimestamp(),
+      });
+      setTitle("");
+      setDesc("");
+      setAssignee("");
+      setDue("");
+    } catch {
+      setErr("สร้างงานไม่สำเร็จ กรุณาลองใหม่");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <div>
       <PageHeader title="จัดการงาน" subtitle="มอบหมายงานให้สมาชิก" />
+
+      {err && (
+        <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm text-red-400">
+          ⚠️ {err}
+        </div>
+      )}
 
       <Card className="mb-5">
         <form onSubmit={create}>
@@ -75,7 +88,7 @@ export default function AdminTasksPage() {
             </Field>
           </div>
           <Button type="submit" disabled={busy || !title.trim() || !assignee} className="mt-2">
-            + สร้างงาน
+            {busy ? "กำลังสร้าง…" : "+ สร้างงาน"}
           </Button>
         </form>
       </Card>

@@ -25,11 +25,16 @@ export default function AdminBookingsPage() {
   );
   const [filter, setFilter] = useState<BookingStatus | "all">("all");
   const [viewImg, setViewImg] = useState<string | null>(null);
+  const [actionErr, setActionErr] = useState("");
+  const [actionBusy, setActionBusy] = useState<string | null>(null);
 
   const shown = filter === "all" ? bookings : bookings.filter((b) => b.status === filter);
 
-  // อนุมัติ/ปฏิเสธ + sync สถานะอุปกรณ์ + สร้าง feed
+  // อนุมัติ/ปฏิเสธ + sync slot + สร้าง feed
   async function decide(b: WithId<BookingDoc>, status: "approved" | "rejected") {
+    if (actionBusy) return;
+    setActionErr("");
+
     // เตือนถ้ามีการจองที่ "อนุมัติแล้ว" ของ item เดียวกัน ช่วงเวลาทับกัน
     if (status === "approved") {
       const overlap = bookings.find(
@@ -50,40 +55,65 @@ export default function AdminBookingsPage() {
       }
     }
 
-    const batch = writeBatch(db);
-    batch.update(doc(db, "bookings", b.id), { status });
-    if (status === "approved" && b.bookingType === "equipment") {
-      batch.update(doc(db, "equipments", b.itemId), { status: "borrowed" });
-    }
-    await batch.commit();
+    setActionBusy(b.id);
+    try {
+      const batch = writeBatch(db);
+      batch.update(doc(db, "bookings", b.id), { status });
+      // slot: อนุมัติ = ยืนยันช่วงเวลา / ปฏิเสธ = ปล่อยช่วงเวลาคืน (ห้าม update ทิ้งไว้)
+      if (status === "approved") {
+        batch.update(doc(db, "slots", b.id), { status: "approved" });
+      } else {
+        batch.delete(doc(db, "slots", b.id));
+      }
+      await batch.commit();
 
-    if (status === "approved") {
-      await addDoc(collection(db, "feeds"), {
-        message: `${b.userName} จอง${b.bookingType === "studio" ? "สตูดิโอ" : "อุปกรณ์"} "${b.itemName}" ได้รับการอนุมัติแล้ว`,
-        bookingId: b.id,
-        userId: b.userId,
-        formImageUrl: b.formImageUrl,
-        bookingStatus: "approved",
-        likedBy: [],
-        likeCount: 0,
-        createdAt: serverTimestamp(),
-      });
+      if (status === "approved") {
+        await addDoc(collection(db, "feeds"), {
+          message: `${b.userName} จอง${b.bookingType === "studio" ? "สตูดิโอ" : "อุปกรณ์"} "${b.itemName}" ได้รับการอนุมัติแล้ว`,
+          bookingId: b.id,
+          userId: b.userId,
+          formImageUrl: null, // ❌ ห้ามก็อปเอกสารขออนุญาตขึ้นฟีดสาธารณะ
+          bookingStatus: "approved",
+          likedBy: [],
+          likeCount: 0,
+          createdAt: serverTimestamp(),
+        });
+      }
+    } catch (err) {
+      console.error("decide error:", err);
+      setActionErr("ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+    } finally {
+      setActionBusy(null);
     }
   }
 
-  // ยืนยันรับคืน → returned + อุปกรณ์ available
+  // ยืนยันรับคืน → returned + ลบ slot
   async function confirmReturn(b: WithId<BookingDoc>) {
-    const batch = writeBatch(db);
-    batch.update(doc(db, "bookings", b.id), { status: "returned" });
-    if (b.bookingType === "equipment") {
-      batch.update(doc(db, "equipments", b.itemId), { status: "available" });
+    if (actionBusy) return;
+    setActionErr("");
+    setActionBusy(b.id);
+    try {
+      const batch = writeBatch(db);
+      batch.update(doc(db, "bookings", b.id), { status: "returned" });
+      batch.delete(doc(db, "slots", b.id)); // คืนแล้ว = ปล่อยช่วงเวลา
+      await batch.commit();
+    } catch (err) {
+      console.error("confirmReturn error:", err);
+      setActionErr("บันทึกการรับคืนไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+    } finally {
+      setActionBusy(null);
     }
-    await batch.commit();
   }
 
   return (
     <div>
       <PageHeader title="รายการจอง" subtitle="อนุมัติ ปฏิเสธ และตรวจรับคืนอุปกรณ์" />
+
+      {actionErr && (
+        <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm text-red-400">
+          ⚠️ {actionErr}
+        </div>
+      )}
 
       <div className="mb-4 flex flex-wrap gap-2">
         {FILTERS.map((f) => (
@@ -143,13 +173,19 @@ export default function AdminBookingsPage() {
                   <div className="flex gap-2">
                     {b.status === "pending" && (
                       <>
-                        <Button onClick={() => decide(b, "approved")}>อนุมัติ</Button>
-                        <Button variant="danger" onClick={() => decide(b, "rejected")}>
+                        <Button onClick={() => decide(b, "approved")} disabled={actionBusy === b.id}>
+                          {actionBusy === b.id ? "กำลังดำเนินการ…" : "อนุมัติ"}
+                        </Button>
+                        <Button variant="danger" onClick={() => decide(b, "rejected")} disabled={actionBusy === b.id}>
                           ปฏิเสธ
                         </Button>
                       </>
                     )}
-                    {b.status === "pending_return" && <Button onClick={() => confirmReturn(b)}>ยืนยันรับคืน</Button>}
+                    {b.status === "pending_return" && (
+                      <Button onClick={() => confirmReturn(b)} disabled={actionBusy === b.id}>
+                        {actionBusy === b.id ? "กำลังดำเนินการ…" : "ยืนยันรับคืน"}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>

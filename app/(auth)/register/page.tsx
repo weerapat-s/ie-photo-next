@@ -28,13 +28,14 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      const mail = email.trim().toLowerCase();
+      const cred = await createUserWithEmailAndPassword(auth, mail, password);
       // สร้าง user doc (rules อนุญาตให้สร้าง doc ตัวเอง role=member)
       await setDoc(doc(db, "users", cred.user.uid), {
-        studentId: email.split("@")[0],
+        studentId: mail.split("@")[0],
         firstName: "",
         lastName: "",
-        email,
+        email: mail,
         phone: "",
         role: "member",
         profileImageUrl: null,
