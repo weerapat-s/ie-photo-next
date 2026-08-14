@@ -5,7 +5,7 @@ import { collection, query, where, orderBy, doc, updateDoc } from "firebase/fire
 import { db } from "@/lib/firebase/client";
 import { compressImageToDataUrl } from "@/lib/image";
 import { useAuth } from "@/lib/firebase/auth-context";
-import { useCollection } from "@/lib/hooks";
+import { useCollection, useNow } from "@/lib/hooks";
 import { PageHeader, Card, Badge, Spinner, Button, Modal, EmptyState } from "@/components/ui";
 import { fmtDateTime, BOOKING_STATUS } from "@/lib/format";
 import type { BookingDoc, WithId } from "@/lib/types";
@@ -18,6 +18,7 @@ export default function MyBookingsPage() {
     [user?.uid]
   );
   const [returning, setReturning] = useState<WithId<BookingDoc> | null>(null);
+  const now = useNow();
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -47,12 +48,17 @@ export default function MyBookingsPage() {
                 <Badge className={BOOKING_STATUS[b.status].cls}>{BOOKING_STATUS[b.status].label}</Badge>
               </div>
 
-              {b.bookingType === "equipment" && b.status === "approved" && (
+              {b.bookingType === "equipment" && b.status === "approved" && now !== null && b.startAt.toMillis() <= now && (
                 <div className="mt-3 border-t border-slate-800/80 pt-3">
                   <Button variant="outline" onClick={() => setReturning(b)}>
                     📸 คืนอุปกรณ์ (แนบรูป)
                   </Button>
                 </div>
+              )}
+              {b.bookingType === "equipment" && b.status === "approved" && now !== null && b.startAt.toMillis() > now && (
+                <p className="mt-3 border-t border-slate-800/80 pt-3 text-xs text-muted-foreground">
+                  เปิดให้แจ้งคืนได้เมื่อถึงเวลาเริ่มยืมอุปกรณ์
+                </p>
               )}
               {b.status === "pending_return" && (
                 <p className="mt-2 text-xs text-purple-400">รอแอดมินตรวจรับคืน</p>

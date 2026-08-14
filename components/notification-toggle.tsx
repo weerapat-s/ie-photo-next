@@ -1,20 +1,22 @@
 "use client";
 // components/notification-toggle.tsx — เปิด/ปิดการแจ้งเตือน push (ทำงานแม้ปิดแอพ)
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { isPushSupported, getNotificationPermission, subscribeToPush, unsubscribeFromPush } from "@/lib/push";
 import { useAuth } from "@/lib/firebase/auth-context";
+
+const subscribeToCapabilities = () => () => {};
+const getServerPushSupport = () => true;
+const getServerPermission = (): NotificationPermission | "unsupported" => "default";
 
 export default function NotificationToggle() {
   const { user, profile } = useAuth();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [supported, setSupported] = useState(true);
-  const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default");
   const [endpoint, setEndpoint] = useState<string | null>(null);
+  const supported = useSyncExternalStore(subscribeToCapabilities, isPushSupported, getServerPushSupport);
+  const permission = useSyncExternalStore(subscribeToCapabilities, getNotificationPermission, getServerPermission);
 
   useEffect(() => {
-    setSupported(isPushSupported());
-    setPermission(getNotificationPermission());
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
       navigator.serviceWorker.ready
         .then((r) => r.pushManager.getSubscription())
@@ -76,8 +78,12 @@ export default function NotificationToggle() {
           )}
         </div>
         <button
+          type="button"
           onClick={toggle}
           disabled={busy || (!subscribed && permission === "denied")}
+          role="switch"
+          aria-checked={subscribed}
+          aria-label="เปิดหรือปิดการแจ้งเตือน"
           className={`relative h-7 w-12 flex-shrink-0 rounded-full transition disabled:opacity-40 ${
             subscribed ? "bg-orange-500 shadow-[0_0_12px_rgba(255,91,31,0.4)]" : "bg-slate-700"
           }`}

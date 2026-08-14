@@ -75,9 +75,26 @@ service cloud.firestore {
              && d.status == 'pending';   // 'approved' ตั้งได้โดยแอดมินเท่านั้น
     }
 
+    // Client สร้าง slot ได้เฉพาะพร้อม booking ใหม่ที่มีข้อมูลช่วงเวลาเดียวกันใน batch เดียวกัน
+    // เพื่อกัน anonymous/public client สร้าง pending slot ปลอมมาบล็อกคิว
+    function hasNewMatchingBooking(slotId) {
+      let slot = request.resource.data;
+      let bookingPath = /databases/$(database)/documents/bookings/$(slotId);
+      return slot.bookingId == slotId
+             && !exists(bookingPath)
+             && existsAfter(bookingPath)
+             && getAfter(bookingPath).data.bookingType == slot.bookingType
+             && getAfter(bookingPath).data.itemId == slot.itemId
+             && getAfter(bookingPath).data.itemName == slot.itemName
+             && getAfter(bookingPath).data.startAt == slot.startAt
+             && getAfter(bookingPath).data.endAt == slot.endAt
+             && getAfter(bookingPath).data.status == 'pending';
+    }
+
     match /slots/{id} {
       allow read:   if true;
-      allow create: if validSlot() && (request.auth == null || notBanned());
+      allow create: if validSlot() && hasNewMatchingBooking(id)
+                       && (request.auth == null || notBanned());
       allow update, delete: if isAdmin() && notBanned();
     }
 
@@ -103,7 +120,7 @@ service cloud.firestore {
              && d.userId == request.auth.uid
              && d.endAt < d.startAt + duration.value(7,'d')
              && (d.formImageUrl == null
-                 || (d.formImageUrl is string && d.formImageUrl.size() <= 900000));
+                 || (d.formImageUrl is string && d.formImageUrl.size() <= 650000));
     }
 
     function validGuestBooking() {
@@ -123,9 +140,13 @@ service cloud.firestore {
     }
 
     function onlyReturnChanged() {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','returnImageUrl'])
+      return resource.data.bookingType == 'equipment'
+             && request.time >= resource.data.startAt
+             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','returnImageUrl'])
              && request.resource.data.status == 'pending_return'
-             && resource.data.status == 'approved';
+             && resource.data.status == 'approved'
+             && request.resource.data.returnImageUrl is string
+             && request.resource.data.returnImageUrl.size() <= 650000;
     }
 
     match /bookings/{id} {
@@ -155,13 +176,16 @@ service cloud.firestore {
       let after  = request.resource.data;
       let uid    = request.auth.uid;
       return after.diff(before).affectedKeys().hasOnly(['likedBy','likeCount'])
+             && after.likeCount >= 0
              && (
                   ( after.likeCount == before.likeCount + 1
                     && !(uid in before.likedBy) && (uid in after.likedBy)
+                    && after.likedBy.size() == before.likedBy.size() + 1
                     && after.likedBy.hasAll(before.likedBy)
                     && after.likedBy.hasOnly(before.likedBy.concat([uid])) )
                || ( after.likeCount == before.likeCount - 1
                     && (uid in before.likedBy) && !(uid in after.likedBy)
+                    && after.likedBy.size() == before.likedBy.size() - 1
                     && before.likedBy.hasAll(after.likedBy) )
              );
     }

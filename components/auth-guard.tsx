@@ -7,8 +7,9 @@ import Navbar from "./navbar";
 
 function Loading() {
   return (
-    <div className="flex flex-1 items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-orange-500 shadow-[0_0_15px_rgba(255,91,31,0.5)]" />
+    <div className="flex flex-1 items-center justify-center" role="status" aria-label="กำลังตรวจสอบสิทธิ์">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary" />
+      <span className="sr-only">กำลังตรวจสอบสิทธิ์</span>
     </div>
   );
 }
@@ -26,8 +27,9 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <a href="#main-content" className="skip-link">ข้ามไปเนื้อหาหลัก</a>
       <Navbar />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5">{children}</main>
+      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 outline-none">{children}</main>
     </>
   );
 }
@@ -48,8 +50,9 @@ export function RequireAdmin({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <a href="#main-content" className="skip-link">ข้ามไปเนื้อหาหลัก</a>
       <Navbar />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5">{children}</main>
+      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 outline-none">{children}</main>
     </>
   );
 }

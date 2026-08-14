@@ -1,6 +1,6 @@
 "use client";
 // app/(member)/borrow/page.tsx — ยืมอุปกรณ์ (เลือกหลายชิ้น + แนบเอกสาร)
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { collection, query, where, orderBy, doc, writeBatch, Timestamp, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
@@ -11,6 +11,8 @@ import { useCollection } from "@/lib/hooks";
 import { PageHeader, Card, Spinner, Button, Field, inputClass, EmptyState } from "@/components/ui";
 import { EQUIPMENT_TYPE_LABEL } from "@/lib/format";
 import type { EquipmentDoc } from "@/lib/types";
+
+const MAX_EQUIPMENT_PER_REQUEST = 6;
 
 export default function BorrowPage() {
   const { user, profile } = useAuth();
@@ -35,25 +37,36 @@ export default function BorrowPage() {
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   }, []);
 
-  // sync selection: ลบ id ที่หายจาก equipments list (ถูกยืม/ถูกลบระหว่างกรอกฟอร์ม)
-  useEffect(() => {
-    setSelected((prev) => {
-      const ids = new Set(equipments.map((e) => e.id));
-      const next = new Set([...prev].filter((id) => ids.has(id)));
-      return next.size === prev.size ? prev : next;
-    });
-  }, [equipments]);
+  const availableEquipmentIds = useMemo(() => new Set(equipments.map((equipment) => equipment.id)), [equipments]);
+  const availableSelected = useMemo(
+    () => new Set([...selected].filter((id) => availableEquipmentIds.has(id))),
+    [availableEquipmentIds, selected]
+  );
 
   function toggle(id: string) {
+    if (!availableSelected.has(id) && availableSelected.size >= MAX_EQUIPMENT_PER_REQUEST) {
+      setErr("เลือกอุปกรณ์ได้สูงสุด " + MAX_EQUIPMENT_PER_REQUEST + " ชิ้นต่อคำขอ");
+      return;
+    }
+    setErr("");
     setSelected((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      // Discard equipment that became unavailable while the form was open.
+      const next = new Set([...prev].filter((selectedId) => availableEquipmentIds.has(selectedId)));
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
 
   const canSubmit =
-    selected.size > 0 && start && end && reason.trim() && file && new Date(end) > new Date(start) && !busy;
+    availableSelected.size > 0 &&
+    availableSelected.size <= MAX_EQUIPMENT_PER_REQUEST &&
+    start &&
+    end &&
+    reason.trim() &&
+    file &&
+    new Date(end) > new Date(start) &&
+    !busy;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,11 +79,16 @@ export default function BorrowPage() {
     if (startDate.getTime() < Date.now() - 60_000) return setErr("ไม่สามารถจองเวลาในอดีตได้");
     setBusy(true);
     try {
-      const items = equipments.filter((eq) => selected.has(eq.id));
+      const items = equipments.filter((eq) => availableSelected.has(eq.id));
 
       // #6 — ถ้าอุปกรณ์หลุดจาก list ระหว่างกรอก → แจ้ง error ชัดเจน
       if (items.length === 0) {
         setErr("อุปกรณ์ที่เลือกไม่พร้อมใช้งานแล้ว กรุณาเลือกใหม่");
+        setBusy(false);
+        return;
+      }
+      if (items.length > MAX_EQUIPMENT_PER_REQUEST) {
+        setErr("เลือกอุปกรณ์ได้สูงสุด " + MAX_EQUIPMENT_PER_REQUEST + " ชิ้นต่อคำขอ");
         setBusy(false);
         return;
       }
@@ -95,7 +113,7 @@ export default function BorrowPage() {
       const startTs = Timestamp.fromDate(startDate);
       const endTs = Timestamp.fromDate(endDate);
 
-      // เขียนทั้งหมดใน batch เดียว (2N writes, ลิมิต 500 — เหลือเฟือ)
+      // จำกัดจำนวนรายการและ data URL ใน lib/image ให้ต่ำกว่าเพดาน batch 10 MiB
       const batch = writeBatch(db);
       for (const eq of items) {
         const bRef = doc(collection(db, "bookings"));
@@ -139,10 +157,13 @@ export default function BorrowPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <PageHeader title="ยืมอุปกรณ์" subtitle="เลือกอุปกรณ์ที่ต้องการ แนบเอกสาร แล้วส่งคำขอ" />
+      <p className="mb-4 text-sm text-muted-foreground">
+        ส่งคำขอได้สูงสุด {MAX_EQUIPMENT_PER_REQUEST} ชิ้นต่อครั้ง เพื่อให้เอกสารแนบถูกบันทึกครบทุกชิ้น
+      </p>
 
       <form onSubmit={submit}>
         <Card className="mb-4">
-          <h3 className="mb-3 font-medium text-slate-100">เลือกอุปกรณ์ {selected.size > 0 && `(${selected.size} ชิ้น)`}</h3>
+          <h3 className="mb-3 font-medium text-slate-100">เลือกอุปกรณ์ {availableSelected.size > 0 && `(${availableSelected.size} ชิ้น)`}</h3>
           {loading ? (
             <Spinner />
           ) : loadError ? (
@@ -155,12 +176,12 @@ export default function BorrowPage() {
                 <label
                   key={eq.id}
                   className={`flex cursor-pointer items-center gap-2 rounded-xl border p-3 text-sm transition ${
-                    selected.has(eq.id)
+                    availableSelected.has(eq.id)
                       ? "border-orange-500/50 bg-orange-500/15 text-slate-100 shadow-[0_0_15px_rgba(255,91,31,0.2)]"
                       : "border-slate-800/80 bg-slate-900/40 text-slate-300 hover:border-slate-700 hover:bg-slate-800/40"
                   }`}
                 >
-                  <input type="checkbox" checked={selected.has(eq.id)} onChange={() => toggle(eq.id)} className="accent-orange-500" />
+                  <input type="checkbox" checked={availableSelected.has(eq.id)} onChange={() => toggle(eq.id)} className="accent-orange-500" />
                   <span>{eq.name}</span>
                   <span className="ml-auto text-xs text-slate-400">{EQUIPMENT_TYPE_LABEL[eq.type]}</span>
                 </label>

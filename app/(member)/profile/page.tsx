@@ -1,36 +1,37 @@
 "use client";
 // app/(member)/profile/page.tsx — แก้ไขข้อมูลส่วนตัว + รูปโปรไฟล์
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { compressImageToDataUrl } from "@/lib/image";
 import { useAuth } from "@/lib/firebase/auth-context";
 import NotificationToggle from "@/components/notification-toggle";
+import type { UserDoc, WithId } from "@/lib/types";
 
 export default function ProfilePage() {
+  const { profile } = useAuth();
+
+  // Auth state arrives asynchronously. Remount once the user's profile is
+  // available so the form takes its initial values without synchronously
+  // copying props into state from an effect.
+  return <ProfileForm key={profile?.id ?? "profile-loading"} initialProfile={profile} />;
+}
+
+function ProfileForm({ initialProfile }: { initialProfile: WithId<UserDoc> | null }) {
   const { user, profile, refresh } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
   const firstLogin = params.get("first_login") === "1";
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [firstName, setFirstName] = useState(() => initialProfile?.firstName || "");
+  const [lastName, setLastName] = useState(() => initialProfile?.lastName || "");
+  const [phone, setPhone] = useState(() => initialProfile?.phone || "");
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(() => initialProfile?.profileImageUrl || null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
-
-  useEffect(() => {
-    if (profile) {
-      setFirstName(profile.firstName || "");
-      setLastName(profile.lastName || "");
-      setPhone(profile.phone || "");
-      setPreview(profile.profileImageUrl || null);
-    }
-  }, [profile]);
 
   function onPickImage(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -80,8 +81,8 @@ export default function ProfilePage() {
           🎉 ยินดีต้อนรับ! กรุณาตั้งค่าโปรไฟล์ก่อนเริ่มใช้งาน
         </div>
       )}
-      {msg && <div className="mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5 text-sm text-emerald-400">✅ {msg}</div>}
-      {err && <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm text-red-400">⚠️ {err}</div>}
+      {msg && <div role="status" className="mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5 text-sm text-emerald-400">✅ {msg}</div>}
+      {err && <div role="alert" className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm text-red-400">⚠️ {err}</div>}
 
       <form onSubmit={handleSave} className="glass-card rounded-3xl p-6">
         <div className="mb-5 text-center">
@@ -98,14 +99,15 @@ export default function ProfilePage() {
         </div>
 
         <div className="mb-3">
-          <label className="mb-1 block text-sm font-medium text-slate-300">อีเมล</label>
+          <p className="mb-1 text-sm font-medium text-slate-300">อีเมล</p>
           <div className="rounded-xl bg-slate-900/80 border border-slate-800 px-3.5 py-2.5 text-sm text-slate-400">{user?.email}</div>
         </div>
 
         <div className="mb-3 grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-300">ชื่อจริง *</label>
+            <label htmlFor="profile-first-name" className="mb-1 block text-sm font-medium text-slate-300">ชื่อจริง *</label>
             <input
+              id="profile-first-name"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
               placeholder="สมชาย"
@@ -113,8 +115,9 @@ export default function ProfilePage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-300">นามสกุล</label>
+            <label htmlFor="profile-last-name" className="mb-1 block text-sm font-medium text-slate-300">นามสกุล</label>
             <input
+              id="profile-last-name"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
               placeholder="ใจดี"
@@ -124,8 +127,9 @@ export default function ProfilePage() {
         </div>
 
         <div className="mb-5">
-          <label className="mb-1 block text-sm font-medium text-slate-300">เบอร์โทรศัพท์</label>
+          <label htmlFor="profile-phone" className="mb-1 block text-sm font-medium text-slate-300">เบอร์โทรศัพท์</label>
           <input
+            id="profile-phone"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="0XXXXXXXXX"

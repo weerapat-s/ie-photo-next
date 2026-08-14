@@ -2,7 +2,7 @@
 // app/(member)/calendar/page.tsx — ตารางการจอง (agenda view อ่านจาก slots สาธารณะ)
 import { collection, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { useCollection } from "@/lib/hooks";
+import { useCollection, useNow } from "@/lib/hooks";
 import { PageHeader, Card, Badge, Spinner, EmptyState } from "@/components/ui";
 import { fmtDate, fmtDateTime } from "@/lib/format";
 import type { SlotDoc, WithId } from "@/lib/types";
@@ -20,9 +20,9 @@ export default function CalendarPage() {
     []
   );
 
-  // client filter: กรองรายการที่ endAt > Date.now()
-  const now = Date.now();
-  const upcoming = slots.filter((s) => s.endAt.toMillis() > now);
+  // client filter: กรองรายการที่ endAt > เวลาปัจจุบันที่ refresh ทุกนาที
+  const now = useNow();
+  const upcoming = now === null ? [] : slots.filter((s) => s.endAt.toMillis() > now);
 
   // group ตามวัน
   const groups: Record<string, WithId<SlotDoc>[]> = {};
@@ -35,7 +35,7 @@ export default function CalendarPage() {
     <div className="mx-auto max-w-3xl">
       <PageHeader title="ปฏิทินการจอง" subtitle="ตารางการใช้อุปกรณ์และสตูดิโอ" />
 
-      {loading ? (
+      {loading || now === null ? (
         <Spinner />
       ) : error ? (
         <EmptyState icon="⚠️" text="โหลดข้อมูลไม่สำเร็จ กรุณารีเฟรชหน้า" />

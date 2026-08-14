@@ -64,13 +64,14 @@ export default function RegisterPage() {
         </div>
 
         {error && (
-          <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm text-red-400">⚠️ {error}</div>
+          <div role="alert" className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm text-red-400">⚠️ {error}</div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-300">อีเมล KMITL</label>
+            <label htmlFor="register-email" className="mb-1 block text-sm font-medium text-slate-300">อีเมล KMITL</label>
             <input
+              id="register-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -83,8 +84,9 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-300">รหัสผ่าน</label>
+            <label htmlFor="register-password" className="mb-1 block text-sm font-medium text-slate-300">รหัสผ่าน</label>
             <input
+              id="register-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -96,8 +98,9 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-300">ยืนยันรหัสผ่าน</label>
+            <label htmlFor="register-confirm-password" className="mb-1 block text-sm font-medium text-slate-300">ยืนยันรหัสผ่าน</label>
             <input
+              id="register-confirm-password"
               type="password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
