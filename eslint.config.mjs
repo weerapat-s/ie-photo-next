@@ -13,6 +13,15 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    // Deployment and maintenance scripts intentionally use CommonJS so they
+    // can run directly with Node. Keep linting them, without applying the
+    // TypeScript import-style rule used by the browser application.
+    files: ["scripts/**/*.cjs"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

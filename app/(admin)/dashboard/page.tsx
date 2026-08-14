@@ -10,7 +10,7 @@ import type { BookingDoc, EquipmentDoc, UserDoc, TaskDoc } from "@/lib/types";
 function Stat({ icon, label, value, href, accent }: { icon: string; label: string; value: number; href: string; accent: string }) {
   return (
     <Link href={href}>
-      <Card className="transition hover:border-orange-500/40 hover:shadow-[0_0_20px_rgba(255,91,31,0.15)]">
+      <Card className="transition hover:border-primary/40 hover:shadow-[0_12px_28px_rgba(181,31,70,0.12)]">
         <div className="flex items-center gap-3">
           <div className={`flex h-12 w-12 items-center justify-center rounded-2xl text-xl ${accent}`}>{icon}</div>
           <div>
@@ -40,12 +40,12 @@ export default function DashboardPage() {
     <div>
       <PageHeader title="แดชบอร์ด" subtitle="ภาพรวมระบบ IE-Photo" />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <Stat icon="⏳" label="รออนุมัติ" value={pendingBookings} href="/bookings" accent="bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.15)]" />
-        <Stat icon="📸" label="รอตรวจคืน" value={pendingReturns} href="/bookings" accent="bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]" />
-        <Stat icon="📦" label="อุปกรณ์พร้อมใช้" value={availableEq} href="/inventory" accent="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.15)]" />
-        <Stat icon="🗂️" label="การจองทั้งหมด" value={bookings.length} href="/bookings" accent="bg-blue-500/20 text-blue-300 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.15)]" />
-        <Stat icon="👥" label="สมาชิก" value={users.length} href="/users" accent="bg-slate-800 text-slate-200 border border-slate-700" />
-        <Stat icon="📋" label="งานค้าง" value={pendingTasks} href="/tasks" accent="bg-orange-500/20 text-orange-300 border border-orange-500/30 shadow-[0_0_15px_rgba(255,91,31,0.15)]" />
+        <Stat icon="⏳" label="รออนุมัติ" value={pendingBookings} href="/bookings" accent="border border-amber-200 bg-amber-50 text-amber-800" />
+        <Stat icon="📸" label="รอตรวจคืน" value={pendingReturns} href="/bookings" accent="border border-purple-200 bg-purple-50 text-purple-800" />
+        <Stat icon="📦" label="อุปกรณ์พร้อมใช้" value={availableEq} href="/inventory" accent="border border-emerald-200 bg-emerald-50 text-emerald-800" />
+        <Stat icon="🗂️" label="การจองทั้งหมด" value={bookings.length} href="/bookings" accent="border border-blue-200 bg-blue-50 text-blue-800" />
+        <Stat icon="👥" label="สมาชิก" value={users.length} href="/users" accent="border border-border bg-muted text-foreground" />
+        <Stat icon="📋" label="งานค้าง" value={pendingTasks} href="/tasks" accent="border border-orange-200 bg-orange-50 text-orange-800" />
       </div>
     </div>
   );

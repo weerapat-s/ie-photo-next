@@ -1,12 +1,9 @@
 // lib/image.ts — ย่อ+บีบอัดรูปฝั่ง client (เร็ว ไม่ต้องพึ่ง Storage)
 "use client";
 
-const MAX_BYTES = 800_000; // Firestore doc limit 1 MiB — เผื่อฟิลด์อื่น
-
-function approxBytes(dataUrl: string): number {
-  const i = dataUrl.indexOf(",");
-  return Math.floor((dataUrl.length - i - 1) * 0.75);
-}
+// Firestore นับ data URL ที่เก็บจริง ไม่ใช่ขนาด JPEG ก่อน encode
+// ใช้เพดานต่ำกว่า 1 MiB มากพอสำหรับ metadata ของ booking และการเขียนหลายรายการใน batch
+export const MAX_IMAGE_DATA_URL_CHARS = 650_000;
 
 function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -37,18 +34,18 @@ function drawToDataUrl(img: HTMLImageElement, maxSize: number, quality: number):
 
 /**
  * ย่อรูปและบีบอัดเป็น JPEG data URL
- * ถ้าขนาดเกิน MAX_BYTES จะวนลดทั้งความกว้าง/ยาว และ quality
+ * ถ้าขนาด data URL เกินเพดาน จะวนลดทั้งความกว้าง/ยาว และ quality
  */
 export async function compressImageToDataUrl(file: File, maxSize = 256, quality = 0.82): Promise<string> {
   const img = await loadImage(file);
   let curSize = maxSize;
   let curQuality = quality;
 
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 6; i++) {
     const url = drawToDataUrl(img, curSize, curQuality);
-    if (approxBytes(url) <= MAX_BYTES) return url;
+    if (url.length <= MAX_IMAGE_DATA_URL_CHARS) return url;
     curSize = Math.round(curSize * 0.8);
-    curQuality = Math.max(0.4, curQuality - 0.12);
+    curQuality = Math.max(0.35, curQuality - 0.1);
   }
 
   throw new Error("IMAGE_TOO_LARGE");

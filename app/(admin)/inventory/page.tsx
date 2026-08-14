@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { collection, query, orderBy, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { useCollection } from "@/lib/hooks";
+import { useCollection, useNow } from "@/lib/hooks";
 import { PageHeader, Card, Badge, Spinner, Button, Modal, Field, inputClass, EmptyState } from "@/components/ui";
 import { EQUIPMENT_STATUS, EQUIPMENT_TYPE_LABEL } from "@/lib/format";
 import type { EquipmentDoc, EquipmentStatus, EquipmentType, SlotDoc } from "@/lib/types";
@@ -17,6 +17,7 @@ export default function InventoryPage() {
     () => query(collection(db, "slots")),
     []
   );
+  const now = useNow();
 
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
@@ -93,9 +94,13 @@ export default function InventoryPage() {
         <div className="space-y-2">
           {items.map((eq) => {
             const st = EQUIPMENT_STATUS[eq.status] ?? EQUIPMENT_STATUS.available;
-            const now = Date.now();
             const isCurrentlyBorrowed = slots.some(
-              (s) => s.itemId === eq.id && s.status === "approved" && s.startAt.toMillis() <= now && s.endAt.toMillis() > now
+              (s) =>
+                now !== null &&
+                s.itemId === eq.id &&
+                s.status === "approved" &&
+                s.startAt.toMillis() <= now &&
+                s.endAt.toMillis() > now
             );
 
             return (

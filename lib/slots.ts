@@ -1,7 +1,7 @@
 "use client";
 // lib/slots.ts — ตารางเวลาสาธารณะ (slot 1 ใบ = booking 1 ใบ, ใช้ id เดียวกันเสมอ)
-// หมายเหตุ: rules ยืนยันไม่ได้ว่ามี booking คู่จริง (batch write ประเมินทีละ doc)
-//          slots จึงเป็นข้อมูลช่วยตัดสินใจ ไม่ใช่ source of truth — แอดมินเป็นด่านสุดท้าย
+// Rules ยืนยันผ่าน getAfter() ว่า slot ใหม่ต้องมี booking คู่ใน batch เดียวกัน
+// slot ยังเป็นข้อมูลตารางสาธารณะ ส่วนการอนุมัติสุดท้ายอยู่ที่ทีมแอดมิน
 import { collection, query, where, getDocs, type Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { BookingType, SlotDoc, WithId } from "@/lib/types";

@@ -60,16 +60,17 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm text-red-400">⚠️ {error}</div>
+          <div role="alert" className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm text-red-400">⚠️ {error}</div>
         )}
         {info && (
-          <div className="mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5 text-sm text-emerald-400">✅ {info}</div>
+          <div role="status" className="mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5 text-sm text-emerald-400">✅ {info}</div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-300">อีเมล</label>
+            <label htmlFor="login-email" className="mb-1 block text-sm font-medium text-slate-300">อีเมล</label>
             <input
+              id="login-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -80,8 +81,9 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-300">รหัสผ่าน</label>
+            <label htmlFor="login-password" className="mb-1 block text-sm font-medium text-slate-300">รหัสผ่าน</label>
             <input
+              id="login-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

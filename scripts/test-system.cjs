@@ -9,7 +9,7 @@ const { getFirestore: adminFs } = require("firebase-admin/firestore");
 const { initializeApp: clientInit } = require("firebase/app");
 const { getAuth, signInWithCustomToken, signOut } = require("firebase/auth");
 const {
-  getFirestore, doc, getDoc, getDocs, collection, addDoc, setDoc, updateDoc, deleteDoc, query, where,
+  getFirestore, doc, getDoc, getDocs, collection, addDoc, setDoc, updateDoc, deleteDoc, writeBatch, query, where,
 } = require("firebase/firestore");
 
 const DB_ID = process.env.FIREBASE_DATABASE_ID || "default";
@@ -92,12 +92,20 @@ async function signAs(uid) {
   await expectDenied("member list users ทั้งหมด (ต้องบล็อก)", () => getDocs(collection(cDb, "users")));
 
   await expectOk("member สร้าง booking (pending)", async () => {
-    const ref = await addDoc(collection(cDb, "bookings"), {
+    const ref = doc(collection(cDb, "bookings"));
+    const startAt = new Date();
+    const endAt = new Date(Date.now() + 3600000);
+    const batch = writeBatch(cDb);
+    batch.set(ref, {
       bookingType: "equipment", itemId: eqId, itemName: "Test", userId: MEMBER.uid, userName: "Test",
-      userPhone: "0900000000", guestName: null, guestEmail: null, startAt: new Date(), endAt: new Date(Date.now() + 3600000),
+      userPhone: "0900000000", guestName: null, guestEmail: null, startAt, endAt,
       formImageUrl: null, returnImageUrl: null, usageReason: "test", usageType: null, status: "pending",
       responsibleUserId: null, responsibleUserName: null, consentToken: null, createdAt: new Date(),
     });
+    batch.set(doc(cDb, "slots", ref.id), {
+      bookingId: ref.id, itemId: eqId, itemName: "Test", bookingType: "equipment", startAt, endAt, status: "pending",
+    });
+    await batch.commit();
     bookingId = ref.id;
   });
   await expectDenied("member สร้าง booking สถานะ approved (ต้องบล็อก)", () =>
@@ -107,7 +115,16 @@ async function signAs(uid) {
     addDoc(collection(cDb, "bookings"), { bookingType: "studio", itemId: "x", itemName: "x", userId: ADMIN.uid, status: "pending", createdAt: new Date() })
   );
   await expectDenied("member อนุมัติ booking ตัวเอง (ต้องบล็อก)", () => updateDoc(doc(cDb, "bookings", bookingId), { status: "approved" }));
-  await expectOk("member คืนของ (status→pending_return + รูป)", () => updateDoc(doc(cDb, "bookings", bookingId), { status: "pending_return", returnImageUrl: "http://x" }));
+  await expectDenied("member คืนของก่อนอนุมัติ (ต้องบล็อก)", () =>
+    updateDoc(doc(cDb, "bookings", bookingId), { status: "pending_return", returnImageUrl: "data:image/jpeg;base64,AAAA" })
+  );
+
+  await expectDenied("member สร้าง pending slot โดยไม่มี booking คู่ (ต้องบล็อก)", () =>
+    setDoc(doc(cDb, "slots", "orphan-test-slot"), {
+      bookingId: "orphan-test-slot", itemId: eqId, itemName: "Test", bookingType: "equipment",
+      startAt: new Date(Date.now() + 3600000), endAt: new Date(Date.now() + 7200000), status: "pending",
+    })
+  );
 
   await expectDenied("member สร้าง equipment (ต้องบล็อก)", () => addDoc(collection(cDb, "equipments"), { name: "x", type: "camera", status: "available" }));
   await expectDenied("member แก้ studio (ต้องบล็อก)", () => updateDoc(doc(cDb, "studios", studioId), { subtitle: "hacked" }));
@@ -116,7 +133,12 @@ async function signAs(uid) {
   console.log("\n=== ADMIN ===");
   await signAs(ADMIN.uid);
   await expectOk("admin list bookings ทั้งหมด", () => getDocs(collection(cDb, "bookings")));
-  await expectOk("admin อนุมัติ booking ของ member", () => updateDoc(doc(cDb, "bookings", bookingId), { status: "approved" }));
+  await expectOk("admin อนุมัติ booking และ slot ของ member", async () => {
+    const batch = writeBatch(cDb);
+    batch.update(doc(cDb, "bookings", bookingId), { status: "approved" });
+    batch.update(doc(cDb, "slots", bookingId), { status: "approved" });
+    await batch.commit();
+  });
   await expectOk("admin list users ทั้งหมด", () => getDocs(collection(cDb, "users")));
   await expectOk("admin สร้าง equipment", async () => {
     const ref = await addDoc(collection(cDb, "equipments"), { name: "TEST-EQ", type: "camera", status: "available" });
@@ -138,6 +160,9 @@ async function signAs(uid) {
 
   console.log("\n=== MEMBER (task + feed like) ===");
   await signAs(MEMBER.uid);
+  await expectOk("member คืนอุปกรณ์ที่อนุมัติและเริ่มแล้ว", () =>
+    updateDoc(doc(cDb, "bookings", bookingId), { status: "pending_return", returnImageUrl: "data:image/jpeg;base64,AAAA" })
+  );
   await expectOk("member อ่าน task ที่ได้รับมอบหมาย", () => getDoc(doc(cDb, "tasks", taskId)));
   await expectOk("member อัปเดต status งานตัวเอง", () => updateDoc(doc(cDb, "tasks", taskId), { status: "in_progress" }));
   await expectDenied("member แก้ title งาน (ต้องบล็อก)", () => updateDoc(doc(cDb, "tasks", taskId), { title: "hacked" }));
@@ -147,6 +172,7 @@ async function signAs(uid) {
   console.log("\n=== CLEANUP ===");
   await signOut(cAuth);
   await aDb.collection("bookings").doc(bookingId).delete();
+  await aDb.collection("slots").doc(bookingId).delete();
   await aDb.collection("tasks").doc(taskId).delete();
   await aDb.collection("equipments").doc(tempEqId).delete();
   await aDb.collection("feeds").doc(feedId).delete();

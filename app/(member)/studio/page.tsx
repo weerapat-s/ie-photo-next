@@ -34,8 +34,8 @@ export default function StudioPage() {
               key={s.id}
               className={`animate-in rounded-3xl p-6 transition-all duration-400 hover:-translate-y-1 ${
                 s.theme === "dark"
-                  ? "border border-orange-500/30 bg-[#0c121e] text-slate-100 shadow-[0_24px_60px_rgba(0,0,0,0.7),0_0_25px_rgba(255,91,31,0.15)]"
-                  : "glass-card text-slate-100"
+                  ? "border border-primary/25 bg-[linear-gradient(145deg,#fff,#fff4f7)] text-foreground shadow-[0_18px_40px_rgba(181,31,70,.12)]"
+                  : "glass-card text-foreground"
               }`}
             >
               <div className="mb-3 flex items-start justify-between">
@@ -46,7 +46,7 @@ export default function StudioPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge className={s.status === "open" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "bg-red-500/20 text-red-300 border border-red-500/30"}>
+                  <Badge className={s.status === "open" ? "border border-emerald-200 bg-emerald-50 text-emerald-700" : "border border-red-200 bg-red-50 text-red-700"}>
                     {s.status === "open" ? "เปิดให้จอง" : "ปิด"}
                   </Badge>
                   {isAdmin && (
