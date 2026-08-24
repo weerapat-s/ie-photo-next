@@ -84,6 +84,7 @@ export interface BookingDoc {
   consentToken: string | null;
   createdAt: Timestamp;
   reminderSentAt?: Timestamp | null; // กันแจ้งเตือนซ้ำ — ตั้งโดย scripts/send-notifications.cjs
+  discordNotifiedAt?: Timestamp | null; // กันแจ้ง Discord ซ้ำ — ตั้งโดย scripts/send-notifications.cjs
 }
 
 // ── tasks/{id} ────────────────────────────────────────────────

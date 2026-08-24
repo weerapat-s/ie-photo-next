@@ -1,11 +1,15 @@
-/* scripts/send-notifications.cjs — เช็คงาน/การจองใกล้ครบกำหนด แล้วส่ง Web Push
+/* scripts/send-notifications.cjs — เช็คงาน/การจองใกล้ครบกำหนด แล้วส่ง Web Push + แจ้งคำขอจองใหม่เข้า Discord
  * รันจาก GitHub Actions cron (ดู .github/workflows/notify.yml)
  * ต้องมี env: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY,
  *             FIREBASE_DATABASE_ID, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY
+ * ไม่บังคับ: DISCORD_WEBHOOK_URL (ไม่ตั้งค่า = ข้ามการแจ้ง Discord เงียบๆ)
  */
 const webpush = require("web-push");
 const { getDb } = require("./lib-admin.cjs");
 const { FieldValue } = require("firebase-admin/firestore");
+
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || "";
+const BOOKING_TYPE_LABEL = { equipment: "📷 อุปกรณ์", studio: "🎬 สตูดิโอ" };
 
 webpush.setVapidDetails(
   "https://iephoto.web.app",
@@ -118,13 +122,55 @@ async function notifyBookings(db) {
   return sent;
 }
 
+async function notifyDiscordNewBookings(db) {
+  if (!DISCORD_WEBHOOK_URL) return 0;
+
+  // ดึง booking ที่ยัง pending ทั้งหมด แล้วกรอง discordNotifiedAt ฝั่งนี้
+  // (เหมือน pattern reminderSentAt เดิม — pending มีจำนวนจำกัดเพราะแอดมินตัดสินใจแล้วก็หลุดจาก filter)
+  const snap = await db.collection("bookings").where("status", "==", "pending").get();
+
+  let sent = 0;
+  for (const d of snap.docs) {
+    const b = d.data();
+    if (b.discordNotifiedAt) continue;
+
+    const label = BOOKING_TYPE_LABEL[b.bookingType] || b.bookingType;
+    const who = b.userId ? b.userName : `${b.guestName || b.userName} (บุคคลภายนอก)`;
+    const timeStr = `${b.startAt.toDate().toLocaleString("th-TH", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} → ${b.endAt.toDate().toLocaleString("th-TH", { hour: "2-digit", minute: "2-digit" })}`;
+
+    try {
+      const res = await fetch(DISCORD_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content:
+            `📥 **คำขอจองใหม่รอตรวจสอบ**\n` +
+            `${label} — **${b.itemName}**\n` +
+            `👤 ${who}${b.userPhone ? ` · 📞 ${b.userPhone}` : ""}\n` +
+            `🕐 ${timeStr}\n` +
+            `🔗 https://iephoto.web.app/bookings`,
+        }),
+      });
+      if (!res.ok && res.status !== 204) throw new Error(`HTTP ${res.status}`);
+      await d.ref.update({ discordNotifiedAt: FieldValue.serverTimestamp() });
+      console.log(`  discord: "${b.itemName}" (${who}) → sent`);
+      sent++;
+    } catch (e) {
+      console.error(`  discord failed for booking ${d.id}:`, e.message);
+    }
+  }
+  return sent;
+}
+
 (async () => {
   const db = getDb();
   console.log("=== ตรวจงานใกล้ครบกำหนด ===");
   const taskSent = await notifyTasks(db);
   console.log("=== ตรวจการจองใกล้ถึงเวลา ===");
   const bookingSent = await notifyBookings(db);
-  console.log(`\n✅ ส่งแจ้งเตือนสำเร็จ: งาน ${taskSent} รายการ, การจอง ${bookingSent} รายการ`);
+  console.log("=== แจ้งคำขอจองใหม่เข้า Discord ===");
+  const discordSent = await notifyDiscordNewBookings(db);
+  console.log(`\n✅ ส่งแจ้งเตือนสำเร็จ: งาน ${taskSent} รายการ, การจอง ${bookingSent} รายการ, Discord ${discordSent} รายการ`);
   process.exit(0);
 })().catch((e) => {
   console.error("✗ FAILED:", e.message);
