@@ -9,6 +9,8 @@ import { findSlotConflicts, slotPayload } from "@/lib/slots";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useCollection } from "@/lib/hooks";
 import { PageHeader, Card, Spinner, Button, Field, inputClass, EmptyState } from "@/components/ui";
+import QrScanner from "@/components/qr-scanner";
+import { parseScan } from "@/lib/qr";
 import { EQUIPMENT_TYPE_LABEL } from "@/lib/format";
 import type { EquipmentDoc } from "@/lib/types";
 
@@ -30,6 +32,9 @@ export default function BorrowPage() {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [manualCode, setManualCode] = useState("");
+  const [scanMsg, setScanMsg] = useState("");
 
   const nowLocal = useMemo(() => {
     const d = new Date();
@@ -56,6 +61,37 @@ export default function BorrowPage() {
       else next.add(id);
       return next;
     });
+  }
+
+  /** เลือกอุปกรณ์จากรหัสที่สแกน/พิมพ์มา — ใช้ทั้งกล้องและช่องกรอกเอง */
+  function selectByCode(raw: string) {
+    const parsed = parseScan(raw);
+    if (parsed.kind === "member") {
+      setScanMsg("นี่คือ QR ประจำตัวสมาชิก ไม่ใช่ QR ของอุปกรณ์");
+      return;
+    }
+    if (parsed.kind !== "equipment") {
+      setScanMsg("อ่าน QR ไม่ออก ลองใหม่อีกครั้ง");
+      return;
+    }
+
+    const item = equipments.find((eq) => (eq.code || "").toUpperCase() === parsed.code);
+    if (!item) {
+      setScanMsg(`ไม่พบอุปกรณ์รหัส ${parsed.code} ในรายการที่ว่างอยู่ (อาจถูกยืมไปแล้ว หรือยังไม่ได้ตั้งรหัส)`);
+      return;
+    }
+    if (availableSelected.has(item.id)) {
+      setScanMsg(`เลือก "${item.name}" ไว้แล้ว`);
+      return;
+    }
+    if (availableSelected.size >= MAX_EQUIPMENT_PER_REQUEST) {
+      setScanMsg(`เลือกได้สูงสุด ${MAX_EQUIPMENT_PER_REQUEST} ชิ้นต่อคำขอ`);
+      return;
+    }
+
+    setErr("");
+    setScanMsg(`✅ เพิ่ม "${item.name}" แล้ว`);
+    setSelected((prev) => new Set([...prev, item.id]));
   }
 
   const canSubmit =
@@ -163,7 +199,51 @@ export default function BorrowPage() {
 
       <form onSubmit={submit}>
         <Card className="mb-4">
-          <h3 className="mb-3 font-medium text-slate-100">เลือกอุปกรณ์ {availableSelected.size > 0 && `(${availableSelected.size} ชิ้น)`}</h3>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-medium text-foreground">เลือกอุปกรณ์ {availableSelected.size > 0 && `(${availableSelected.size} ชิ้น)`}</h3>
+            <Button variant="outline" onClick={() => { setScanning((v) => !v); setScanMsg(""); }}>
+              {scanning ? "ปิดกล้อง" : "📷 สแกน QR"}
+            </Button>
+          </div>
+
+          {scanning && (
+            <div className="mb-3">
+              <QrScanner
+                onScan={selectByCode}
+                onClose={() => setScanning(false)}
+                hint="ยิง QR ที่ติดบนอุปกรณ์ได้ต่อเนื่องหลายชิ้น ระบบจะติ๊กเลือกให้เอง"
+              />
+            </div>
+          )}
+
+          {/* ช่องสำรอง เผื่อกล้องใช้ไม่ได้ (เช่นเปิดจากแอป Line) */}
+          <div className="mb-3 flex gap-2">
+            <input
+              value={manualCode}
+              onChange={(e) => setManualCode(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter") return;
+                e.preventDefault();
+                if (manualCode.trim()) { selectByCode(manualCode); setManualCode(""); }
+              }}
+              placeholder="พิมพ์รหัสอุปกรณ์เอง เช่น CAM-001"
+              className={inputClass}
+            />
+            <Button
+              variant="outline"
+              onClick={() => { if (manualCode.trim()) { selectByCode(manualCode); setManualCode(""); } }}
+              className="flex-shrink-0"
+            >
+              เพิ่ม
+            </Button>
+          </div>
+
+          {scanMsg && (
+            <p className="mb-3 rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground" role="status">
+              {scanMsg}
+            </p>
+          )}
+
           {loading ? (
             <Spinner />
           ) : loadError ? (

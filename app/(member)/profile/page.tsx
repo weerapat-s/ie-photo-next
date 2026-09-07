@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase/client";
 import { compressImageToDataUrl } from "@/lib/image";
 import { useAuth } from "@/lib/firebase/auth-context";
 import NotificationToggle from "@/components/notification-toggle";
+import MemberQrCard from "@/components/member-qr-card";
 import type { UserDoc, WithId } from "@/lib/types";
 
 export default function ProfilePage() {
@@ -145,6 +146,10 @@ function ProfileForm({ initialProfile }: { initialProfile: WithId<UserDoc> | nul
           {saving ? "กำลังบันทึก…" : "บันทึกข้อมูล"}
         </button>
       </form>
+
+      <div className="mt-4">
+        <MemberQrCard />
+      </div>
 
       <div className="mt-4">
         <NotificationToggle />

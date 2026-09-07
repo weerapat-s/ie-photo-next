@@ -29,7 +29,14 @@ service cloud.firestore {
         (request.auth.uid == uid && notBanned()
          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
               ['firstName','lastName','phone','profileImageUrl','profileCompleted',
-               'pushSubscription','pushSubscriptions']))
+               'pushSubscription','pushSubscriptions','memberCode'])
+         // memberCode = รหัสใน QR ประจำตัว ตั้งได้ครั้งเดียว เจ้าของแก้เองภายหลังไม่ได้
+         // (ถ้าทำหลุด ต้องให้แอดมินออกรหัสใหม่ให้ ผ่าน branch ของ admin ข้างล่าง)
+         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['memberCode'])
+             || (!('memberCode' in resource.data)
+                 && request.resource.data.memberCode is string
+                 && request.resource.data.memberCode.size() >= 6
+                 && request.resource.data.memberCode.size() <= 20)))
         // แอดมิน — แก้ doc คนอื่นเท่านั้น, admin ธรรมดาห้ามแตะ super_admin ทั้งขาขึ้น/ขาลง
         || (isAdmin() && notBanned() && request.auth.uid != uid
             && (isSuper() || (resource.data.role != 'super_admin'

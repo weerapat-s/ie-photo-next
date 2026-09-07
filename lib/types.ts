@@ -4,7 +4,7 @@ import type { Timestamp } from "firebase/firestore";
 
 export type Role = "member" | "admin" | "super_admin";
 
-export type EquipmentType = "camera" | "lens" | "accessory";
+export type EquipmentType = "camera" | "lens" | "accessory" | "memory" | "key";
 export type EquipmentStatus = "available" | "borrowed" | "maintenance";
 
 export type StudioStatus = "open" | "closed";
@@ -41,6 +41,7 @@ export interface UserDoc {
   createdAt: Timestamp;
   pushSubscription?: PushSubscriptionData | null;      // legacy — คงไว้ช่วง migrate
   pushSubscriptions?: PushSubscriptionData[] | null;   // multi-device
+  memberCode?: string;                                 // รหัสสุ่มใน QR ประจำตัว — ตั้งได้ครั้งเดียว แก้เองไม่ได้ (rules บังคับ)
 }
 
 // ── equipments/{id} ───────────────────────────────────────────
@@ -48,6 +49,7 @@ export interface EquipmentDoc {
   name: string;
   type: EquipmentType;
   status: EquipmentStatus;
+  code?: string; // รหัสสั้นอ่านออก (เช่น CAM-001) — เนื้อหาใน QR ที่ติดบนตัวอุปกรณ์
 }
 
 // ── studios/{id} ──────────────────────────────────────────────
@@ -85,6 +87,7 @@ export interface BookingDoc {
   createdAt: Timestamp;
   reminderSentAt?: Timestamp | null; // กันแจ้งเตือนซ้ำ — ตั้งโดย scripts/send-notifications.cjs
   discordNotifiedAt?: Timestamp | null; // กันแจ้ง Discord ซ้ำ — ตั้งโดย scripts/send-notifications.cjs
+  pickedUpAt?: Timestamp | null;        // เวลาที่แอดมินกด "ส่งมอบแล้ว" ที่เคาน์เตอร์ (หน้า /scan)
 }
 
 // ── tasks/{id} ────────────────────────────────────────────────

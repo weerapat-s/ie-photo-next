@@ -23,6 +23,7 @@ const MEMBER_LINKS: NavLink[] = [
 const ADMIN_LINKS: NavLink[] = [
   { href: "/dashboard", label: "แดชบอร์ด", icon: "📊" },
   { href: "/bookings", label: "รายการจอง", icon: "✅" },
+  { href: "/scan", label: "สถานีสแกน", icon: "📷" },
   { href: "/borrow", label: "ยืมอุปกรณ์", icon: "📷" },
   { href: "/studio", label: "จองสตูดิโอ", icon: "🎬" },
   { href: "/inventory", label: "คลังอุปกรณ์", icon: "📦" },

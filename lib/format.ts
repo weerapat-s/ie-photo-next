@@ -56,4 +56,6 @@ export const EQUIPMENT_TYPE_LABEL: Record<string, string> = {
   camera: "📷 กล้อง",
   lens: "🔍 เลนส์",
   accessory: "📦 อุปกรณ์เสริม",
+  memory: "🗂️ การ์ดความจำ",
+  key: "🔑 กุญแจ",
 };
