@@ -1,78 +1,44 @@
 "use client";
-// app/(member)/profile/page.tsx — แก้ไขข้อมูลส่วนตัว + รูปโปรไฟล์ + การแจ้งเตือน
-import { Suspense, useState } from "react";
+// app/(member)/profile/page.tsx — แก้ไขข้อมูลส่วนตัว + รูปโปรไฟล์
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { describeWriteError } from "@/lib/errors";
 import { compressImageToDataUrl } from "@/lib/image";
 import { useAuth } from "@/lib/firebase/auth-context";
-import { useSettings } from "@/lib/settings-context";
 import NotificationToggle from "@/components/notification-toggle";
-import { ROLE_LABEL } from "@/lib/roles";
-import { useDevMode } from "@/lib/hooks";
-import { DEV_BADGE } from "@/lib/dev-mode";
-import DevGear from "@/components/dev-gear";
-import {
-  PageHeader,
-  Card,
-  Button,
-  Field,
-  inputClass,
-  Alert,
-  Spinner,
-  Row,
-  useToast,
-} from "@/components/ui";
+import MemberQrCard from "@/components/member-qr-card";
+import type { UserDoc, WithId } from "@/lib/types";
 
 export default function ProfilePage() {
-  return (
-    <Suspense fallback={<Spinner />}>
-      <ProfileInner />
-    </Suspense>
-  );
+  const { profile } = useAuth();
+
+  // Auth state arrives asynchronously. Remount once the user's profile is
+  // available so the form takes its initial values without synchronously
+  // copying props into state from an effect.
+  return <ProfileForm key={profile?.id ?? "profile-loading"} initialProfile={profile} />;
 }
 
-function ProfileInner() {
-  const { user, profile, role, signOut } = useAuth();
-  const { settings } = useSettings();
+function ProfileForm({ initialProfile }: { initialProfile: WithId<UserDoc> | null }) {
+  const { user, profile, refresh } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
   const firstLogin = params.get("first_login") === "1";
-  const { show, node: toastNode } = useToast();
 
-  // เก็บเฉพาะช่องที่ผู้ใช้แก้ — ช่องที่ยังไม่แตะอ่านจาก profile สด ๆ
-  // (ไม่ต้อง sync ด้วย effect ซึ่งทำให้ค่าที่กำลังพิมพ์โดนเขียนทับตอน snapshot มา)
-  const [edits, setEdits] = useState<{
-    firstName?: string;
-    lastName?: string;
-    nickname?: string;
-    phone?: string;
-    skills?: string;
-  }>({});
+  const [firstName, setFirstName] = useState(() => initialProfile?.firstName || "");
+  const [lastName, setLastName] = useState(() => initialProfile?.lastName || "");
+  const [phone, setPhone] = useState(() => initialProfile?.phone || "");
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [localPreview, setLocalPreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(() => initialProfile?.profileImageUrl || null);
   const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
-
-  const firstName = edits.firstName ?? profile?.firstName ?? "";
-  const lastName = edits.lastName ?? profile?.lastName ?? "";
-  const nickname = edits.nickname ?? profile?.nickname ?? "";
-  const phone = edits.phone ?? profile?.phone ?? "";
-  const skills = edits.skills ?? (profile?.skills ?? []).join(", ");
-  const preview = localPreview ?? profile?.profileImageUrl ?? null;
-
-  const setFirstName = (v: string) => setEdits((e) => ({ ...e, firstName: v }));
-  const setLastName = (v: string) => setEdits((e) => ({ ...e, lastName: v }));
-  const setNickname = (v: string) => setEdits((p) => ({ ...p, nickname: v }));
-  const setSkills = (v: string) => setEdits((p) => ({ ...p, skills: v }));
-  const setPhone = (v: string) => setEdits((e) => ({ ...e, phone: v }));
 
   function onPickImage(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (f) {
       setImageFile(f);
-      setLocalPreview(URL.createObjectURL(f));
+      setPreview(URL.createObjectURL(f));
     }
   }
 
@@ -80,149 +46,114 @@ function ProfileInner() {
     e.preventDefault();
     if (!user) return;
     setErr("");
+    setMsg("");
     if (!firstName.trim()) return setErr("กรุณากรอกชื่อจริง");
-    // ชื่อเล่นบังคับเหมือนตอนสมัคร — ระบบใช้เรียกกันในตารางงานและปฏิทิน
-    if (!nickname.trim()) return setErr("กรุณากรอกชื่อเล่น");
     setSaving(true);
     try {
       let imageUrl = profile?.profileImageUrl ?? null;
       if (imageFile) {
-        // ย่อ+บีบอัดเป็น data URL เล็ก ๆ เก็บใน Firestore — อัปทันที ไม่ต้องใช้ Storage
+        // ย่อ+บีบอัดเป็น data URL เล็กๆ เก็บใน Firestore — อัปทันที ไม่ต้องใช้ Storage
         imageUrl = await compressImageToDataUrl(imageFile);
       }
       await updateDoc(doc(db, "users", user.uid), {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        nickname: nickname.trim(),
         phone: phone.trim(),
-        skills: skills
-          .split(",")
-          .map((x) => x.trim())
-          .filter(Boolean)
-          .slice(0, 12),
         profileImageUrl: imageUrl,
         profileCompleted: true,
       });
-      setEdits({});
-      show("บันทึกข้อมูลเรียบร้อย");
+      await refresh();
+      setMsg("บันทึกข้อมูลเรียบร้อย");
       if (firstLogin) router.push("/feed");
     } catch {
-      setErr(describeWriteError(e, "บันทึกข้อมูล"));
+      setErr("บันทึกไม่สำเร็จ กรุณาลองใหม่");
     } finally {
       setSaving(false);
     }
   }
 
-  const devOn = useDevMode();
-  // เปิดโหมด dev แล้วยศตัวเองแสดงเป็น </> — คนอื่นที่เห็นจอเราจะเดาไม่ออกว่าเป็นยศอะไร
-  const roleLabel = devOn ? DEV_BADGE : role ? ROLE_LABEL[role] : "สมาชิก";
-
   return (
-    <div className="mx-auto max-w-lg">
-      <PageHeader eyebrow="บัญชี" title="ข้อมูลส่วนตัว" subtitle="จัดการข้อมูลและรูปโปรไฟล์ของคุณ" />
+    <div className="mx-auto max-w-md">
+      <h1 className="mb-1 text-2xl font-semibold text-slate-100">ข้อมูลส่วนตัว</h1>
+      <p className="mb-6 text-sm text-slate-400">จัดการข้อมูลและรูปโปรไฟล์ของคุณ</p>
 
       {firstLogin && (
-        <Alert tone="info">ยินดีต้อนรับ! กรุณาตั้งค่าโปรไฟล์ก่อนเริ่มใช้งาน</Alert>
+        <div className="mb-4 rounded-xl bg-orange-500/10 border border-orange-500/20 px-4 py-3 text-sm text-orange-400">
+          🎉 ยินดีต้อนรับ! กรุณาตั้งค่าโปรไฟล์ก่อนเริ่มใช้งาน
+        </div>
       )}
-      {err && <Alert onClose={() => setErr("")}>{err}</Alert>}
+      {msg && <div role="status" className="mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5 text-sm text-emerald-400">✅ {msg}</div>}
+      {err && <div role="alert" className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm text-red-400">⚠️ {err}</div>}
 
-      <form onSubmit={handleSave}>
-        <Card className="mb-4">
-          <div className="mb-5 flex flex-col items-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={
-                preview ||
-                `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.email || "U")}&background=EF3961&color=fff&size=160`
-              }
-              alt="รูปโปรไฟล์"
-              className="h-24 w-24 rounded-3xl border-2 border-white object-cover shadow-[0_10px_30px_rgba(0,0,0,.14)]"
-            />
-            <label className="press mt-3 cursor-pointer rounded-full bg-black/5 px-4 py-2 text-sm font-semibold text-[var(--ink)]">
-              เปลี่ยนรูป
-              <input type="file" accept="image/*" onChange={onPickImage} className="hidden" />
-            </label>
-          </div>
+      <form onSubmit={handleSave} className="glass-card rounded-3xl p-6">
+        <div className="mb-5 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={preview || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.email || "U")}&background=F2531C&color=fff&size=128`}
+            alt="avatar"
+            className="mx-auto h-24 w-24 rounded-2xl object-cover border-2 border-orange-500/40 shadow-[0_0_20px_rgba(255,91,31,0.25)]"
+          />
+          <label className="mt-2 inline-block cursor-pointer text-sm font-medium text-orange-400 hover:text-orange-300 transition">
+            เปลี่ยนรูป
+            <input type="file" accept="image/*" onChange={onPickImage} className="hidden" />
+          </label>
+        </div>
 
-          <div className="mb-4 rounded-2xl bg-black/[0.03] px-4 py-1">
-            <Row label="อีเมล">{user?.email}</Row>
-            <Row label="สิทธิ์">{roleLabel}</Row>
-          </div>
+        <div className="mb-3">
+          <p className="mb-1 text-sm font-medium text-slate-300">อีเมล</p>
+          <div className="rounded-xl bg-slate-900/80 border border-slate-800 px-3.5 py-2.5 text-sm text-slate-400">{user?.email}</div>
+        </div>
 
-          <div className="grid gap-0 sm:grid-cols-2 sm:gap-3">
-            <Field label="ชื่อจริง" required>
-              <input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="สมชาย" className={inputClass} maxLength={60} />
-            </Field>
-            <Field label="นามสกุล">
-              <input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="ใจดี" className={inputClass} maxLength={60} />
-            </Field>
-          </div>
-
-          <Field label="ชื่อเล่น" required help="ชื่อที่เพื่อนในชุมนุมเรียก — แสดงในตารางงานและปฏิทิน">
+        <div className="mb-3 grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="profile-first-name" className="mb-1 block text-sm font-medium text-slate-300">ชื่อจริง *</label>
             <input
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              placeholder="เช่น ต้น"
-              className={inputClass}
-              maxLength={30}
+              id="profile-first-name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="สมชาย"
+              className="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm"
             />
-          </Field>
-
-          <Field label="เบอร์โทรศัพท์" help="ใช้ติดต่อเวลาอนุมัติ/ส่งงาน">
-            <input inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0XXXXXXXXX" className={inputClass} maxLength={20} />
-          </Field>
-
-          <Field label="ความถนัด" help="คั่นด้วยจุลภาค — กรรมการใช้จับคู่คนกับงานที่ถนัด">
+          </div>
+          <div>
+            <label htmlFor="profile-last-name" className="mb-1 block text-sm font-medium text-slate-300">นามสกุล</label>
             <input
-              value={skills}
-              onChange={(e) => setSkills(e.target.value)}
-              placeholder="Portrait, Event, ตัดต่อวิดีโอ"
-              className={inputClass}
-              maxLength={200}
+              id="profile-last-name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              placeholder="ใจดี"
+              className="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm"
             />
-          </Field>
+          </div>
+        </div>
 
-          <Button type="submit" loading={saving} fullWidth size="lg" className="mt-2">
-            บันทึกข้อมูล
-          </Button>
-        </Card>
+        <div className="mb-5">
+          <label htmlFor="profile-phone" className="mb-1 block text-sm font-medium text-slate-300">เบอร์โทรศัพท์</label>
+          <input
+            id="profile-phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="0XXXXXXXXX"
+            className="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={saving}
+          className="btn-grad w-full rounded-full py-3 text-sm font-semibold disabled:opacity-50"
+        >
+          {saving ? "กำลังบันทึก…" : "บันทึกข้อมูล"}
+        </button>
       </form>
 
-      <NotificationToggle />
-
-      <Card className="mt-4">
-        <p className="mb-3 text-sm font-bold text-[var(--ink)]">ติดต่อชุมนุม</p>
-        <Row label="โทร">
-          <a href={`tel:${settings.contactPhone.replace(/-/g, "")}`} className="text-[var(--faculty)]">
-            {settings.contactPhone}
-          </a>
-        </Row>
-        <Row label="อีเมล">
-          <a href={`mailto:${settings.contactEmail}`} className="text-[var(--faculty)]">
-            {settings.contactEmail}
-          </a>
-        </Row>
-      </Card>
-
-      <Button
-        variant="outline"
-        fullWidth
-        size="lg"
-        className="mt-4"
-        onClick={async () => {
-          await signOut();
-          router.push("/login");
-        }}
-      >
-        ออกจากระบบ
-      </Button>
-
-      {/* ปุ่มลับ — มุมล่างขวา ดูเหมือนของประดับ กดรัว 6 ทีเพื่อสลับโหมด */}
-      <div className="mt-8 flex justify-end pr-1">
-        <DevGear />
+      <div className="mt-4">
+        <MemberQrCard />
       </div>
 
-      {toastNode}
+      <div className="mt-4">
+        <NotificationToggle />
+      </div>
     </div>
   );
 }
