@@ -1,0 +1,110 @@
+/* components/ai/radiant-prompt.css — ขอบไล่สีหมุนของช่องสั่งงาน AI
+ *
+ * @property ทำให้เบราว์เซอร์รู้ว่า --rotation เป็น <angle> จึง interpolate ได้
+ * ถ้าเบราว์เซอร์ไม่รองรับ (รุ่นเก่า) มุมจะไม่หมุน แต่ยังได้ขอบไล่สีนิ่ง ๆ ที่ใช้งานได้ปกติ
+ */
+@property --rotation {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes radiant-rotate {
+  to {
+    --rotation: 360deg;
+  }
+}
+
+.radiant-wrap {
+  --border-size: 2px;
+  /* ไล่สียึดสีหลักของระบบเป็นแกน แล้วแตกเป็นโทนข้างเคียง
+     ไม่ใช้จานสีของต้นฉบับ เพราะจะหลุดจากธีมของชุมนุม */
+  --radiant-gradient: conic-gradient(
+    from var(--rotation) at 50% 50%,
+    var(--faculty) 0%,
+    #ff8fab 18%,
+    #ffc971 34%,
+    #6ad0a8 52%,
+    #5aa9e6 70%,
+    var(--faculty) 100%
+  );
+
+  position: relative;
+  border-radius: 26px;
+  background: var(--surface-raised, #fff);
+  animation: radiant-rotate 6s linear infinite;
+}
+
+/* แสงเรืองรอบขอบ */
+.radiant-wrap::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  background: var(--radiant-gradient);
+  filter: blur(10px);
+  opacity: 0.45;
+  z-index: 0;
+  transition: opacity 0.3s ease;
+}
+
+.radiant-wrap:focus-within::before {
+  opacity: 0.75;
+}
+
+/* ขอบคม — วาดไล่สีเต็มกล่องแล้วเจาะกลางออกด้วย mask */
+.radiant-border {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: var(--border-size);
+  background: var(--radiant-gradient);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ตอน AI กำลังคิด — หมุนเร็วขึ้นให้รู้ว่าระบบยังทำงานอยู่ */
+.radiant-wrap.is-busy {
+  animation-duration: 1.6s;
+}
+
+.radiant-field {
+  flex: 1;
+  min-width: 0;
+  max-height: 30vh;
+  /* ข้อความตัวอย่างยาวกว่า 1 บรรทัด ถ้าไม่ตั้งความสูงขั้นต่ำจะถูกตัดครึ่ง
+     (field-sizing ยืดตามค่าที่พิมพ์ ไม่ยืดตาม placeholder) */
+  min-height: 3.2rem;
+  padding: 0.6rem 0.25rem;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  color: var(--ink);
+  font-size: 0.9375rem;
+  line-height: 1.65; /* ภาษาไทยมีวรรณยุกต์บน-ล่าง ต้องการบรรทัดสูงกว่าปกติ */
+  font-family: inherit;
+  field-sizing: content; /* ยืดตามเนื้อหาเอง เบราว์เซอร์ที่ไม่รองรับจะได้ 1 บรรทัดแล้วเลื่อน */
+}
+
+.radiant-field::placeholder {
+  color: color-mix(in oklab, var(--muted-ink) 75%, transparent);
+}
+
+.radiant-field:disabled {
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radiant-wrap {
+    animation: none;
+  }
+}

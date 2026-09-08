@@ -1,0 +1,111 @@
+/* components/ai/generate-button.css — ปุ่มสั่งวางแผน สลับข้อความทีละตัว */
+
+.gen-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0 1.1rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease,
+    box-shadow 0.2s ease;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+}
+
+.gen-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+}
+
+.gen-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+/* ดาวหมุนช้า ๆ ตอนกำลังคิด */
+.gen-btn-star {
+  flex: 0 0 auto;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gen-btn[data-loading] .gen-btn-star {
+  animation: gen-spin 2.4s linear infinite;
+}
+
+@keyframes gen-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── ข้อความสองชั้นซ้อนกัน ── */
+.gen-btn-labels {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  line-height: 1.5;
+}
+
+/* ตัวกำหนดความกว้าง — มองไม่เห็นแต่กินที่ กันปุ่มกระตุกตอนสลับคำ */
+.gen-btn-ghost {
+  visibility: hidden;
+  white-space: nowrap;
+}
+
+.gen-btn-line {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  white-space: nowrap;
+}
+
+.gen-btn-line > span {
+  display: inline-block;
+  white-space: pre;
+  transition:
+    transform 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.26s ease;
+  /* ไล่ทีละตัวจากซ้ายไปขวา 26ms ต่อตัว */
+  transition-delay: calc(var(--i, 0) * 26ms);
+}
+
+/* สถานะปกติ: "วางแผนให้" อยู่ตรงกลาง · "กำลังวางแผน" รออยู่ข้างล่าง */
+.gen-btn-idle > span {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.gen-btn-busy > span {
+  transform: translateY(110%);
+  opacity: 0;
+}
+
+/* สถานะกำลังทำงาน: สลับกัน */
+.gen-btn[data-loading] .gen-btn-idle > span {
+  transform: translateY(-110%);
+  opacity: 0;
+}
+
+.gen-btn[data-loading] .gen-btn-busy > span {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gen-btn-line > span {
+    transition-duration: 0.01ms;
+    transition-delay: 0s;
+  }
+  .gen-btn[data-loading] .gen-btn-star {
+    animation: none;
+  }
+}

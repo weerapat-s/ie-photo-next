@@ -1,18 +1,52 @@
 {
-  "name": "IE-Photo Booking System",
+  "name": "IE-Photo · ระบบจองอุปกรณ์ สตูดิโอ และตากล้อง",
   "short_name": "IE-Photo",
-  "description": "ระบบจองอุปกรณ์ถ่ายภาพและสตูดิโอ IE-Photo KMITL",
+  "description": "ระบบจองอุปกรณ์ถ่ายภาพ สตูดิโอ ตากล้อง และส่งงาน IE-Photo KMITL",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#edf1f6",
-  "theme_color": "#ff5b1f",
+  "background_color": "#f5f5f7",
+  "theme_color": "#f5f5f7",
   "lang": "th",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "จองใช้บริการ",
+      "url": "/reserve/"
+    },
+    {
+      "name": "ของฉัน",
+      "url": "/my/"
+    },
+    {
+      "name": "ปฏิทิน",
+      "url": "/calendar/"
+    }
   ]
 }

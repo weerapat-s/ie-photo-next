@@ -30,5 +30,7 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  // scripts/ รันด้วย node ตรง ๆ (--experimental-strip-types) ไม่ผ่าน bundler
+  // จึงต้อง import ลงท้าย .ts ซึ่งขัดกับกฎของ tsc ที่ใช้ build แอป
+  "exclude": ["node_modules", "scripts"]
 }

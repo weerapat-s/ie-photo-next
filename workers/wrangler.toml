@@ -1,0 +1,25 @@
+# workers/wrangler.toml — ตัวตั้งค่า Cloudflare Worker ที่วางหน้า OKMD AI Playground
+#
+# deploy:  npm run worker:deploy   (ครั้งแรกต้อง npm run worker:login ก่อน)
+# ใส่คีย์: npm run worker:key      (คีย์ถูกเก็บฝั่ง Cloudflare ไม่อยู่ในโปรเจกต์นี้)
+# บัญชี Wooden Date — ตัวที่ claim ไว้ และเป็นเจ้าของโดเมน
+# okmd-proxy.wooden-date.workers.dev ที่แอปชี้ไปอยู่ (DEFAULT_BASE_URL)
+# เปลี่ยนบัญชี = URL เปลี่ยน = ต้องแก้ DEFAULT_BASE_URL ตามด้วย
+account_id = "18d2d7413d7a7f1a492c872292e47993"
+name = "okmd-proxy"
+main = "okmd-proxy.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+# โดเมนเดียวที่ยอมให้เรียก — เว็บอื่นจะได้ 403
+ALLOWED_ORIGIN = "https://iephoto.web.app"
+# ผู้ส่งอีเมลแจ้งเตือน — ต้องเป็นโดเมนที่ยืนยันกับ Resend แล้ว
+# ระหว่างยังไม่ได้ยืนยันโดเมน ใช้ onboarding@resend.dev ได้ แต่ส่งได้เฉพาะอีเมลเจ้าของบัญชี
+MAIL_FROM = "IE-Photo <onboarding@resend.dev>"
+# กล่องกลางของชุมนุม — ใช้รับอีเมลที่ส่งตรงถึงสมาชิกไม่ได้
+# (Resend โหมดทดสอบส่งได้เฉพาะอีเมลเจ้าของบัญชี จนกว่าจะยืนยันโดเมน)
+MAIL_FALLBACK_TO = "ietechphoto@gmail.com"
+
+# เตือนอัตโนมัติทุกวัน 08:00 เวลาไทย (= 01:00 UTC)
+[triggers]
+crons = ["0 1 * * *"]

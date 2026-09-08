@@ -1,19 +1,29 @@
 import type { Metadata, Viewport } from "next";
-import { Kanit } from "next/font/google";
+import { Kanit, Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/firebase/auth-context";
+import { SettingsProvider } from "@/lib/settings-context";
 import SwRegister from "@/components/sw-register";
+import ClickSpark from "@/components/reactbits/ClickSpark";
+
+// Inter คุมตัวเลข/อังกฤษ · Kanit คุมภาษาไทย — ชุดเดียวกับหน้าเว็บหลัก
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+});
 
 const kanit = Kanit({
   variable: "--font-kanit",
   subsets: ["latin", "thai"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700"],
   display: "swap", // แสดงข้อความทันทีด้วยฟอนต์สำรอง ระหว่างรอ Kanit โหลด
 });
 
 export const metadata: Metadata = {
-  title: "IE-Photo Booking System",
-  description: "ระบบจองอุปกรณ์ถ่ายภาพและสตูดิโอ IE-Photo KMITL",
+  title: "IE-Photo · ระบบจองอุปกรณ์ สตูดิโอ และตากล้อง",
+  description: "ระบบจองอุปกรณ์ถ่ายภาพ สตูดิโอ และตากล้อง IE-Photo KMITL",
   manifest: "/manifest.json",
   icons: {
     icon: "/icon-32.png",
@@ -21,15 +31,16 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "IE-Photo",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#fcf9fb",
+  themeColor: "#f5f5f7",
   width: "device-width",
   initialScale: 1,
+  maximumScale: 5, // ให้ซูมได้ — บังคับ 1 เท่าตัดคนสายตาไม่ดีออก
   viewportFit: "cover",
 };
 
@@ -39,7 +50,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="th" className={`${kanit.variable} h-full antialiased`} data-scroll-behavior="smooth">
+    <html lang="th" className={`${kanit.variable} ${inter.variable} h-full antialiased`}>
       <head>
         {/* เปิด TLS connection ล่วงหน้า — API call แรกไปถึง Firebase เร็วขึ้น */}
         <link rel="preconnect" href="https://firestore.googleapis.com" />
@@ -49,9 +60,15 @@ export default function RootLayout({
             (metadata API ของ Next.js เรนเดอร์แค่ mobile-web-app-capable เฉยๆ) */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
-      <body className="min-h-full flex flex-col bg-background font-[family-name:var(--font-kanit)] text-foreground">
+      <body
+        className="flex min-h-full flex-col text-[var(--ink)]"
+        style={{ fontFamily: "var(--font-inter), var(--font-kanit), system-ui, sans-serif" }}
+      >
         <SwRegister />
-        <AuthProvider>{children}</AuthProvider>
+        <ClickSpark />
+        <SettingsProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </SettingsProvider>
       </body>
     </html>
   );
