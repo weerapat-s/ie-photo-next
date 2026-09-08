@@ -1,0 +1,388 @@
+/* StaggeredMenu — ปุ่ม toggle อยู่ inline ในแถบบน ส่วนแผงเป็น fixed overlay
+ *
+ * ตำแหน่งของแผง "คุมด้วย CSS ล้วน" ไม่พึ่ง JS animation library
+ * เหตุผล: เดิมใช้ GSAP เลื่อนแผงเข้ามา ถ้า requestAnimationFrame ถูกหน่วง
+ * (แท็บพื้นหลัง เครื่องช้า ตัวประหยัดแบต) ไทม์ไลน์ไม่เดิน แผงค้างนอกจอ
+ * เหลือแต่ฉากหลังมืด ๆ กับขอบสีโผล่มานิดเดียว — เมนูเปิดไม่ออกทั้งที่กดแล้ว
+ * CSS transition ทำงานได้แม้ rAF ถูกหน่วง และถ้าปิด transition ไปเลย
+ * แผงก็ยังไปอยู่ตำแหน่งที่ถูกต้องทันที
+ */
+
+/* ห้ามกำหนด display ที่นี่ — จะไป override `lg:hidden` ของ Tailwind (specificity เท่ากัน
+   แต่ไฟล์นี้ถูก import ทีหลัง) ทำให้เมนูมือถือโผล่บนจอใหญ่ ให้ใส่ผ่าน className แทน */
+.staggered-menu-wrapper {
+  position: relative;
+}
+
+/* ── ปุ่มเปิด/ปิด ─────────────────────────────────────────────── */
+.sm-toggle {
+  position: relative;
+  z-index: 130;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0 0.5rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #1d1d1f;
+  font-weight: 600;
+  font-size: 0.875rem;
+  line-height: 1;
+  overflow: visible;
+}
+
+.sm-toggle:focus-visible {
+  outline: 2px solid var(--sm-accent, #ef3961);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+/* คำว่า "เมนู"/"ปิด" เลื่อนสลับกันในกรอบสูง 1 บรรทัด */
+.sm-toggle-textWrap {
+  position: relative;
+  display: inline-block;
+  height: 1em;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.sm-toggle-textInner {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+  transform: translateY(0);
+  transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-open] .sm-toggle-textInner {
+  transform: translateY(-1em);
+}
+
+.sm-toggle-line {
+  display: block;
+  height: 1em;
+  line-height: 1;
+}
+
+.sm-icon {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(0deg);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-open] .sm-icon {
+  transform: rotate(225deg);
+}
+
+.sm-icon-line {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 2px;
+  background: currentColor;
+  border-radius: 2px;
+  transform: translate(-50%, -50%);
+}
+
+.sm-icon-line-v {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+/* ── ฉากหลังมืดตอนเปิด ───────────────────────────────────────── */
+.sm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.28);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sm-overlay[data-open] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ตัว portal — ไม่ต้องกินพื้นที่ ลูกทุกตัวเป็น fixed อยู่แล้ว */
+.staggered-menu-portal {
+  position: relative;
+  z-index: 100;
+}
+
+/* ── ชั้นสีที่ไถลตามกันมา ─────────────────────────────────────── */
+.sm-prelayers {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(88vw, 420px);
+  pointer-events: none;
+  z-index: 110;
+}
+
+[data-position="left"] .sm-prelayers {
+  right: auto;
+  left: 0;
+}
+
+.sm-prelayer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 100%;
+  transform: translateX(100%);
+  visibility: hidden;
+  transition:
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s linear 0.5s;
+}
+
+[data-position="left"] .sm-prelayer {
+  transform: translateX(-100%);
+}
+
+/* ชั้นสีเข้ามาก่อนแผงหลักทีละ 70ms — ได้จังหวะ "ไถลเป็นชั้น" แบบเดิม */
+[data-open] .sm-prelayer {
+  transform: translateX(0);
+  visibility: visible;
+  transition:
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s;
+}
+[data-open] .sm-prelayer:nth-child(2) {
+  transition-delay: 0.07s;
+}
+
+/* ── แผงเมนู ─────────────────────────────────────────────────── */
+.staggered-menu-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(88vw, 420px);
+  height: 100%;
+  background: rgba(255, 255, 255, 0.96);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  backdrop-filter: blur(28px) saturate(200%);
+  display: flex;
+  flex-direction: column;
+  padding: calc(5.5rem + env(safe-area-inset-top, 0px)) 1.5rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  z-index: 120;
+  box-shadow: -20px 0 60px rgba(0, 0, 0, 0.14);
+
+  transform: translateX(100%);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s linear 0.5s;
+}
+
+[data-position="left"] .staggered-menu-panel {
+  right: auto;
+  left: 0;
+  transform: translateX(-100%);
+  box-shadow: 20px 0 60px rgba(0, 0, 0, 0.14);
+}
+
+[data-open] .staggered-menu-panel {
+  transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
+  /* เข้ามาหลังชั้นสีเล็กน้อย ให้เห็นว่าเป็นชั้น ๆ */
+  transition:
+    transform 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.12s,
+    visibility 0s;
+}
+
+/* ── ปุ่มปิดในแผง ────────────────────────────────────────────── */
+.sm-close {
+  position: absolute;
+  top: calc(1.25rem + env(safe-area-inset-top, 0px));
+  right: 1.25rem;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.05);
+  color: #1d1d1f;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.sm-close:hover {
+  background: rgba(0, 0, 0, 0.09);
+}
+
+.sm-close:focus-visible {
+  outline: 2px solid var(--sm-accent, #ef3961);
+  outline-offset: 2px;
+}
+
+.sm-close-line {
+  position: absolute;
+  width: 16px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  transform: rotate(45deg);
+}
+
+.sm-close-line-v {
+  transform: rotate(-45deg);
+}
+
+.sm-panel-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.sm-panel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.sm-panel-itemWrap {
+  overflow: hidden;
+}
+
+.sm-panel-item {
+  position: relative;
+  display: block;
+  padding: 0.35rem 0;
+  color: #1d1d1f;
+  font-size: clamp(1.75rem, 7vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0;
+  text-decoration: none;
+  transition: color 0.25s ease;
+}
+
+.sm-panel-item:hover {
+  color: var(--sm-accent, #ef3961);
+}
+
+.sm-panel-list[data-numbering] .sm-panel-item::after {
+  content: attr(data-index);
+  position: absolute;
+  top: 0.4em;
+  right: 0.1em;
+  font-size: 0.32em;
+  font-weight: 600;
+  color: var(--sm-accent, #ef3961);
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+
+[data-open] .sm-panel-list[data-numbering] .sm-panel-item::after {
+  opacity: 1;
+  transition-delay: calc(var(--sm-i, 0) * 0.06s + 0.4s);
+}
+
+/* ตัวอักษรไถลขึ้นมาทีละบรรทัด — เดิมทำด้วย GSAP stagger ตอนนี้ใช้ delay ตาม index */
+.sm-panel-itemLabel {
+  display: block;
+  transform: translateY(140%) rotate(8deg);
+  transform-origin: left center;
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-open] .sm-panel-itemLabel {
+  transform: translateY(0) rotate(0deg);
+  transition-delay: calc(var(--sm-i, 0) * 0.07s + 0.3s);
+}
+
+/* ── ช่องทางติดต่อ ───────────────────────────────────────────── */
+.sm-socials {
+  margin-top: auto;
+  padding-top: 1rem;
+}
+
+.sm-socials-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--sm-accent, #ef3961);
+  opacity: 0;
+  transition: opacity 0.45s ease;
+}
+
+[data-open] .sm-socials-title {
+  opacity: 1;
+  transition-delay: 0.45s;
+}
+
+.sm-socials-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sm-socials-link {
+  display: inline-block;
+  color: rgba(29, 29, 31, 0.75);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+  transform: translateY(25px);
+  opacity: 0;
+  transition:
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.5s ease,
+    color 0.2s ease;
+}
+
+.sm-socials-link:hover {
+  color: var(--sm-accent, #ef3961);
+}
+
+[data-open] .sm-socials-link {
+  transform: translateY(0);
+  opacity: 1;
+  transition-delay: calc(var(--sm-i, 0) * 0.07s + 0.5s);
+}
+
+.sm-panel-footer {
+  padding-top: 1rem;
+}
+
+/* เคารพการตั้งค่า "ลดการเคลื่อนไหว" ของเครื่อง — ยังเปิด/ปิดได้ปกติ แค่ไม่มีอนิเมชัน */
+@media (prefers-reduced-motion: reduce) {
+  .sm-toggle-textInner,
+  .sm-icon,
+  .sm-prelayer,
+  .staggered-menu-panel,
+  .sm-panel-itemLabel,
+  .sm-socials-title,
+  .sm-socials-link,
+  .sm-overlay {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+}

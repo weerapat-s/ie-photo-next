@@ -13,8 +13,11 @@ export function slotPayload(input: {
   bookingType: BookingType;
   startAt: Timestamp;
   endAt: Timestamp;
+  /** แอดมินมอบหมาย = ยืนยันคิวทันที ("approved") · คำขอทั่วไปเริ่มที่ "pending" */
+  status?: SlotDoc["status"];
 }): SlotDoc {
-  return { ...input, status: "pending" };
+  const { status = "pending", ...rest } = input;
+  return { ...rest, status };
 }
 
 /**
