@@ -1,28 +1,48 @@
 "use client";
 // app/(auth)/login/page.tsx
-import { useState } from "react";
+// เลย์เอาต์การ์ดกลางจอบนพื้นไล่สี — โครงเดียวกับตัวอย่างที่ให้มา
+// แต่ใช้สี/ฟอนต์ของ iephoto.online (faculty #ef3961) ไม่ใช่โทนฟ้า
+// กรอกแค่รหัสนักศึกษาก็พอ ระบบเติม @kmitl.ac.th ให้เอง
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
+import { useSettings } from "@/lib/settings-context";
+import { Button, Alert } from "@/components/ui";
+import Icon from "@/components/icon";
+
+const DOMAIN = "@kmitl.ac.th";
+
+/** "68030263" -> "68030263@kmitl.ac.th" · ถ้าพิมพ์เต็มมาแล้วใช้ตามนั้น */
+function toEmail(input: string): string {
+  const v = input.trim().toLowerCase();
+  if (!v) return "";
+  return v.includes("@") ? v : v + DOMAIN;
+}
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const { settings } = useSettings();
+  const [account, setAccount] = useState("");
   const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
   const [resetting, setResetting] = useState(false);
 
+  const email = useMemo(() => toEmail(account), [account]);
+  const showDomainBadge = !account.includes("@");
+
   async function handleReset() {
     setError("");
     setInfo("");
-    if (!email) return setError("กรุณากรอกอีเมลก่อนกด \"ลืมรหัสผ่าน\"");
+    if (!account.trim()) return setError('กรอกรหัสนักศึกษาก่อนกด "ลืมรหัสผ่าน"');
     setResetting(true);
     try {
       await sendPasswordResetEmail(auth, email);
-      setInfo("ส่งลิงก์ตั้งรหัสผ่านใหม่ไปที่อีเมลแล้ว กรุณาตรวจสอบกล่องจดหมาย");
+      setInfo(`ส่งลิงก์ตั้งรหัสผ่านใหม่ไปที่ ${email} แล้ว`);
     } catch {
       setInfo("ถ้าอีเมลนี้มีในระบบ จะได้รับลิงก์ตั้งรหัสผ่านใหม่ในไม่ช้า");
     } finally {
@@ -33,100 +53,129 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (!account.trim()) return setError("กรุณากรอกรหัสนักศึกษาหรืออีเมล");
+    if (!password) return setError("กรุณากรอกรหัสผ่าน");
+
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // role อ่านจาก Firestore doc (auth-context) → ให้หน้าแรก redirect ตาม role
       router.push("/");
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
       if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found")
-        setError("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+        setError("รหัสนักศึกษา/อีเมล หรือรหัสผ่านไม่ถูกต้อง");
+      else if (code === "auth/invalid-email") setError("รูปแบบอีเมลไม่ถูกต้อง");
       else if (code === "auth/too-many-requests") setError("พยายามเข้าสู่ระบบมากเกินไป กรุณารอสักครู่");
+      else if (code === "auth/network-request-failed") setError("เชื่อมต่อไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองใหม่");
       else setError("เข้าสู่ระบบไม่สำเร็จ");
       setLoading(false);
     }
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center p-6 min-h-screen">
-      <div className="glass-card animate-in w-full max-w-sm rounded-3xl p-8 shadow-[0_25px_60px_rgba(0,0,0,0.7),0_0_30px_rgba(255,91,31,0.15)]">
+    <div className="auth-bg flex min-h-screen flex-1 items-center justify-center p-5">
+      <div className="auth-card animate-in w-full max-w-[26rem] rounded-[28px] p-7 sm:p-9">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--orange)] to-[var(--pink)] text-2xl text-white shadow-[0_10px_30px_rgba(255,91,31,.45)]">
-            📷
+          <div className="auth-badge mx-auto mb-4 grid h-14 w-14 place-items-center rounded-[18px] text-[var(--faculty)]">
+            <Icon name="equipment" size={24} strokeWidth={2} />
           </div>
-          <h1 className="text-xl font-semibold text-slate-100">เข้าสู่ระบบ</h1>
-          <p className="text-sm text-slate-400">ยินดีต้อนรับกลับสู่ IE-Photo</p>
+          <h1 className="t-title text-[var(--ink)]">เข้าสู่ระบบ</h1>
+          <p className="t-body mx-auto mt-1 max-w-[19rem] text-[var(--muted-ink)]">
+            {settings.siteName} · {settings.tagline}
+          </p>
         </div>
 
-        {error && (
-          <div role="alert" className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm text-red-400">⚠️ {error}</div>
-        )}
-        {info && (
-          <div role="status" className="mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5 text-sm text-emerald-400">✅ {info}</div>
-        )}
+        {error && <Alert onClose={() => setError("")}>{error}</Alert>}
+        {info && <Alert tone="success">{info}</Alert>}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="login-email" className="mb-1 block text-sm font-medium text-slate-300">อีเมล</label>
+        <form onSubmit={handleSubmit} className="space-y-2.5">
+          <div className="auth-field flex items-center">
+            <span className="grid w-11 shrink-0 place-items-center text-[var(--muted-ink)]">
+              <Icon name="user" size={18} />
+            </span>
             <input
-              id="login-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="6XXXXXXX@kmitl.ac.th"
+              type="text"
+              inputMode="email"
+              value={account}
+              onChange={(e) => setAccount(e.target.value)}
+              placeholder="รหัสนักศึกษา"
               autoComplete="username"
-              className="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              aria-label="รหัสนักศึกษาหรืออีเมล KMITL"
+              className="min-w-0 flex-1 bg-transparent py-3.5 pr-2 text-[16px] leading-snug outline-none placeholder:text-[var(--muted-ink)]"
               required
             />
+            {showDomainBadge && (
+              <span className="shrink-0 pr-4 text-sm font-medium text-[var(--muted-ink)]">{DOMAIN}</span>
+            )}
           </div>
-          <div>
-            <label htmlFor="login-password" className="mb-1 block text-sm font-medium text-slate-300">รหัสผ่าน</label>
+
+          <div className="auth-field flex items-center">
+            <span className="grid w-11 shrink-0 place-items-center text-[var(--muted-ink)]">
+              <Icon name="admin" size={18} />
+            </span>
             <input
-              id="login-password"
-              type="password"
+              type={showPw ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="รหัสผ่านของคุณ"
+              placeholder="รหัสผ่าน"
               autoComplete="current-password"
-              className="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm"
+              className="min-w-0 flex-1 bg-transparent py-3.5 pr-2 text-[16px] leading-snug outline-none placeholder:text-[var(--muted-ink)]"
               required
             />
+            <button
+              type="button"
+              onClick={() => setShowPw((v) => !v)}
+              aria-label={showPw ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+              aria-pressed={showPw}
+              className="tap grid shrink-0 place-items-center px-3 text-[var(--muted-ink)] transition hover:text-[var(--ink)]"
+            >
+              <Icon name={showPw ? "hide" : "show"} size={18} />
+            </button>
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-grad w-full rounded-full py-3 text-sm font-semibold disabled:opacity-50"
-          >
-            {loading ? "กำลังเข้าสู่ระบบ…" : "เข้าสู่ระบบ"}
-          </button>
+
+          <div className="flex justify-end pb-1">
+            <button
+              type="button"
+              onClick={handleReset}
+              disabled={resetting}
+              className="tap text-[0.8125rem] font-medium text-[var(--muted-ink)] transition hover:text-[var(--faculty)] disabled:opacity-50"
+            >
+              {resetting ? "กำลังส่ง…" : "ลืมรหัสผ่าน?"}
+            </button>
+          </div>
+
+          <Button type="submit" loading={loading} fullWidth size="lg" iconEnd="next">
+            เข้าสู่ระบบ
+          </Button>
         </form>
 
-        <button
-          type="button"
-          onClick={handleReset}
-          disabled={resetting}
-          className="mt-3 w-full text-center text-sm text-slate-400 hover:text-slate-200 underline disabled:opacity-50"
-        >
-          {resetting ? "กำลังส่ง…" : "ลืมรหัสผ่าน?"}
-        </button>
+        <div className="my-6 flex items-center gap-3">
+          <span className="auth-divider flex-1" />
+          <span className="t-caption shrink-0">หรือ</span>
+          <span className="auth-divider flex-1" />
+        </div>
 
-        <p className="mt-5 text-center text-sm text-slate-400">
-          ยังไม่มีบัญชี?{" "}
-          <Link href="/register" className="font-semibold text-orange-400 hover:underline">
-            สมัครสมาชิกใหม่
-          </Link>
-        </p>
-
-        <div className="mt-4 border-t border-slate-800/80 pt-4 text-center">
-          <p className="text-sm text-slate-400">บุคคลภายนอกต้องการจองสตูดิโอ?</p>
+        <div className="grid grid-cols-2 gap-2.5">
           <Link
             href="/book"
-            className="mt-1 inline-block text-sm font-semibold text-orange-400 hover:underline"
+            className="auth-alt press flex min-h-[46px] items-center justify-center gap-2 rounded-2xl text-center text-[0.8125rem] font-semibold leading-tight"
           >
-            🎬 จองได้เลยไม่ต้องเข้าสู่ระบบ →
+            <Icon name="studio" size={16} />
+            จองไม่ต้องล็อกอิน
+          </Link>
+          <Link
+            href="/register"
+            className="auth-alt press flex min-h-[46px] items-center justify-center gap-2 rounded-2xl text-[0.8125rem] font-semibold"
+          >
+            <Icon name="add" size={16} />
+            สมัครสมาชิก
           </Link>
         </div>
+
+        <p className="t-caption mt-6 text-center">ใช้ได้เฉพาะอีเมล {DOMAIN} ของ สจล.</p>
       </div>
     </div>
   );

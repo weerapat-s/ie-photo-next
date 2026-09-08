@@ -1,22 +1,38 @@
 "use client";
 // app/(auth)/register/page.tsx — สมัครสมาชิกด้วยอีเมล @kmitl.ac.th
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase/client";
+import { useSettings } from "@/lib/settings-context";
+import { Button, Field, inputClass, Alert } from "@/components/ui";
+import Icon from "@/components/icon";
+
+const DOMAIN = "@kmitl.ac.th";
+
+/** "68030263" → "68030263@kmitl.ac.th" · ถ้าพิมพ์เต็มมาแล้วใช้ตามนั้น */
+function toEmail(input: string): string {
+  const v = input.trim().toLowerCase();
+  if (!v) return "";
+  return v.includes("@") ? v : v + DOMAIN;
+}
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const { settings } = useSettings();
+  const [account, setAccount] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const emailValid = !email || email.toLowerCase().endsWith("@kmitl.ac.th");
-  const canSubmit = email && emailValid && password.length >= 6 && password === confirm && !loading;
+  const email = useMemo(() => toEmail(account), [account]);
+  const showDomainBadge = !account.includes("@");
+  const emailValid = !account.trim() || email.endsWith(DOMAIN);
+  const canSubmit = !!account.trim() && emailValid && password.length >= 6 && password === confirm && !loading;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,7 +44,7 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      const mail = email.trim().toLowerCase();
+      const mail = email;
       const cred = await createUserWithEmailAndPassword(auth, mail, password);
       // สร้าง user doc (rules อนุญาตให้สร้าง doc ตัวเอง role=member)
       await setDoc(doc(db, "users", cred.user.uid), {
@@ -53,79 +69,99 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center p-6 min-h-screen">
-      <div className="glass-card animate-in w-full max-w-sm rounded-3xl p-8 shadow-[0_25px_60px_rgba(0,0,0,0.7),0_0_30px_rgba(255,91,31,0.15)]">
+    <div className="flex min-h-screen flex-1 items-center justify-center p-5">
+      <div className="glass-card animate-in w-full max-w-sm rounded-[28px] p-7">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--orange)] to-[var(--pink)] text-2xl text-white shadow-[0_10px_30px_rgba(255,91,31,.45)]">
-            📷
+          <div className="btn-grad mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl text-white">
+            <Icon name="equipment" size={24} />
           </div>
-          <h1 className="text-xl font-semibold text-slate-100">สมัครสมาชิก</h1>
-          <p className="text-sm text-slate-400">IE-Photo Booking System</p>
+          <h1 className="t-title text-[var(--ink)]">สมัครสมาชิก</h1>
+          <p className="mt-0.5 text-sm text-[var(--muted-ink)]">{settings.siteName} · {settings.tagline}</p>
         </div>
 
-        {error && (
-          <div role="alert" className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm text-red-400">⚠️ {error}</div>
-        )}
+        {error && <Alert onClose={() => setError("")}>{error}</Alert>}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="register-email" className="mb-1 block text-sm font-medium text-slate-300">อีเมล KMITL</label>
-            <input
-              id="register-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="6XXXXXXX@kmitl.ac.th"
-              autoComplete="username"
-              className={`glass-input w-full rounded-xl px-3.5 py-2.5 text-sm ${emailValid ? "" : "!border-red-400"}`}
-              required
-            />
-            {!emailValid && <p className="mt-1 text-xs text-red-400">ต้องเป็นอีเมล @kmitl.ac.th</p>}
-          </div>
+        <form onSubmit={handleSubmit}>
+          <Field
+            label="รหัสนักศึกษา / อีเมล KMITL"
+            required
+            help={showDomainBadge ? `กรอกแค่รหัสนักศึกษา ระบบเติม ${DOMAIN} ให้อัตโนมัติ` : undefined}
+            error={!emailValid ? `ต้องเป็นอีเมล ${DOMAIN}` : undefined}
+          >
+            <div
+              className={`flex overflow-hidden rounded-2xl border bg-white/78 transition focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(239,57,97,0.16)] ${
+                emailValid ? "border-black/10 focus-within:border-[var(--faculty)]" : "border-red-400"
+              }`}
+            >
+              <input
+                type="text"
+                inputMode="email"
+                value={account}
+                onChange={(e) => setAccount(e.target.value)}
+                placeholder="68030263"
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                aria-label="รหัสนักศึกษาหรืออีเมล"
+                className="min-w-0 flex-1 bg-transparent px-4 py-3 text-[16px] leading-snug outline-none"
+                required
+              />
+              {showDomainBadge && (
+                <span className="grid shrink-0 place-items-center border-l border-black/8 bg-black/[0.035] px-3 text-sm font-medium text-[var(--muted-ink)]">
+                  {DOMAIN}
+                </span>
+              )}
+            </div>
+          </Field>
 
-          <div>
-            <label htmlFor="register-password" className="mb-1 block text-sm font-medium text-slate-300">รหัสผ่าน</label>
-            <input
-              id="register-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="อย่างน้อย 6 ตัวอักษร"
-              autoComplete="new-password"
-              className="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm"
-              required
-            />
-          </div>
+          <Field label="รหัสผ่าน" required help="อย่างน้อย 6 ตัวอักษร">
+            <div className="relative">
+              <input
+                type={showPw ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="อย่างน้อย 6 ตัวอักษร"
+                autoComplete="new-password"
+                className={`${inputClass} pr-12`}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw((v) => !v)}
+                aria-label={showPw ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+                aria-pressed={showPw}
+                className="tap absolute right-1 top-1/2 grid -translate-y-1/2 place-items-center rounded-xl px-2 text-[var(--muted-ink)] transition hover:text-[var(--ink)]"
+              >
+                <Icon name={showPw ? "hide" : "show"} size={18} />
+              </button>
+            </div>
+          </Field>
 
-          <div>
-            <label htmlFor="register-confirm-password" className="mb-1 block text-sm font-medium text-slate-300">ยืนยันรหัสผ่าน</label>
+          <Field
+            label="ยืนยันรหัสผ่าน"
+            required
+            error={confirm && password !== confirm ? "รหัสผ่านไม่ตรงกัน" : undefined}
+          >
             <input
-              id="register-confirm-password"
               type="password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               placeholder="กรอกรหัสผ่านอีกครั้ง"
               autoComplete="new-password"
-              className="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm"
+              className={inputClass}
               required
             />
-            {confirm && password !== confirm && (
-              <p className="mt-1 text-xs text-red-400">รหัสผ่านไม่ตรงกัน</p>
-            )}
-          </div>
+          </Field>
 
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            className="btn-grad w-full rounded-full py-3 text-sm font-semibold disabled:opacity-50"
-          >
-            {loading ? "กำลังสมัคร…" : "สมัครสมาชิก"}
-          </button>
+          <Button type="submit" disabled={!canSubmit} loading={loading} fullWidth size="lg" className="mt-2">
+            สมัครสมาชิก
+          </Button>
         </form>
 
-        <p className="mt-5 text-center text-sm text-slate-400">
+        <p className="mt-5 text-center text-sm text-[var(--muted-ink)]">
           มีบัญชีแล้ว?{" "}
-          <Link href="/login" className="font-semibold text-orange-400 hover:underline">
+          <Link href="/login" className="font-semibold text-[var(--faculty)] hover:underline">
             เข้าสู่ระบบ
           </Link>
         </p>

@@ -48,214 +48,655 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   IE-Photo · Liquid Glass — โทเคนชุดเดียวกับหน้าเว็บหลัก (index.html)
+   faculty #ef3961 · พื้น #f5f5f7 · หมึก #1d1d1f · ease (0.16,1,0.3,1)
+   ═══════════════════════════════════════════════════════════════════════════ */
 :root {
-  color-scheme: light;
-  --background: #fcf9fb;
-  --foreground: #29232d;
-  --card: #ffffff;
-  --card-foreground: #29232d;
-  --popover: #ffffff;
-  --popover-foreground: #29232d;
-  --primary: #b51f46;
-  --primary-foreground: #ffffff;
-  --secondary: #f5eef2;
-  --secondary-foreground: #403640;
-  --muted: #f6f1f4;
-  --muted-foreground: #695f69;
-  --accent: #fbe9f0;
-  --accent-foreground: #80203d;
-  --destructive: #c83a43;
-  --border: #e8dde4;
-  --input: #d9ccd5;
-  --ring: #b51f46;
-  --radius: 0.875rem;
-
-  --brand: #b51f46;
-  --brand-strong: #8f1737;
-  --brand-soft: #fbe9f0;
-  /* Backwards-compatible names still used by the auth identity mark. */
-  --orange: #b51f46;
-  --pink: #d44874;
-  --canvas: #fcf9fb;
-  --surface: #ffffff;
-  --ink: #29232d;
-  --muted-ink: #695f69;
-  --line: #e8dde4;
+  /* ── แบรนด์ ── */
+  --faculty: #ef3961;
+  --faculty-dark: #d62d50;
+  --faculty-light: #ff7b93;
+  --app-bg: #f5f5f7;
+  --ink: #1d1d1f;
+  --muted-ink: #86868b;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /*
-   * Legacy routes use the old dark-only slate scale directly. Mapping those
-   * tokens to the light palette keeps every route readable while new work
-   * moves to semantic Tailwind tokens (foreground, card, muted, border).
-   */
-  --color-slate-950: #29232d;
-  --color-slate-900: #ffffff;
-  --color-slate-800: #faf6f9;
-  --color-slate-700: #e8dde4;
-  --color-slate-600: #9a8d98;
-  --color-slate-500: #766d77;
-  --color-slate-400: #695f69;
-  --color-slate-300: #4c434d;
-  --color-slate-200: #39323b;
-  --color-slate-100: #29232d;
-  --color-slate-50: #211b22;
+  /* ── shadcn/base-ui bridge ── */
+  --background: #f5f5f7;
+  --foreground: #1d1d1f;
+  --card: rgba(255, 255, 255, 0.72);
+  --card-foreground: #1d1d1f;
+  --popover: #ffffff;
+  --popover-foreground: #1d1d1f;
+  --primary: #ef3961;
+  --primary-foreground: #ffffff;
+  --secondary: rgba(255, 255, 255, 0.72);
+  --secondary-foreground: #1d1d1f;
+  --muted: #ececf0;
+  --muted-foreground: #86868b;
+  --accent: #ffeaef;
+  --accent-foreground: #d62d50;
+  --destructive: #e5484d;
+  --border: rgba(0, 0, 0, 0.08);
+  --input: rgba(0, 0, 0, 0.12);
+  --ring: #ef3961;
+  --radius: 0.875rem;
+
+  /* ── ระยะ safe-area (iPhone notch / home indicator) ── */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* ความสูง dock ลอยบนมือถือ (ตัว dock 64 + ระยะลอยจากขอบ) — เนื้อหาเว้นที่ให้เท่านี้ */
+  --dock-h: calc(70px + max(var(--safe-bottom), 18px));
+
+  /* ═══ สเกลตัวอักษร ═══════════════════════════════════════════
+     line-height สูงกว่าสเกลฝรั่งทุกระดับ เพราะสระบน/ล่างของไทย
+     (ไม้โท + สระอุ) ต้องการที่หายใจ ไม่งั้นบรรทัดชนกัน */
+  --text-display: 2rem;      --lh-display: 1.28;
+  --text-title: 1.5rem;      --lh-title: 1.34;
+  --text-heading: 1.125rem;  --lh-heading: 1.45;
+  --text-body: 0.9375rem;    --lh-body: 1.65;
+  --text-label: 0.8125rem;   --lh-label: 1.5;
+  --text-caption: 0.75rem;   --lh-caption: 1.5;
+
+  /* ═══ จังหวะระยะห่าง — ยึด 4px grid ═══════════════════════ */
+  --gap-tight: 0.5rem;    /*  8px — ของที่อยู่ชุดเดียวกัน */
+  --gap-snug: 0.75rem;    /* 12px — ระหว่างการ์ดในลิสต์ */
+  --gap-base: 1.25rem;    /* 20px — ระหว่างบล็อกในหน้า */
+  --gap-section: 1.75rem; /* 28px — ระหว่างหัวข้อใหญ่ */
+
+  /* ═══ ลำดับชั้นพื้นผิว ═════════════════════════════════════
+     3 ระดับเท่านั้น: จม → พื้น → ลอย  (เดิมทุกอย่างเป็นการ์ดแก้วเหมือนกันหมด
+     ตาเลยแยกไม่ออกว่าอะไรสำคัญกว่าอะไร) */
+  --surface-sunken: rgba(0, 0, 0, 0.032);
+  --surface-base: rgba(255, 255, 255, 0.62);
+  --surface-raised: rgba(255, 255, 255, 0.82);
+  --hairline: rgba(0, 0, 0, 0.07);
+  --hairline-strong: rgba(0, 0, 0, 0.11);
+
+  /* ═══ สีสถานะ — ปรับ hue ให้เข้าตระกูลเดียวกับ faculty ══════
+     ไม่ใช้ค่า default ของ Tailwind ตรง ๆ เพราะคนละ hue family
+     ทำให้ป้ายสถานะดูเหมือนหลุดมาจากคนละเว็บ */
+  --tone-ok-bg: #e7f6ee;    --tone-ok-ink: #12674a;   --tone-ok-line: #bfe6d3;
+  --tone-warn-bg: #fdf0e0;  --tone-warn-ink: #8a5410; --tone-warn-line: #f3dcba;
+  --tone-info-bg: #e9f1fd;  --tone-info-ink: #1f4f8f; --tone-info-line: #c9dcf7;
+  --tone-bad-bg: #fdeaec;   --tone-bad-ink: #9c1f2e;  --tone-bad-line: #f6ccd2;
+  --tone-mute-bg: #f0f0f2;  --tone-mute-ink: #5f5f66; --tone-mute-line: #e0e0e4;
+  --tone-brand-bg: #fdeaef; --tone-brand-ink: #b32448; --tone-brand-line: #f8ccd8;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-
   html {
-    @apply font-sans scroll-smooth;
+    @apply font-sans;
+    /* กันหน้าเด้งเวลา modal ล็อก scroll */
+    scrollbar-gutter: stable;
+    -webkit-tap-highlight-color: transparent;
   }
-
   body {
-    @apply bg-background text-foreground;
+    background-color: var(--app-bg);
+    color: var(--ink);
+    min-height: 100%;
+    position: relative;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  /* พื้นหลังไล่สีชมพูจาง ๆ ลอยนิ่ง — โทนเดียวกับหน้าเว็บหลัก */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(42rem 42rem at 12% -8%, rgba(239, 57, 97, 0.1), transparent 62%),
+      radial-gradient(38rem 38rem at 88% 6%, rgba(255, 123, 147, 0.09), transparent 64%),
+      radial-gradient(46rem 46rem at 50% 112%, rgba(239, 57, 97, 0.06), transparent 70%);
   }
 }
 
-body {
-  min-height: 100%;
-  position: relative;
-  background: var(--canvas);
-  color: var(--ink);
+/* ═══ คลาสตัวอักษร — ใช้แทนการหยิบ text-sm/text-xs มั่ว ═══════════════════ */
+.t-display {
+  font-size: var(--text-display);
+  line-height: var(--lh-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.t-title {
+  font-size: var(--text-title);
+  line-height: var(--lh-title);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+.t-heading {
+  font-size: var(--text-heading);
+  line-height: var(--lh-heading);
+  font-weight: 700;
+}
+.t-body {
+  font-size: var(--text-body);
+  line-height: var(--lh-body);
+}
+.t-label {
+  font-size: var(--text-label);
+  line-height: var(--lh-label);
+  font-weight: 600;
+}
+.t-caption {
+  font-size: var(--text-caption);
+  line-height: var(--lh-caption);
+  color: var(--muted-ink);
+}
+/* หัวข้อกำกับหมวด — ตัวเล็กหนา ไม่ใส่ letter-spacing กับไทย
+   (ไทยไม่มีช่องว่างระหว่างคำ ยืดตัวอักษรแล้วอ่านยากขึ้น ไม่ใช่ดูพรีเมียมขึ้น) */
+.t-eyebrow {
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  font-weight: 700;
+  color: var(--faculty);
+}
+.t-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(44rem 32rem at 0% -8%, rgba(181, 31, 70, 0.1), transparent 66%),
-    radial-gradient(38rem 28rem at 100% 0%, rgba(217, 132, 165, 0.12), transparent 70%),
-    linear-gradient(180deg, #fffdfd 0%, var(--canvas) 38rem);
+/* ═══ Liquid Glass surfaces ═══════════════════════════════════════════════ */
+.liquid-glass {
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.52) 100%);
+  -webkit-backdrop-filter: blur(36px) saturate(210%);
+  backdrop-filter: blur(36px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.07),
+    0 2px 8px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.35);
 }
 
-::selection {
-  background: #f3cad9;
-  color: #4a1024;
+.glass-thin {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.62));
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
-.glass-card {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid var(--line);
-  box-shadow: 0 14px 36px rgba(77, 45, 62, 0.08);
-  backdrop-filter: blur(14px) saturate(120%);
-  -webkit-backdrop-filter: blur(14px) saturate(120%);
-  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease), border-color 0.25s var(--ease);
-}
-
-.glass-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(181, 31, 70, 0.3);
-  box-shadow: 0 18px 42px rgba(77, 45, 62, 0.12);
-}
-
-.glow-card {
-  background: linear-gradient(145deg, #ffffff, #fff7fa);
-  border: 1px solid rgba(181, 31, 70, 0.22);
-  box-shadow: 0 16px 42px rgba(181, 31, 70, 0.12);
-}
-
-@keyframes fadeUpFloat {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-in {
-  animation: fadeUpFloat 0.42s var(--ease) both;
-}
-
-.glass-nav {
-  background: rgba(255, 255, 255, 0.88);
-  border-bottom: 1px solid rgba(232, 221, 228, 0.9);
-  box-shadow: 0 2px 14px rgba(77, 45, 62, 0.05);
-  backdrop-filter: blur(18px) saturate(120%);
-  -webkit-backdrop-filter: blur(18px) saturate(120%);
-}
-
-.btn-grad {
-  background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+.liquid-glass-dark {
+  background: linear-gradient(155deg, rgba(46, 46, 50, 0.78) 0%, rgba(20, 20, 22, 0.72) 100%);
+  -webkit-backdrop-filter: blur(36px) saturate(200%);
+  backdrop-filter: blur(36px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04);
   color: #ffffff;
-  box-shadow: 0 8px 20px rgba(181, 31, 70, 0.2);
-  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), opacity 0.2s;
 }
 
-.btn-grad:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(181, 31, 70, 0.28);
+/* การ์ดหลัก — ใช้แทน .glass-card เดิม */
+.glass-card {
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.52) 100%);
+  -webkit-backdrop-filter: blur(36px) saturate(210%);
+  backdrop-filter: blur(36px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  box-shadow:
+    0 10px 36px rgba(0, 0, 0, 0.07),
+    0 2px 8px rgba(0, 0, 0, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transition: transform 0.4s var(--ease), box-shadow 0.4s var(--ease), border-color 0.4s var(--ease);
 }
 
-.btn-grad:focus-visible {
-  outline: 3px solid rgba(181, 31, 70, 0.28);
-  outline-offset: 3px;
+/* พื้นผิว "จม" — ใช้กับกล่องข้อมูลย่อยที่อยู่ในการ์ดอีกที
+   (เดิมซ้อนการ์ดแก้วในการ์ดแก้ว ทำให้ขอบเบลอกันจนดูมั่ว) */
+.surface-sunken {
+  background: var(--surface-sunken);
+  border: 1px solid var(--hairline);
 }
 
-.text-grad {
-  background: linear-gradient(135deg, #b51f46, #7e1b3a);
+/* พื้นผิวระดับกลาง — เบากว่า .glass-card ไม่มีเงา ใช้กับ list item */
+.surface-flat {
+  background: var(--surface-base);
+  border: 1px solid var(--hairline);
+}
+
+/* การ์ดที่ต้องเน้น — ขอบชมพู faculty */
+.glow-card {
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 240, 243, 0.7) 100%);
+  -webkit-backdrop-filter: blur(36px) saturate(210%);
+  backdrop-filter: blur(36px) saturate(210%);
+  border: 1px solid rgba(239, 57, 97, 0.28);
+  box-shadow:
+    0 14px 44px rgba(239, 57, 97, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+/* ยกการ์ดตอน hover — เฉพาะเครื่องที่มีเมาส์จริง กันค้างบนมือถือ */
+@media (hover: hover) and (pointer: fine) {
+  .hover-scale {
+    transition: transform 0.4s var(--ease), box-shadow 0.4s var(--ease);
+  }
+  .hover-scale:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+  }
+}
+/* บนสัมผัส ใช้ "กดแล้วยุบ" แทน hover — ให้ฟีดแบ็กทันตา */
+.press {
+  transition: transform 0.18s var(--ease), opacity 0.18s var(--ease);
+}
+.press:active {
+  transform: scale(0.97);
+}
+
+/* ═══ ป้ายสถานะ — 6 โทนเท่านั้นทั้งระบบ ═══════════════════════════════════ */
+.tone-ok    { background: var(--tone-ok-bg);    color: var(--tone-ok-ink);    border: 1px solid var(--tone-ok-line); }
+.tone-warn  { background: var(--tone-warn-bg);  color: var(--tone-warn-ink);  border: 1px solid var(--tone-warn-line); }
+.tone-info  { background: var(--tone-info-bg);  color: var(--tone-info-ink);  border: 1px solid var(--tone-info-line); }
+.tone-bad   { background: var(--tone-bad-bg);   color: var(--tone-bad-ink);   border: 1px solid var(--tone-bad-line); }
+.tone-mute  { background: var(--tone-mute-bg);  color: var(--tone-mute-ink);  border: 1px solid var(--tone-mute-line); }
+.tone-brand { background: var(--tone-brand-bg); color: var(--tone-brand-ink); border: 1px solid var(--tone-brand-line); }
+
+/* ═══ แถบนำทาง ═══════════════════════════════════════════════════════════ */
+.glass-nav {
+  background: rgba(245, 245, 247, 0.72);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  backdrop-filter: blur(24px) saturate(200%);
+}
+
+/* ── ปุ่มใน dock — ให้เห็นชัดว่าอยู่หน้าไหน ─────────────────────────────
+   พื้นหลังแยกเป็นชั้น .dock-pill เพื่อให้ขยายจากตรงกลางได้นุ่ม ๆ
+   ถ้าใส่พื้นหลังบนปุ่มตรง ๆ ข้อความจะกระตุกตามตอนเปลี่ยนหน้า */
+.dock-item {
+  transition: color 0.25s ease;
+}
+
+.dock-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: var(--faculty);
+  box-shadow: 0 6px 16px rgba(239, 57, 97, 0.35);
+  transform: scale(0.6);
+  opacity: 0;
+  transition:
+    transform 0.32s cubic-bezier(0.34, 1.4, 0.64, 1),
+    opacity 0.22s ease;
+}
+
+.dock-item.is-active .dock-pill {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* ไอคอนของหน้าปัจจุบันเด้งขึ้นเล็กน้อย — อ่านตำแหน่งได้จากหางตา */
+.dock-icon {
+  transition: transform 0.32s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.dock-item.is-active .dock-icon {
+  transform: translateY(-1px) scale(1.06);
+}
+
+.dock-item:active .dock-icon {
+  transform: scale(0.92);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dock-pill,
+  .dock-icon {
+    transition-duration: 0.01ms;
+  }
+}
+
+/* ── ปุ่มลับ dev — สีนอกธีม ดูเหมือนของประดับ มี hover ตอบสนอง ── */
+.dev-gear {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 8px;
+  cursor: default;
+  color: #8a7fb5; /* ม่วงเทา — จงใจไม่ใช่สีหลักของแอป */
+  background: transparent;
+  opacity: 0.5;
+  transition:
+    transform 0.25s cubic-bezier(0.34, 1.4, 0.64, 1),
+    opacity 0.25s ease,
+    color 0.25s ease,
+    background 0.25s ease;
+}
+
+.dev-gear:hover {
+  opacity: 1;
+  color: #6d5fa8;
+  background: rgba(138, 127, 181, 0.12);
+  transform: rotate(45deg) scale(1.1);
+}
+
+.dev-gear:active {
+  transform: rotate(90deg) scale(0.9);
+}
+
+/* เปิดโหมดอยู่ — เรืองแสงจาง ๆ ให้เจ้าตัวรู้ คนอื่นไม่ทันสังเกต */
+.dev-gear[data-on] {
+  opacity: 0.85;
+  color: #10b981;
+}
+
+.dev-gear[data-flash] {
+  animation: dev-flash 0.9s ease;
+}
+
+@keyframes dev-flash {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.6) rotate(180deg); color: #10b981; }
+  100% { transform: scale(1) rotate(360deg); }
+}
+
+/* Dock ลอยบนมือถือ — ผิวแก้วหนา ลอยพ้นขอบจอ */
+.dock-shell {
+  background: rgba(252, 252, 253, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  backdrop-filter: blur(28px) saturate(200%);
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.14),
+    0 2px 8px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* ── ช่องกรอกที่ยังไม่ถูกต้อง — ขอบแดงชัด + สั่นเบา ๆ ครั้งเดียวให้สะดุดตา ── */
+[aria-invalid="true"],
+.glass-input[aria-invalid="true"],
+[data-field-invalid] .glass-input,
+[data-field-invalid] input,
+[data-field-invalid] textarea,
+[data-field-invalid] select {
+  border-color: var(--tone-bad-ink) !important;
+  box-shadow: 0 0 0 3px rgba(156, 31, 46, 0.14) !important;
+}
+
+[data-field-invalid] {
+  animation: field-shake 0.32s ease;
+}
+
+@keyframes field-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-field-invalid] { animation: none; }
+}
+
+/* ═══ ปุ่ม ═══════════════════════════════════════════════════════════════ */
+/* ปุ่มหลัก — glossy แบบเดียวกับหน้าเว็บหลัก */
+.btn-grad {
+  background: linear-gradient(180deg, #fb7185 0%, #ef3961 50%, #d62d50 100%);
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 10px 20px rgba(239, 57, 97, 0.32);
+  transition: filter 0.3s var(--ease), transform 0.2s var(--ease), box-shadow 0.3s var(--ease), opacity 0.2s;
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn-grad:hover:not(:disabled) {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.8),
+      0 15px 26px rgba(239, 57, 97, 0.4);
+  }
+}
+.btn-grad:active:not(:disabled) {
+  transform: scale(0.975);
+}
+
+/* ปุ่มรอง — ผิวแก้วบาง */
+.btn-glass {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.66));
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: var(--ink);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  transition: background 0.25s var(--ease), transform 0.2s var(--ease), border-color 0.25s;
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn-glass:hover:not(:disabled) {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.14);
+  }
+}
+.btn-glass:active:not(:disabled) {
+  transform: scale(0.975);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #ef3961, #ff7b93);
   -webkit-background-clip: text;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+/* ชื่อเดิมในโค้ดเก่า — ให้ผลเหมือน .text-gradient */
+.text-grad {
+  background: linear-gradient(135deg, #ef3961, #ff7b93);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   color: transparent;
 }
 
+/* ═══ ช่องกรอก ═══════════════════════════════════════════════════════════ */
 .glass-input {
-  background: #ffffff;
-  border: 1px solid var(--input);
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   color: var(--ink);
-  box-shadow: inset 0 1px 1px rgba(52, 37, 46, 0.03);
-  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+  /* 16px กัน iOS Safari ซูมอัตโนมัติตอนโฟกัส */
+  font-size: 16px;
+  transition: border-color 0.25s, box-shadow 0.25s, background-color 0.25s;
 }
-
 .glass-input::placeholder {
-  color: #9a8d98;
+  color: #a1a1a8;
 }
-
 .glass-input:focus {
   outline: none;
-  border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(181, 31, 70, 0.14);
+  background: #ffffff;
+  border-color: var(--faculty);
+  box-shadow: 0 0 0 3px rgba(239, 57, 97, 0.16);
+}
+.glass-input:disabled {
+  opacity: 0.55;
+}
+/* select ต้องเห็นลูกศรบนพื้นแก้ว */
+select.glass-input {
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2386868b' stroke-width='2' stroke-linecap='round'><path d='M4 6l4 4 4-4'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.25rem;
 }
 
-.skip-link {
-  position: fixed;
-  top: 0.75rem;
-  left: 0.75rem;
-  z-index: 100;
-  transform: translateY(-180%);
-  border-radius: 9999px;
-  background: var(--brand);
-  color: #ffffff;
-  padding: 0.65rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  transition: transform 0.2s var(--ease);
+/* ═══ อนิเมชัน ═══════════════════════════════════════════════════════════ */
+@keyframes fadeUpFloat {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-in {
+  animation: fadeUpFloat 0.55s var(--ease) both;
 }
 
-.skip-link:focus {
-  transform: translateY(0);
+/* เข้าฉากไล่ทีละใบ — ใส่ style="--i:3" ที่ลูกแต่ละตัว
+   หน่วงลดจาก 55ms เหลือ 38ms และหยุดเพิ่มหลังใบที่ 8
+   (ลิสต์ยาว ๆ ถ้าหน่วงสะสมไปเรื่อย ใบท้ายจะโผล่ช้าจนรู้สึกว่าเว็บค้าง) */
+.stagger > * {
+  animation: fadeUpFloat 0.45s var(--ease) both;
+  animation-delay: calc(min(var(--i, 0), 8) * 38ms);
 }
 
+/* bottom sheet ไถลขึ้นบนมือถือ */
+@keyframes sheetUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.05);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  animation: shimmer 1.4s infinite;
+}
+
+/* วงแหวนหมุน */
+@keyframes spinRing { to { transform: rotate(360deg); } }
+.ring-spin {
+  animation: spinRing 0.8s linear infinite;
+}
+
+/* ─── เคารพ prefers-reduced-motion ทั้งระบบ ─── */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
+    animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
   }
+}
 
-  .glass-card:hover,
-  .btn-grad:hover:not(:disabled) {
-    transform: none;
+/* ═══ ยูทิลิตี้ ═══════════════════════════════════════════════════════════ */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* แถบเลื่อนแนวนอนแบบ snap สำหรับชิปกรอง/การ์ดบนมือถือ */
+.snap-x-list {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+.snap-x-list > * {
+  scroll-snap-align: start;
+  flex: 0 0 auto;
+}
+
+/* เว้นที่ให้ dock ลอย — เนื้อหาบรรทัดสุดท้ายจึงไม่ถูกบัง */
+.pb-dock {
+  /* เผื่อทั้ง dock และปุ่มผู้ช่วยที่ลอยอยู่เหนือมัน ไม่งั้นแถวปุ่มของการ์ดใบสุดท้ายถูกบัง */
+  padding-bottom: calc(var(--dock-h) + 5rem);
+}
+
+/* เป้ากดขั้นต่ำ 44px ตามแนวทาง Apple HIG */
+.tap {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* ═══ หน้า login / register ═══════════════════════════════════════════════
+   การ์ดกลางจอบนพื้นไล่สี — โครงเดียวกับตัวอย่างที่อ้างอิง
+   แต่ใช้ตระกูลสี faculty ของ iephoto.online ไม่ใช่โทนฟ้า */
+/* พื้นต้องเข้มพอให้การ์ดขาวลอยขึ้นมา — ถ้าจางไปการ์ดจะจมหายไปกับพื้น */
+.auth-bg {
+  position: relative;
+  background:
+    radial-gradient(60rem 38rem at 50% -12%, rgba(239, 57, 97, 0.42), transparent 62%),
+    radial-gradient(46rem 32rem at 8% 106%, rgba(255, 123, 147, 0.34), transparent 64%),
+    radial-gradient(46rem 32rem at 96% 88%, rgba(214, 45, 80, 0.22), transparent 62%),
+    linear-gradient(170deg, #ffe9ef 0%, #fbdfe6 42%, #f4eef0 100%);
+}
+
+/* เส้นโค้งจาง ๆ ด้านหลังการ์ด ให้พื้นไม่ตายสนิท (ไม่ใช้รูป = ไม่กินโหลด) */
+.auth-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(closest-side, transparent 78%, rgba(239, 57, 97, 0.07) 79%, transparent 80%),
+    radial-gradient(closest-side, transparent 86%, rgba(239, 57, 97, 0.05) 87%, transparent 88%);
+  background-size: 130% 130%, 170% 170%;
+  background-position: 50% 42%, 50% 42%;
+  background-repeat: no-repeat;
+}
+
+.auth-card {
+  position: relative;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 250, 251, 0.9) 100%);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
+  backdrop-filter: blur(30px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 30px 70px rgba(120, 20, 45, 0.16),
+    0 8px 20px rgba(120, 20, 45, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+.auth-badge {
+  background: linear-gradient(160deg, #ffffff, #fff3f6);
+  border: 1px solid rgba(239, 57, 97, 0.14);
+  box-shadow:
+    0 8px 20px rgba(120, 20, 45, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+/* ช่องกรอก — พื้นจมเล็กน้อย ไม่มีขอบหนา ให้ฟอร์มดูสงบ */
+.auth-field {
+  background: rgba(29, 29, 31, 0.05);
+  border: 1px solid rgba(29, 29, 31, 0.06);
+  border-radius: 14px;
+  transition: background-color 0.25s, border-color 0.25s, box-shadow 0.25s;
+}
+.auth-field:focus-within {
+  background: #ffffff;
+  border-color: var(--faculty);
+  box-shadow: 0 0 0 3px rgba(239, 57, 97, 0.14);
+}
+
+.auth-divider {
+  height: 1px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--hairline-strong) 0 4px,
+    transparent 4px 9px
+  );
+}
+
+.auth-alt {
+  background: #ffffff;
+  border: 1px solid var(--hairline);
+  color: var(--ink);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+@media (hover: hover) and (pointer: fine) {
+  .auth-alt:hover {
+    border-color: var(--faculty);
+    box-shadow: 0 4px 14px rgba(239, 57, 97, 0.14);
   }
 }
