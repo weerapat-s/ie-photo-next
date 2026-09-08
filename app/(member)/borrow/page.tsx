@@ -247,7 +247,7 @@ export default function BorrowPage() {
           {loading ? (
             <Spinner />
           ) : loadError ? (
-            <EmptyState icon="⚠️" text="โหลดรายการอุปกรณ์ไม่สำเร็จ กรุณารีเฟรชหน้า" />
+            <EmptyState icon="warning" text="โหลดรายการอุปกรณ์ไม่สำเร็จ กรุณารีเฟรชหน้า" />
           ) : equipments.length === 0 ? (
             <EmptyState text="ไม่มีอุปกรณ์ว่างในขณะนี้" />
           ) : (

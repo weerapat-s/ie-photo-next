@@ -180,7 +180,7 @@ export default function ScanStationPage() {
       {loading ? (
         <Spinner />
       ) : !target ? (
-        <EmptyState icon="📷" text="ยังไม่ได้สแกน — ยิง QR เพื่อเริ่ม" />
+        <EmptyState icon="equipment" text="ยังไม่ได้สแกน — ยิง QR เพื่อเริ่ม" />
       ) : (
         <>
           <div className="mb-3 flex items-center justify-between gap-3">

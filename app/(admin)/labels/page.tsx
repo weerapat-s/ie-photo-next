@@ -72,7 +72,7 @@ export default function LabelsPage() {
             )}
 
             {withCode.length === 0 ? (
-              <EmptyState icon="🏷️" text="ยังไม่มีอุปกรณ์ที่ตั้งรหัสไว้" />
+              <EmptyState icon="inventory" text="ยังไม่มีอุปกรณ์ที่ตั้งรหัสไว้" />
             ) : (
               <Card className="mb-4">
                 <p className="mb-3 text-sm text-muted-foreground">
