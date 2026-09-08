@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types scripts/test-analytics.mts && node --experimental-strip-types scripts/test-pairing.mts && node --experimental-strip-types scripts/test-model-chain.mts && node --experimental-strip-types scripts/test-reminders.mts && node --experimental-strip-types scripts/test-crew-status.mts && node --experimental-strip-types scripts/test-nav-path.mts && node --experimental-strip-types scripts/test-ai-parse.mts && node scripts/test-cron.mjs",
+    "test": "node --experimental-strip-types scripts/test-analytics.mts && node --experimental-strip-types scripts/test-pairing.mts && node --experimental-strip-types scripts/test-model-chain.mts && node --experimental-strip-types scripts/test-reminders.mts && node --experimental-strip-types scripts/test-crew-status.mts && node --experimental-strip-types scripts/test-nav-path.mts && node --experimental-strip-types scripts/test-ai-parse.mts && node --experimental-strip-types scripts/test-jobs.mts && node scripts/test-cron.mjs",
     "worker:login": "wrangler login",
     "worker:deploy": "wrangler deploy --config workers/wrangler.toml",
     "worker:key": "wrangler secret put OKMD_API_KEY --config workers/wrangler.toml",

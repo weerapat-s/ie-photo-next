@@ -19,6 +19,7 @@ import { buildClubSnapshot, SYSTEM_PROMPT } from "@/lib/ai/context";
 import { parseAiReply, resolvePlan, type ResolvedAction } from "@/lib/ai/plan";
 import { applyPlan, describeResult } from "@/lib/ai/apply";
 import { Badge, Alert, Spinner, useToast } from "@/components/ui";
+import { displayName } from "@/lib/roles";
 import Icon from "@/components/icon";
 import RadiantPromptInput from "./radiant-prompt";
 import GenerateButton from "./generate-button";
@@ -33,6 +34,7 @@ import type {
   PhotographerDoc,
   TaskDoc,
   UserDoc,
+  WithId,
 } from "@/lib/types";
 
 /** เก็บย้อนหลังแค่ไม่กี่ตา — โควตา 30k token/วัน ทั้งชุมนุมใช้ร่วมกัน */
@@ -44,6 +46,18 @@ const TEMPLATES = [
   "สัปดาห์หน้ามีงานอะไรบ้าง ใครว่างรับได้",
   "งานกระจายกันดีไหม มีใครยังไม่เคยได้งานเลย",
 ];
+
+/** ตอนนี้ระบบกำลังถามหา "ตัวคน" อยู่ไหม — ถ้าใช่ โชว์รายชื่อให้กดเลือก
+ *  แทนที่จะให้ผู้ใช้ไปนั่งหา UID เอง (โมเดลบางตัวจับชื่อเล่นไม่แม่น) */
+function wantsMemberPicker(t: Turn): boolean {
+  if (t.role !== "assistant") return false;
+  const hay = [t.text, ...(t.questions ?? [])].join(" ");
+  // เจอเมื่อ: ถามชื่อ/UID/ว่าใคร  หรือ  ตอบว่าหาสมาชิกไม่พบ
+  return (
+    /uid|ยูไอดี|ระบุชื่อ|ชื่อใด|คนไหน|สมาชิกคนใด|ใครที่|เลือกสมาชิก/i.test(hay) ||
+    (/ไม่พบ|หาไม่เจอ|ไม่เจอ/.test(hay) && /สมาชิก|ชื่อ|คน/.test(hay))
+  );
+}
 
 interface Turn {
   role: "user" | "assistant";
@@ -498,6 +512,12 @@ export default function Assistant({
                     </div>
                   )}
 
+                  {/* กำลังถามหาตัวคน + เป็นข้อความล่าสุด → โชว์รายชื่อให้กดเลือกเลย
+                      ไม่ต้องพิมพ์ชื่อ/หา UID เอง (แก้ปัญหาโมเดลจับชื่อเล่นไม่เจอ) */}
+                  {i === turns.length - 1 && wantsMemberPicker(t) && (
+                    <MemberPicker users={users} disabled={busy} onPick={ask} />
+                  )}
+
                   {/* แผนที่เสนอ — ต้องกดยืนยันเองถึงจะบันทึก */}
                   {t.actions && t.actions.length > 0 && (
                     <>
@@ -562,5 +582,79 @@ export default function Assistant({
       {toastNode}
     </div>,
     document.body
+  );
+}
+
+/** รายชื่อสมาชิกให้กดเลือก — ส่งชื่อ+uid กลับให้ AI ตรง ๆ ผู้ใช้ไม่ต้องรู้จัก UID
+ *  ค้นด้วยชื่อจริง/ชื่อเล่น/รหัสนักศึกษาได้ กดแล้วยิงต่อทันที */
+function MemberPicker({
+  users,
+  disabled,
+  onPick,
+}: {
+  users: WithId<UserDoc>[];
+  disabled: boolean;
+  onPick: (text: string) => void;
+}) {
+  const [q, setQ] = useState("");
+  const term = q.trim().toLowerCase();
+  const list = users
+    .filter((u) => !u.disabled)
+    .filter((u) => {
+      if (!term) return true;
+      const hay = `${u.firstName ?? ""} ${u.lastName ?? ""} ${u.nickname ?? ""} ${u.studentId ?? ""}`.toLowerCase();
+      return hay.includes(term);
+    })
+    .slice(0, 40);
+
+  return (
+    <div className="surface-flat rounded-2xl p-3 ring-1 ring-[var(--hairline)]">
+      <p className="t-label mb-2 flex items-center gap-1.5 text-[var(--ink)]">
+        <Icon name="members" size={16} className="text-[var(--faculty)]" /> เลือกสมาชิกจากรายชื่อ
+      </p>
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="พิมพ์ค้นหา ชื่อ / ชื่อเล่น / รหัส…"
+        className="mb-2 w-full rounded-xl border border-[var(--hairline-strong)] bg-white px-3 py-2 text-sm outline-none focus:border-[var(--faculty)]"
+      />
+      <div className="flex max-h-52 flex-col gap-1 overflow-y-auto">
+        {list.length === 0 ? (
+          <p className="t-caption py-2 text-center">ไม่พบชื่อที่ค้น</p>
+        ) : (
+          list.map((u) => {
+            const nick = u.nickname?.trim();
+            const roleLabel = u.role === "super_admin" ? "ประธาน" : u.role === "admin" ? "กรรมการ" : "สมาชิก";
+            return (
+              <button
+                key={u.id}
+                type="button"
+                disabled={disabled}
+                onClick={() =>
+                  onPick(
+                    `ใช้สมาชิกคนนี้: ${displayName(u)}${nick ? ` (${nick})` : ""} · uid=${u.id}`
+                  )
+                }
+                className="press flex items-center gap-2 rounded-xl px-2.5 py-2 text-left text-sm transition hover:bg-[var(--faculty)]/8 disabled:opacity-50"
+              >
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--faculty)]/10 text-[var(--faculty)]">
+                  <Icon name="user" size={16} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium text-[var(--ink)]">
+                    {displayName(u)}
+                    {nick ? <span className="text-[var(--muted-ink)]"> ({nick})</span> : null}
+                  </span>
+                  <span className="block truncate text-[11px] text-[var(--muted-ink)]">
+                    {roleLabel}
+                    {u.studentId ? ` · ${u.studentId}` : ""}
+                  </span>
+                </span>
+              </button>
+            );
+          })
+        )}
+      </div>
+    </div>
   );
 }

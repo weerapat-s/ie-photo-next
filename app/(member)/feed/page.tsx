@@ -49,10 +49,11 @@ export default function FeedPage() {
   const shortcuts = (
     isAdminRole(role)
       ? [
+          // แผนผังงานมาก่อน — เป็นหน้าที่กรรมการเปิดดูภาพรวมงานทั้งชุมนุมบ่อยสุด
+          { href: "/workflow", icon: "workflow", label: "แผนผังงาน", desc: "โครงสร้าง + ติดตามทุกงาน" },
           settings.featureBorrow && { href: "/assign?tab=equipment", icon: "equipment", label: "มอบหมายอุปกรณ์", desc: "ระบุผู้รับผิดชอบ" },
           settings.featureStudio && { href: "/assign?tab=studio", icon: "studio", label: "กันห้องสตูดิโอ", desc: "งานของชุมนุม" },
           settings.featurePhotographer && { href: "/assign?tab=photographer", icon: "photographer", label: "มอบหมายตากล้อง", desc: "เลือกทีมที่ว่าง" },
-          { href: "/workflow", icon: "workflow", label: "งานทั้งหมด", desc: "ติดตามสถานะ" },
         ]
       : [
           settings.featureBorrow && { href: "/borrow-equipment", icon: "equipment", label: "ขอยืมอุปกรณ์", desc: "ส่งคำขอ รอกรรมการอนุมัติ" },

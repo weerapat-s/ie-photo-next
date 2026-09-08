@@ -26,6 +26,7 @@ import AssignPicker from "@/components/assign-picker";
 import { buildBusyMap } from "@/lib/availability";
 import { pairRequirements, unmetRequirements, describeUnmet } from "@/lib/pairing";
 import { isAdminRole, displayName } from "@/lib/roles";
+import { activeJobNames } from "@/lib/jobs";
 import Icon from "@/components/icon";
 import EquipmentThumb from "@/components/equipment-thumb";
 import type { AvailabilityDoc, BookingDoc, EquipmentDoc, EquipmentType, SlotDoc, UserDoc } from "@/lib/types";
@@ -47,27 +48,12 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
   // ตารางคิวทั้งระบบ — ใช้โชว์ว่าช่วงไหนอุปกรณ์ถูกจองแล้ว
   const { data: slots } = useCollection<SlotDoc>(() => collection(db, "slots"), []);
 
-  // งานชุมนุมที่มีอยู่ — รวบชื่อจากงานถ่ายและการยืมที่ผูกงานไว้ ตัดซ้ำ
-  // (ระบบไม่มีคอลเลกชัน "งาน" แยก — งานคือชื่อที่ปรากฏใน bookings)
+  // งานชุมนุมที่ "ยังไม่จบ" — งานที่เสร็จ/ผ่านเวลาไปแล้วจะหายจากตัวเลือกเอง (ดู lib/jobs.ts)
+  // (ระบบไม่มีคอลเลกชัน "งาน" แยก — งานคือชื่อที่ผูกไว้ใน bookings หลายใบ)
   const { data: allBookings } = useCollection<BookingDoc>(() => collection(db, "bookings"), []);
-  const clubJobs = useMemo(() => {
-    const seen = new Set<string>();
-    const out: string[] = [];
-    for (const b of allBookings) {
-      const name =
-        b.bookingType === "photographer"
-          ? b.usageType || b.usageReason
-          : b.usageType?.startsWith("ชุมนุม: ")
-            ? b.usageType.slice("ชุมนุม: ".length)
-            : null;
-      const t = name?.trim();
-      if (t && !seen.has(t)) {
-        seen.add(t);
-        out.push(t);
-      }
-    }
-    return out.slice(0, 30);
-  }, [allBookings]);
+  // now ต้องมาก่อน clubJobs เพราะใช้ตัดงานที่จบแล้วออก (เรียก Date.now() ตอน render ไม่ได้)
+  const now = useNow(60_000);
+  const clubJobs = useMemo(() => activeJobNames(allBookings, now).slice(0, 30), [allBookings, now]);
 
   // โหมดมอบหมายต้องเลือกได้ว่าใครถือของ — อุปกรณ์รับผิดชอบได้ทีละคน
   // (ของหายต้องรู้ชัดว่าใครถือ ไม่ใช่หารกันรับผิด)
@@ -102,8 +88,6 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  // ขอบเขตวันเวลาที่เลือกได้ — อิง now จาก useNow (เรียก Date.now() ตอน render ไม่ได้)
-  const now = useNow(60_000);
   // อุปกรณ์อาจถูกยืม/ถูกลบระหว่างที่ผู้ใช้กรอกฟอร์ม — คัดเฉพาะที่ยังว่างจริงตอน render
   // (ไม่ sync ด้วย effect เพื่อเลี่ยง render ซ้อน)
   const availableIds = useMemo(() => new Set(equipments.map((e) => e.id)), [equipments]);

@@ -45,6 +45,7 @@ import {
   DELIVERY_STATUS,
 } from "@/lib/format";
 import { groupByStage, STAGE_META, STAGE_ORDER, type Stage } from "@/lib/analytics";
+import { deriveClubJobs, type ClubJob, type JobStatus } from "@/lib/jobs";
 import type { AvailabilityDoc, BookingDoc, BookingType, DeliveryDoc, UserDoc, WithId } from "@/lib/types";
 
 type TypeFilter = BookingType | "all";
@@ -63,8 +64,8 @@ export default function WorkflowPage() {
   const { user } = useAuth();
   const { settings } = useSettings();
 
-  /** แผนผัง = โครงสร้างการทำงาน (ผูกเมนู) · บอร์ด = ใบจองจริงไหลข้ามขั้น */
-  const [view, setView] = useState<"map" | "board">("map");
+  /** แผนผัง = โครงสร้างการทำงาน (ผูกเมนู) · บอร์ด = ใบจองไหลข้ามขั้น · งานชุมนุม = รวมตามอีเวนต์ */
+  const [view, setView] = useState<"map" | "board" | "jobs">("map");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [detail, setDetail] = useState<WithId<BookingDoc> | null>(null);
   /** การจองที่กำลังเลือกผู้รับผิดชอบ (กรรมการสั่งได้ ไม่ต้องรอตากล้องกดรับเอง) */
@@ -77,6 +78,8 @@ export default function WorkflowPage() {
     [bookings, typeFilter]
   );
   const stages = useMemo(() => groupByStage(filtered, now), [filtered, now]);
+  /** งานชุมนุมรวมตามอีเวนต์ — ใช้ bookings ทั้งหมด ไม่กรองตามประเภท */
+  const jobs = useMemo(() => deriveClubJobs(bookings, now), [bookings, now]);
   const busyMap = useMemo(() => buildBusyMap(availability), [availability]);
   /** uid → ชื่อ ใช้แปลง assigneeIds เป็นชื่อคนตอนแสดงผล */
   const nameOf = useMemo(() => {
@@ -207,6 +210,7 @@ export default function WorkflowPage() {
         options={[
           { key: "map", label: "แผนผัง", icon: "workflow" },
           { key: "board", label: "บอร์ดงาน", icon: "assign", count: bookings.length },
+          { key: "jobs", label: "งานชุมนุม", icon: "members", count: jobs.length },
         ]}
       />
 
@@ -218,6 +222,8 @@ export default function WorkflowPage() {
           settings={settings}
           now={now}
         />
+      ) : view === "jobs" ? (
+        <JobsView jobs={jobs} nameOf={nameOf} now={now} loading={loading} />
       ) : loading ? (
         <Spinner label="กำลังโหลดงาน…" />
       ) : (
@@ -495,5 +501,144 @@ function StageColumn({
         )}
       </div>
     </section>
+  );
+}
+
+/* ═══ มุมมอง "งานชุมนุม" — รวม booking ตามอีเวนต์ ═══════════════
+   เห็นในงานเดียว: ช่วงเวลา · ใครทำงาน · ยืมของอะไรไปบ้าง
+   งานที่ผ่านไปแล้วยุบไว้ใต้ "จบแล้ว" — ค้างอยู่ข้างบนเฉพาะงานที่ยังต้องดูแล */
+const JOB_STATUS: Record<JobStatus, { label: string; cls: string; dot: string }> = {
+  active: { label: "กำลังดำเนินอยู่", cls: "tone-ok", dot: "bg-emerald-400" },
+  upcoming: { label: "กำลังจะถึง", cls: "tone-brand", dot: "bg-sky-400" },
+  done: { label: "จบแล้ว", cls: "tone-mute", dot: "bg-black/25" },
+};
+
+function fmtDayMs(ms: number): string {
+  return new Date(ms).toLocaleDateString("th-TH", { day: "numeric", month: "short" });
+}
+
+function JobsView({
+  jobs,
+  nameOf,
+  now,
+  loading,
+}: {
+  jobs: ClubJob[];
+  nameOf: Map<string, string>;
+  now: number;
+  loading: boolean;
+}) {
+  if (loading) return <Spinner label="กำลังโหลดงาน…" />;
+  if (jobs.length === 0) {
+    return (
+      <div className="rounded-3xl border border-dashed border-black/10 py-12 text-center">
+        <Icon name="members" size={28} className="mx-auto mb-2 text-[var(--muted-ink)]" />
+        <p className="text-sm text-[var(--muted-ink)]">ยังไม่มีงานชุมนุม — งานจะโผล่เมื่อมีการมอบหมายงานถ่าย หรือยืมของเพื่องานชุมนุม</p>
+      </div>
+    );
+  }
+  const live = jobs.filter((j) => j.status !== "done");
+  const done = jobs.filter((j) => j.status === "done");
+
+  return (
+    <div className="space-y-3">
+      {live.length === 0 && (
+        <p className="t-caption text-center">ไม่มีงานที่ยังดำเนินอยู่ — ดูงานที่จบแล้วด้านล่าง</p>
+      )}
+      {live.map((j) => (
+        <JobCard key={j.name} job={j} nameOf={nameOf} now={now} />
+      ))}
+
+      {done.length > 0 && (
+        <details className="group">
+          <summary className="press flex cursor-pointer list-none items-center gap-2 rounded-2xl px-3 py-2.5 text-sm font-semibold text-[var(--muted-ink)]">
+            <Icon name="chevronRight" size={16} className="transition group-open:rotate-90" />
+            งานที่จบแล้ว ({done.length})
+          </summary>
+          <div className="mt-2 space-y-3">
+            {done.map((j) => (
+              <JobCard key={j.name} job={j} nameOf={nameOf} now={now} />
+            ))}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function JobCard({ job, nameOf, now }: { job: ClubJob; nameOf: Map<string, string>; now: number }) {
+  const meta = JOB_STATUS[job.status];
+  const people = job.peopleIds.map((id) => nameOf.get(id) ?? "ไม่ทราบชื่อ");
+  // นับ booking แยกตามประเภทในงานนี้
+  const counts = job.bookings.reduce<Record<string, number>>((m, b) => {
+    m[b.bookingType] = (m[b.bookingType] ?? 0) + 1;
+    return m;
+  }, {});
+  const late = job.status === "active" && job.endMs < now; // เผื่อกรณี edge
+
+  return (
+    <Card className={`p-4 ${job.status === "done" ? "opacity-75" : ""}`}>
+      <div className="mb-1.5 flex items-start gap-2">
+        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${meta.dot}`} aria-hidden />
+        <h3 className="min-w-0 flex-1 text-base font-bold text-[var(--ink)]">{job.name}</h3>
+        <Badge className={meta.cls}>{meta.label}</Badge>
+      </div>
+
+      <p className="t-caption mb-2 flex items-center gap-1.5">
+        <Icon name="calendar" size={14} />
+        {fmtDayMs(job.startMs)}
+        {fmtDayMs(job.startMs) !== fmtDayMs(job.endMs) ? ` – ${fmtDayMs(job.endMs)}` : ""}
+        {late && <span className="tone-warn ml-1 rounded-full px-2 py-0.5 text-[10px] font-semibold">เลยกำหนด</span>}
+      </p>
+
+      {/* ประเภทงานในอีเวนต์นี้ */}
+      <div className="mb-2 flex flex-wrap gap-1.5">
+        {(["photographer", "equipment", "studio"] as const).map((t) =>
+          counts[t] ? (
+            <span
+              key={t}
+              className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-sunken)] px-2 py-0.5 text-[11px] font-medium text-[var(--ink)]/70"
+            >
+              <Icon name={BOOKING_TYPE_ICON[t]} size={14} />
+              {BOOKING_TYPE_LABEL[t]} {counts[t]}
+            </span>
+          ) : null
+        )}
+      </div>
+
+      {/* คนที่ทำงาน / ถือของในงานนี้ */}
+      <div className="mb-2">
+        <p className="t-caption mb-1 flex items-center gap-1">
+          <Icon name="members" size={14} /> คนในงาน ({people.length})
+        </p>
+        {people.length === 0 ? (
+          <p className="t-caption text-[var(--muted-ink)]">ยังไม่มีคนรับผิดชอบ</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {people.map((n, i) => (
+              <span key={i} className="rounded-full bg-[var(--faculty)]/10 px-2.5 py-0.5 text-xs font-medium text-[var(--faculty)]">
+                {n}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* อุปกรณ์ที่ถูกยืมเพื่องานนี้ */}
+      {job.equipmentNames.length > 0 && (
+        <div>
+          <p className="t-caption mb-1 flex items-center gap-1">
+            <Icon name="equipment" size={14} /> ของที่ยืมไป ({job.equipmentNames.length})
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {job.equipmentNames.map((n) => (
+              <span key={n} className="rounded-full bg-[var(--surface-sunken)] px-2.5 py-0.5 text-xs text-[var(--ink)]/75">
+                {n}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
   );
 }
