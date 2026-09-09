@@ -7,7 +7,7 @@
 import { useMemo, useState } from "react";
 import { Modal, EmptyState, SearchInput, Badge, Button } from "@/components/ui";
 import Icon from "@/components/icon";
-import { displayName, titleLine, sortByRank, searchText, ROLE_ICON } from "@/lib/roles";
+import { uniqueLabel, titleLine, sortByRank, searchText, ROLE_ICON } from "@/lib/roles";
 import { busyDaysInRange, shortDay, type BusyMap } from "@/lib/availability";
 import type { UserDoc, WithId } from "@/lib/types";
 
@@ -105,7 +105,7 @@ export default function AssignPicker({
                     </span>
                   )}
                   <span className="min-w-0 flex-1">
-                    <span className="t-label block truncate text-[var(--ink)]">{displayName(u)}</span>
+                    <span className="t-label block truncate text-[var(--ink)]">{uniqueLabel(u, users)}</span>
                     <span className="t-caption block truncate">{titleLine(u)}</span>
                   </span>
                   {clash.length > 0 &&

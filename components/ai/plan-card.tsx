@@ -5,12 +5,12 @@
 // สิ่งที่ต้องเห็นก่อนกดยืนยันเสมอ: ใคร · งานอะไร · ชนวันไหนไหม · ทำไม
 import { Badge, Button } from "@/components/ui";
 import Icon, { type IconName } from "@/components/icon";
-import { displayName } from "@/lib/roles";
+import { uniqueLabel } from "@/lib/roles";
 import { shortDay } from "@/lib/availability";
 import { fmtRange } from "@/lib/format";
 import { conflictDays } from "@/lib/ai/context";
 import type { ResolvedAction } from "@/lib/ai/plan";
-import type { AvailabilityDoc, WithId } from "@/lib/types";
+import type { AvailabilityDoc, UserDoc, WithId } from "@/lib/types";
 
 const KIND: Record<ResolvedAction["type"], { icon: IconName; label: string }> = {
   assign: { icon: "assign", label: "มอบหมายงาน" },
@@ -23,6 +23,7 @@ export default function PlanCard({
   summary,
   actions,
   availability,
+  users,
   applied,
   busy,
   onApply,
@@ -30,6 +31,8 @@ export default function PlanCard({
   summary?: string;
   actions: ResolvedAction[];
   availability: WithId<AvailabilityDoc>[];
+  /** รายชื่อทั้งหมด — ใช้ต่อท้ายตัวแยกเมื่อชื่อซ้ำ (กันมอบหมายผิดคน) */
+  users: WithId<UserDoc>[];
   applied?: boolean;
   busy: boolean;
   onApply: () => void;
@@ -64,7 +67,7 @@ export default function PlanCard({
                     );
                     return (
                       <Badge key={u.id} className={clash.length ? "tone-warn" : "tone-ok"}>
-                        {displayName(u)}
+                        {uniqueLabel(u, users)}
                         {clash.length > 0 && ` · ติด ${clash.map(shortDay).join(", ")}`}
                       </Badge>
                     );
@@ -78,7 +81,7 @@ export default function PlanCard({
                 <p className="t-label text-[var(--ink)]">{a.title}</p>
                 {a.description && <p className="t-caption">{a.description}</p>}
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  <Badge className="tone-brand">{displayName(a.assignee)}</Badge>
+                  <Badge className="tone-brand">{uniqueLabel(a.assignee, users)}</Badge>
                   {a.dueDate && <Badge className="tone-mute">ส่ง {shortDay(a.dueDate)}</Badge>}
                 </div>
               </>
@@ -86,7 +89,7 @@ export default function PlanCard({
 
             {a.type === "update_person" && (
               <>
-                <p className="t-label text-[var(--ink)]">{displayName(a.user)}</p>
+                <p className="t-label text-[var(--ink)]">{uniqueLabel(a.user, users)}</p>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {(a.firstName || a.lastName) && (
                     <Badge className="tone-brand">
@@ -116,7 +119,7 @@ export default function PlanCard({
                 <p className="t-label text-[var(--ink)]">{a.equipment.name}</p>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   <Badge className="tone-brand" icon="user">
-                    ให้ {displayName(a.user)}
+                    ให้ {uniqueLabel(a.user, users)}
                   </Badge>
                   {a.usageType && <Badge className="tone-ok">เพื่อ {a.usageType}</Badge>}
                   <Badge className="tone-mute">

@@ -45,6 +45,22 @@ export function displayName(
   return nick || u.studentId || u.email || "ไม่ระบุชื่อ";
 }
 
+/**
+ * ชื่อแสดงที่ "ไม่ซ้ำกับใคร" — ถ้ามีคนอื่นชื่อแสดงเหมือนกัน (เช่น ชื่อเล่นซ้ำ "เก้า")
+ * ต่อท้ายด้วยรหัสนักศึกษา (หรือสิทธิ์ถ้าไม่มีรหัส) เพื่อให้แยกออกว่าเป็นคนละคน
+ * ใช้ทุกที่ที่ให้ "เลือกคน" หรือโชว์ว่ามอบหมายให้ใคร — กันสั่งงานผิดคน
+ */
+export function uniqueLabel(
+  u: WithId<UserDoc>,
+  all: readonly WithId<UserDoc>[]
+): string {
+  const name = displayName(u);
+  const dupe = all.some((o) => o.id !== u.id && displayName(o) === name);
+  if (!dupe) return name;
+  const tag = u.studentId?.trim() || ROLE_SHORT[u.role];
+  return `${name} · ${tag}`;
+}
+
 /** ข้อความที่ใช้ค้นหาสมาชิก — ครอบทั้งชื่อจริง ชื่อเล่น รหัส และยศ */
 export function searchText(
   u: Pick<UserDoc, "firstName" | "lastName" | "studentId" | "email" | "title"> & { nickname?: string }

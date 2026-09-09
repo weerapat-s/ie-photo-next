@@ -568,6 +568,7 @@ export default function Assistant({
                         summary={t.planSummary}
                         actions={t.actions}
                         availability={availability}
+                        users={users}
                         applied={t.applied}
                         busy={busy}
                         onApply={() => confirmPlan(i, t.actions!)}
