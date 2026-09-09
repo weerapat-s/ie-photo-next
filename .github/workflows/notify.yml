@@ -2,7 +2,7 @@ name: Send task/booking notifications
 
 on:
   schedule:
-    - cron: "0 * * * *" # ทุกชั่วโมง (GitHub อาจดีเลย์เล็กน้อยตามภาระงาน)
+    - cron: "0,30 * * * *" # ทุก 30 นาที (GitHub อาจดีเลย์เล็กน้อยตามภาระงาน) — ~1,440 นาที/เดือน ยังอยู่ในโควตาฟรี 2,000 นาที
   workflow_dispatch: {} # กดรันเองได้จาก Actions tab เพื่อทดสอบ
 
 jobs:
@@ -26,3 +26,4 @@ jobs:
           FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}

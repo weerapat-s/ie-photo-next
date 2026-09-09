@@ -13,6 +13,7 @@ const FALLBACK: Record<EquipmentType, { icon: IconName; from: string; to: string
   lens: { icon: "search", from: "#e5e9ff", to: "#b9c4ff", fg: "#3b46b3" },
   memory: { icon: "inventory", from: "#e2f6ec", to: "#a9e3c4", fg: "#1f7a4d" },
   accessory: { icon: "inventory", from: "#f1ecff", to: "#cdbdf5", fg: "#6d4fb0" },
+  key: { icon: "settings", from: "#fff1dc", to: "#f8d29a", fg: "#8a5a12" },
 };
 
 const SIZES = { sm: "h-12 w-12 rounded-xl", md: "h-16 w-16 rounded-2xl", lg: "h-24 w-24 rounded-2xl" };

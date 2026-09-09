@@ -4,7 +4,7 @@ import type { Timestamp } from "firebase/firestore";
 
 export type Role = "member" | "admin" | "super_admin";
 
-export type EquipmentType = "camera" | "lens" | "memory" | "accessory";
+export type EquipmentType = "camera" | "lens" | "memory" | "accessory" | "key";
 export type EquipmentStatus = "available" | "borrowed" | "maintenance";
 
 export type StudioStatus = "open" | "closed";
@@ -53,6 +53,8 @@ export interface UserDoc {
   createdAt: Timestamp;
   pushSubscription?: PushSubscriptionData | null;      // legacy — คงไว้ช่วง migrate
   pushSubscriptions?: PushSubscriptionData[] | null;   // multi-device
+  /** รหัสสุ่มใน QR ประจำตัว — ตั้งได้ครั้งเดียว แก้เองไม่ได้ (บังคับที่ firestore.rules) */
+  memberCode?: string;
 }
 
 // ── equipments/{id} ───────────────────────────────────────────
@@ -85,6 +87,8 @@ export interface EquipmentDoc {
   name: string;
   type: EquipmentType;
   status: EquipmentStatus;
+  /** รหัสสั้นอ่านออก (เช่น CAM-001) — เนื้อหาใน QR ที่ติดบนตัวอุปกรณ์ */
+  code?: string;
   note?: string | null;
   imageUrl?: string | null;
   /** ผู้ดูแลของชิ้นนี้ — กรรมการสั่งมอบหมายได้ ใครถือ/ใครรับผิดชอบตอนนี้ */
@@ -161,6 +165,14 @@ export interface BookingDoc {
   /** คำตอบจากฟอร์มที่แนบกับ flow นี้ (formId + values) */
   formId?: string | null;
   formResponseId?: string | null;
+  /** กันแจ้ง Discord ซ้ำ — ตั้งโดย scripts/send-notifications.cjs */
+  discordNotifiedAt?: Timestamp | null;
+  /** เวลาที่แอดมินกด "ส่งมอบแล้ว" ที่เคาน์เตอร์ (หน้า /scan) */
+  pickedUpAt?: Timestamp | null;
+  /** เวลาที่ผู้ยืมรับทราบเงื่อนไขชดใช้ต่อหน้าแอดมิน — ติ๊กก่อนส่งมอบเท่านั้น */
+  liabilityAcceptedAt?: Timestamp | null;
+  /** รหัสคำขอ — ของที่กดยืมพร้อมกันในครั้งเดียวใช้รหัสนี้ร่วมกัน ใช้ทำ QR ใบเดียวต่อคำขอ */
+  requestId?: string;
 }
 
 // ── tasks/{id} ────────────────────────────────────────────────

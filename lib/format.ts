@@ -117,6 +117,7 @@ export const EQUIPMENT_TYPE_LABEL: Record<string, string> = {
   lens: "เลนส์",
   memory: "เมมโมรี่การ์ด",
   accessory: "อุปกรณ์เสริม",
+  key: "กุญแจ",
 };
 
 export const EQUIPMENT_TYPE_ICON: Record<string, IconName> = {
