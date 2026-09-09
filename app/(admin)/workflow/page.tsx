@@ -4,7 +4,7 @@
 // มือถือ: คอลัมน์เลื่อนแนวนอนแบบ snap ทีละใบ (นิ้วโป้งปัดได้)
 // จอใหญ่: เห็นทุกคอลัมน์พร้อมกัน
 // ทุกใบกดแล้วทำงานต่อได้ทันที — อนุมัติ/รับคืน/เปิดงานส่ง ไม่ต้องเด้งไปหน้าอื่น
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   collection,
   query,
@@ -72,6 +72,19 @@ export default function WorkflowPage() {
   const [assigning, setAssigning] = useState<WithId<BookingDoc> | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
+
+  // เปิดหน้าจากลิงก์ที่ระบุมุมมองไว้ (เช่น /workflow?view=board จากปุ่ม "จัดการ")
+  // อ่านครั้งเดียวตอน mount ฝั่ง client — static export อ่าน query ตอน render ปกติไม่ได้
+  // (setState ใน effect ที่นี่คือการตั้งค่าเริ่มต้นครั้งเดียว ไม่ได้วนซ้ำ · ref กันรันซ้ำ)
+  const appliedView = useRef(false);
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (appliedView.current) return;
+    appliedView.current = true;
+    const v = new URLSearchParams(window.location.search).get("view");
+    if (v === "board" || v === "jobs" || v === "map") setView(v);
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const filtered = useMemo(
     () => (typeFilter === "all" ? bookings : bookings.filter((b) => b.bookingType === typeFilter)),
@@ -221,6 +234,7 @@ export default function WorkflowPage() {
           users={users}
           settings={settings}
           now={now}
+          onOpenBoard={() => setView("board")}
         />
       ) : view === "jobs" ? (
         <JobsView jobs={jobs} nameOf={nameOf} now={now} loading={loading} />
@@ -462,6 +476,21 @@ function StageColumn({
                   {b.status === "pending_return" && (
                     <Button size="sm" fullWidth icon="approved" onClick={() => onReturn(b)} loading={busyId === b.id}>
                       ยืนยันรับคืน
+                    </Button>
+                  )}
+                  {/* ของที่ยืมไปแล้ว (อนุมัติ) — กรรมการกดรับคืน/ปิดได้เลยจากบอร์ด
+                      สำคัญกับของที่เลยกำหนด: เจ้าตัวไม่กดคืน กรรมการปิดเองได้ */}
+                  {b.status === "approved" && b.bookingType === "equipment" && (
+                    <Button
+                      size="sm"
+                      fullWidth={late}
+                      variant={late ? "primary" : "outline"}
+                      icon="approved"
+                      onClick={() => onReturn(b)}
+                      loading={busyId === b.id}
+                      className={late ? "" : "flex-1"}
+                    >
+                      {late ? "รับคืน (เลยกำหนด)" : "รับคืน"}
                     </Button>
                   )}
 

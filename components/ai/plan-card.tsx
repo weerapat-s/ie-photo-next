@@ -16,6 +16,7 @@ const KIND: Record<ResolvedAction["type"], { icon: IconName; label: string }> = 
   assign: { icon: "assign", label: "มอบหมายงาน" },
   create_task: { icon: "task", label: "สร้างงานย่อย" },
   update_person: { icon: "user", label: "เพิ่มข้อมูลสมาชิก" },
+  lend_equipment: { icon: "equipment", label: "จ่ายอุปกรณ์" },
 };
 
 export default function PlanCard({
@@ -106,6 +107,22 @@ export default function PlanCard({
                   ))}
                   {a.seniority && <Badge className="tone-brand">ประสบการณ์ {a.seniority}/5</Badge>}
                   {a.note && <Badge className="tone-mute">{a.note}</Badge>}
+                </div>
+              </>
+            )}
+
+            {a.type === "lend_equipment" && (
+              <>
+                <p className="t-label text-[var(--ink)]">{a.equipment.name}</p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  <Badge className="tone-brand" icon="user">
+                    ให้ {displayName(a.user)}
+                  </Badge>
+                  {a.usageType && <Badge className="tone-ok">เพื่อ {a.usageType}</Badge>}
+                  <Badge className="tone-mute">
+                    {a.startDate ?? "วันนี้"}
+                    {a.endDate ? ` – ${a.endDate}` : ""}
+                  </Badge>
                 </div>
               </>
             )}

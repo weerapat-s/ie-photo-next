@@ -8,17 +8,40 @@ import { db } from "@/lib/firebase/client";
 import { displayName } from "@/lib/roles";
 import { sendMail, assigned, taskNew } from "@/lib/mail";
 import { fmtRange } from "@/lib/format";
-import type { ResolvedAction } from "./plan";
+import { slotPayload, findSlotConflicts } from "@/lib/slots";
+import type { LendEquipmentAction, ResolvedAction } from "./plan";
 import type { UserDoc, WithId } from "@/lib/types";
+
+const DAY = 86_400_000;
+/** ยืมกี่วันถ้า AI ไม่ระบุวันคืน */
+const DEFAULT_LEND_DAYS = 3;
 
 export interface ApplyResult {
   assigned: number;
   tasksCreated: number;
   peopleUpdated: number;
+  /** อุปกรณ์ที่จ่าย/ให้ยืมสำเร็จ */
+  lent: number;
   /** แอ็กชันที่ตัดออกเพราะกฎความปลอดภัยไม่ยอมให้ทำจากฝั่งนี้ */
   skipped: string[];
   /** อีเมลที่ส่งออกไปได้จริง */
   mailed: number;
+}
+
+/** คำนวณช่วงเวลายืม + เช็คคิวชน — คืนช่วงที่ใช้ได้ หรือเหตุผลที่ทำไม่ได้
+ *  กัน start ในอดีต เพราะ firestore.rules บังคับ startAt > now-5m */
+async function planLend(
+  a: ResolvedAction & { type: "lend_equipment" }
+): Promise<{ startAt: Timestamp; endAt: Timestamp } | { skip: string }> {
+  const now = Date.now();
+  let startMs = a.startDate ? new Date(`${a.startDate}T00:00:00`).getTime() : now;
+  if (!Number.isFinite(startMs) || startMs < now) startMs = now + 60_000; // เผื่อเลย now-5m ชัวร์
+  let endMs = a.endDate ? new Date(`${a.endDate}T23:59:59`).getTime() : startMs + DEFAULT_LEND_DAYS * DAY;
+  if (!Number.isFinite(endMs) || endMs <= startMs) endMs = startMs + DEFAULT_LEND_DAYS * DAY;
+  if (endMs > startMs + 29 * DAY) endMs = startMs + 29 * DAY; // rules: ไม่เกิน 30 วัน
+  const conflicts = await findSlotConflicts(a.equipmentId, new Date(startMs), new Date(endMs));
+  if (conflicts.length) return { skip: `${a.equipment.name} — ช่วงเวลานี้ถูกจองไว้แล้ว` };
+  return { startAt: Timestamp.fromDate(new Date(startMs)), endAt: Timestamp.fromDate(new Date(endMs)) };
 }
 
 /**
@@ -32,7 +55,13 @@ export async function applyPlan(
   notify?: { siteName: string; aiBaseUrl?: string; emailOn: boolean }
 ): Promise<ApplyResult> {
   const batch = writeBatch(db);
-  const out: ApplyResult = { assigned: 0, tasksCreated: 0, peopleUpdated: 0, skipped: [], mailed: 0 };
+  const out: ApplyResult = { assigned: 0, tasksCreated: 0, peopleUpdated: 0, lent: 0, skipped: [], mailed: 0 };
+
+  // เช็คคิวชนของการยืมทั้งหมดก่อน (async) — ทำก่อนสร้าง batch เพราะ batch เขียนพร้อมกันทีเดียว
+  const lendRanges = new Map<LendEquipmentAction, { startAt: Timestamp; endAt: Timestamp } | { skip: string }>();
+  for (const a of actions) {
+    if (a.type === "lend_equipment") lendRanges.set(a, await planLend(a));
+  }
 
   for (const a of actions) {
     if (a.type === "assign") {
@@ -60,6 +89,53 @@ export async function applyPlan(
       continue;
     }
 
+    if (a.type === "lend_equipment") {
+      const range = lendRanges.get(a);
+      if (!range || "skip" in range) {
+        out.skipped.push(range && "skip" in range ? range.skip : `${a.equipment.name} — จ่ายไม่ได้`);
+        continue;
+      }
+      const bRef = doc(collection(db, "bookings"));
+      batch.set(bRef, {
+        bookingType: "equipment",
+        itemId: a.equipment.id,
+        itemName: a.equipment.name,
+        userId: a.user.id,
+        userName: displayName(a.user),
+        userPhone: a.user.phone ?? "",
+        guestName: null,
+        guestEmail: null,
+        startAt: range.startAt,
+        endAt: range.endAt,
+        formImageUrl: null,
+        returnImageUrl: null,
+        usageReason: a.why?.trim() || "จ่ายผ่านผู้ช่วย AI",
+        usageType: a.usageType?.trim() ? `ชุมนุม: ${a.usageType.trim()}` : "งานชุมนุม",
+        location: null,
+        crewSize: null,
+        status: "approved",
+        assigneeIds: [a.user.id],
+        responsibleUserId: null,
+        responsibleUserName: null,
+        consentToken: null,
+        createdAt: serverTimestamp(),
+      });
+      batch.set(
+        doc(db, "slots", bRef.id),
+        slotPayload({
+          bookingId: bRef.id,
+          itemId: a.equipment.id,
+          itemName: a.equipment.name,
+          bookingType: "equipment",
+          startAt: range.startAt,
+          endAt: range.endAt,
+          status: "approved",
+        })
+      );
+      out.lent++;
+      continue;
+    }
+
     // update_person — firestore.rules ห้ามแอดมินแก้ doc ของตัวเองผ่านเส้นทางแอดมิน
     // (กันการเลื่อนสิทธิ์ตัวเอง) จึงต้องตัดออกแล้วบอกผู้ใช้ตรง ๆ ว่าให้ไปแก้ที่โปรไฟล์
     if (a.userId === actor.uid) {
@@ -80,7 +156,7 @@ export async function applyPlan(
   }
 
   // ไม่มีอะไรให้เขียนเลย (โดนตัดหมด) — ไม่ต้อง commit ให้เปลืองรอบ
-  if (out.assigned + out.tasksCreated + out.peopleUpdated > 0) await batch.commit();
+  if (out.assigned + out.tasksCreated + out.peopleUpdated + out.lent > 0) await batch.commit();
   void me;
 
   // แจ้งเตือนหลัง commit สำเร็จเท่านั้น — จะได้ไม่ส่งเมลบอกงานที่บันทึกไม่ติด
@@ -128,6 +204,7 @@ export function describeResult(r: ApplyResult): string {
   const parts: string[] = [];
   if (r.assigned) parts.push(`มอบหมาย ${r.assigned} งาน`);
   if (r.tasksCreated) parts.push(`สร้างงานย่อย ${r.tasksCreated} รายการ`);
+  if (r.lent) parts.push(`จ่ายอุปกรณ์ ${r.lent} รายการ`);
   if (r.peopleUpdated) parts.push(`อัปเดตข้อมูล ${r.peopleUpdated} คน`);
   if (r.mailed) parts.push(`ส่งอีเมลแจ้ง ${r.mailed} ฉบับ`);
   return parts.length ? parts.join(" · ") : "ไม่มีรายการที่ทำได้";

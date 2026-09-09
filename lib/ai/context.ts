@@ -114,6 +114,11 @@ export function buildClubSnapshot(input: ClubSnapshotInput): string {
     available: equipments.filter((e) => e.status === "available").length,
     maintenance: equipments.filter((e) => e.status === "maintenance").length,
   };
+  // รายการอุปกรณ์ที่ว่าง — ต้องมี equipmentId ให้ AI อ้างตอนสั่งจ่าย (lend_equipment)
+  const gearList = equipments
+    .filter((e) => e.status === "available")
+    .slice(0, 30)
+    .map((e) => `- ${e.name} (equipmentId=${e.id}) · ${e.type}`);
 
   return [
     `วันนี้: ${new Date(now).toLocaleDateString("th-TH", { dateStyle: "full" })} (${todayKey})`,
@@ -122,7 +127,7 @@ export function buildClubSnapshot(input: ClubSnapshotInput): string {
     hr.idle.length ? `ยังว่างไม่มีงานเลย: ${hr.idle.join(", ")}` : "",
     hr.overloaded.length ? `เสี่ยงงานล้น: ${hr.overloaded.join(", ")}` : "",
     `อุปกรณ์: ทั้งหมด ${gear.total} · พร้อมใช้ ${gear.available} · ซ่อม ${gear.maintenance}`,
-    "",
+    ...(gearList.length ? ["อุปกรณ์ที่ว่าง(จ่ายได้):", ...gearList, ""] : [""]),
     "รายชื่อสมาชิก:",
     ...people,
     "",

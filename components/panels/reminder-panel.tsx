@@ -21,12 +21,16 @@ import { Badge, EmptyState, Spinner } from "@/components/ui";
 import Icon, { type IconName } from "@/components/icon";
 import type { BookingDoc, DeliveryDoc, TaskDoc, UserDoc } from "@/lib/types";
 
-const KIND: Record<ReminderKind, { icon: IconName; label: string; href: string }> = {
-  borrow_due_soon: { icon: "equipment", label: "ใกล้ครบกำหนดคืน", href: "/my" },
-  borrow_overdue: { icon: "overdue", label: "เลยกำหนดคืนแล้ว", href: "/my" },
-  job_soon: { icon: "photographer", label: "งานถ่ายใกล้ถึง", href: "/calendar" },
-  task_due_soon: { icon: "task", label: "งานย่อยใกล้กำหนดส่ง", href: "/my" },
-  delivery_due: { icon: "delivery", label: "ไฟล์งานใกล้กำหนดส่ง", href: "/my" },
+// href ของปุ่ม "จัดการ" ต้องพาไปหน้าที่ "จัดการได้จริง"
+//  · สมาชิก (mine) → หน้าของตัวเอง /my, /calendar
+//  · กรรมการ (all) → หน้าจัดการของทั้งชุมนุม เพราะรายการที่เห็นเป็นของคนอื่น
+//    กดแล้วไป /my ของตัวเองจะไม่เจอรายการนั้น = เหมือนกดไม่ได้
+const KIND: Record<ReminderKind, { icon: IconName; label: string; href: string; adminHref: string }> = {
+  borrow_due_soon: { icon: "equipment", label: "ใกล้ครบกำหนดคืน", href: "/my", adminHref: "/workflow?view=board" },
+  borrow_overdue: { icon: "overdue", label: "เลยกำหนดคืนแล้ว", href: "/my", adminHref: "/workflow?view=board" },
+  job_soon: { icon: "photographer", label: "งานถ่ายใกล้ถึง", href: "/calendar", adminHref: "/workflow?view=board" },
+  task_due_soon: { icon: "task", label: "งานย่อยใกล้กำหนดส่ง", href: "/my", adminHref: "/tasks" },
+  delivery_due: { icon: "delivery", label: "ไฟล์งานใกล้กำหนดส่ง", href: "/my", adminHref: "/assign?tab=delivery" },
 };
 
 export default function ReminderPanel({ scope = "mine" }: { scope?: "all" | "mine" }) {
@@ -136,8 +140,8 @@ function ReminderRow({
           {describeLeft(r.hoursLeft)}
         </Badge>
         <Link
-          href={meta.href}
-          className="t-caption font-semibold text-[var(--faculty)] underline-offset-2 hover:underline"
+          href={showWho ? meta.adminHref : meta.href}
+          className="press t-caption -m-1 rounded-lg p-1 font-semibold text-[var(--faculty)] underline-offset-2 hover:underline"
         >
           จัดการ →
         </Link>

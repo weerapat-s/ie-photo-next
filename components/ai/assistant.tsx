@@ -12,6 +12,7 @@ import { useCollection, useDocument, useNow, useBrowserValue } from "@/lib/hooks
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useSettings } from "@/lib/settings-context";
 import { fmtRelative } from "@/lib/format";
+import { compressImageToDataUrl } from "@/lib/image";
 import { crewLoad } from "@/lib/analytics";
 import { chat, aiReady, AiError, type ChatMessage } from "@/lib/ai/client";
 import { PROVIDER_OF } from "@/lib/ai/models";
@@ -72,6 +73,8 @@ interface Turn {
   model?: string;
   /** โมเดลที่ข้ามเพราะโควตาหมด */
   switchedFrom?: string[];
+  /** รูป/เอกสารที่แนบมากับข้อความของผู้ใช้ (data URL) — โชว์เป็นภาพย่อในบับเบิล */
+  imageUrl?: string;
 }
 
 export default function Assistant({
@@ -139,6 +142,23 @@ export default function Assistant({
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(!!initialPrompt);
   const [err, setErr] = useState("");
+  /** รูปที่แนบไว้รอส่ง (data URL หลังบีบอัด) + สถานะกำลังบีบอัด */
+  const [attachUrl, setAttachUrl] = useState<string | null>(null);
+  const [attachBusy, setAttachBusy] = useState(false);
+
+  /** เลือกรูปเอกสาร/โปสเตอร์ → บีบอัดเป็น data URL รอแนบไปกับข้อความถัดไป */
+  async function pickImage(file: File | null) {
+    if (!file) return setAttachUrl(null);
+    setErr("");
+    setAttachBusy(true);
+    try {
+      setAttachUrl(await compressImageToDataUrl(file, 1400, 0.72));
+    } catch {
+      setErr("อ่านรูปไม่สำเร็จ ลองรูปอื่น");
+    } finally {
+      setAttachBusy(false);
+    }
+  }
 
   const load = useMemo(
     () => crewLoad(photographers, bookings, deliveries, tasks, now),
@@ -189,18 +209,26 @@ export default function Assistant({
     [now, users, bookings, availability, equipments, load, loadByUid, crewUids, skillsByUid, openTasks]
   );
 
-  /** ยิงคำถามจริง — ทุก setState เกิดหลัง await เท่านั้น เรียกจาก effect ได้ปลอดภัย */
-  async function run(text: string, history: ChatMessage[], base: Turn[]) {
+  /** ยิงคำถามจริง — ทุก setState เกิดหลัง await เท่านั้น เรียกจาก effect ได้ปลอดภัย
+   *  imageUrl = รูปเอกสาร/โปสเตอร์ที่แนบมา (data URL) ส่งให้ AI อ่านแบบ multimodal */
+  async function run(text: string, history: ChatMessage[], base: Turn[], imageUrl?: string) {
     if (!aiReady(cfg)) return;
     try {
+      // มีรูป → ส่ง content เป็น array (ข้อความ + รูป) · ไม่มี → ส่งข้อความล้วนตามเดิม
+      const userContent: ChatMessage["content"] = imageUrl
+        ? [
+            { type: "text", text: text || "ช่วยอ่านและวิเคราะห์เอกสาร/รูปนี้ให้ละเอียด" },
+            { type: "image_url", image_url: { url: imageUrl } },
+          ]
+        : text;
       const res = await chat(cfg, [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "system", content: `สถานะชุมนุมตอนนี้:\n${snapshot()}` },
         ...history,
-        { role: "user", content: text },
+        { role: "user", content: userContent },
       ]);
       const parsed = parseAiReply(res.text);
-      const resolved = parsed.plan ? resolvePlan(parsed.plan, bookings, users) : null;
+      const resolved = parsed.plan ? resolvePlan(parsed.plan, bookings, users, equipments) : null;
       const next: Turn[] = [
         ...base,
         {
@@ -261,19 +289,24 @@ export default function Assistant({
     }
   }
 
-  /** ผู้ใช้กดส่งเอง — วางข้อความของตัวเองก่อน แล้วค่อยยิง */
+  /** ผู้ใช้กดส่งเอง — วางข้อความของตัวเองก่อน แล้วค่อยยิง
+   *  แนบรูปได้ (attachUrl) — ส่งให้ AI อ่านแล้วเคลียร์ช่องแนบ */
   function ask(text: string) {
     if (busy || !aiReady(cfg)) return;
+    if (!text.trim() && !attachUrl) return;
     setErr("");
     setInput("");
+    const img = attachUrl;
+    setAttachUrl(null);
+    // ประวัติส่งเฉพาะข้อความ (ไม่ส่งรูปเก่าซ้ำ — เปลืองโควตา)
     const history: ChatMessage[] = turns.slice(-HISTORY_TURNS).map((t) => ({
       role: t.role,
       content: t.text,
     }));
-    const base: Turn[] = [...turns, { role: "user", text }];
+    const base: Turn[] = [...turns, { role: "user", text, imageUrl: img ?? undefined }];
     setTurns(base);
     setBusy(true);
-    void run(text, history, base);
+    void run(text, history, base, img ?? undefined);
   }
 
   /** ลงมือทำตามแผน — เฉพาะตอนกรรมการกดยืนยันเท่านั้น */
@@ -484,10 +517,20 @@ export default function Assistant({
           ) : (
             turns.map((t, i) =>
               t.role === "user" ? (
-                <div key={i} className="flex justify-end">
-                  <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-[var(--faculty)] px-3.5 py-2.5 text-sm leading-relaxed text-white">
-                    {t.text}
-                  </p>
+                <div key={i} className="flex flex-col items-end gap-1">
+                  {t.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={t.imageUrl}
+                      alt="เอกสารที่แนบ"
+                      className="max-h-48 max-w-[70%] rounded-2xl rounded-br-md border border-black/10 object-cover"
+                    />
+                  )}
+                  {t.text && (
+                    <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-[var(--faculty)] px-3.5 py-2.5 text-sm leading-relaxed text-white">
+                      {t.text}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div key={i} className="space-y-2">
@@ -560,13 +603,49 @@ export default function Assistant({
 
         {/* ── ช่องสั่งงาน ── */}
         <div className="shrink-0 border-t border-[var(--hairline)] px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3">
+          {/* แถบแนบรูป — ปุ่มแนบ + ภาพย่อที่รอส่ง */}
+          <div className="mb-2 flex items-center gap-2">
+            <label
+              className={`press inline-flex min-h-[40px] cursor-pointer items-center gap-1.5 rounded-full px-3 text-sm font-semibold ring-1 ring-[var(--hairline)] transition ${
+                notConfigured || busy ? "pointer-events-none opacity-50" : "text-[var(--ink)] hover:bg-black/5"
+              }`}
+            >
+              <Icon name={attachBusy ? "time" : "upload"} size={18} className="text-[var(--faculty)]" />
+              {attachBusy ? "กำลังอ่านรูป…" : "แนบรูป/เอกสาร"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={notConfigured || busy}
+                onChange={(e) => {
+                  void pickImage(e.target.files?.[0] ?? null);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {attachUrl && (
+              <span className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={attachUrl} alt="รูปที่จะแนบ" className="h-11 w-11 rounded-xl border border-black/10 object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setAttachUrl(null)}
+                  aria-label="เอารูปออก"
+                  className="absolute -right-1.5 -top-1.5 grid h-5 w-5 place-items-center rounded-full bg-[var(--ink)] text-white"
+                >
+                  <Icon name="close" size={14} />
+                </button>
+              </span>
+            )}
+            {attachUrl && <span className="t-caption">แนบแล้ว — พิมพ์สิ่งที่อยากให้ AI ทำ แล้วกดส่ง</span>}
+          </div>
           <RadiantPromptInput
             value={input}
             onChange={setInput}
             onSubmit={ask}
             disabled={busy || notConfigured}
             templates={TEMPLATES}
-            placeholder="เช่น มอบหมายงานถ่ายวันที่ 12 ให้คนที่ว่างและงานน้อย"
+            placeholder={attachUrl ? "เช่น อ่านตารางนี้แล้ววางแผนมอบหมายงานให้" : "เช่น มอบหมายงานถ่ายวันที่ 12 ให้คนที่ว่างและงานน้อย"}
           />
           <div className="mt-2 flex items-center justify-between gap-2">
             <p className="t-caption">AI เสนอเท่านั้น · ระบบจะไม่บันทึกจนกว่าคุณจะกดยืนยัน</p>

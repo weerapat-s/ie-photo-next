@@ -19,11 +19,13 @@ import { groupByStage, STAGE_META, STAGE_ORDER, type Stage } from "@/lib/analyti
 import type { AppSettings, BookingDoc, DeliveryDoc, UserDoc, WithId } from "@/lib/types";
 
 /** เมนูที่กรรมการไป"ลงมือ"กับงานในแต่ละขั้น + ข้อมูลที่ขั้นนั้นเขียน/อ่าน */
+// ขั้นที่ต้อง "ลงมือกับใบจอง" (อนุมัติ/รับคืน) พาไปบอร์ดงานที่มีปุ่มจริง
+// ไม่ใช่หน้าเมนูเฉย ๆ — กดโหนดแล้วจัดการได้ทันที
 const STAGE_MENU: Record<Stage, { href: string; menu: string; act: string; icon: IconName }> = {
-  requested: { href: "/workflow", menu: "งาน", act: "อนุมัติคำขอ", icon: "workflow" },
+  requested: { href: "/workflow?view=board", menu: "บอร์ดงาน", act: "อนุมัติคำขอ", icon: "assign" },
   scheduled: { href: "/assign", menu: "มอบหมาย", act: "จ่ายงานให้ทีม", icon: "assign" },
-  active: { href: "/my", menu: "งานของฉัน", act: "ทีมลงมือถ่าย/ใช้ของ", icon: "delivery" },
-  wrapping: { href: "/assign", menu: "มอบหมาย · ส่งงาน", act: "รับคืน / อัปไฟล์", icon: "delivery" },
+  active: { href: "/workflow?view=board", menu: "บอร์ดงาน", act: "ทีมลงมือถ่าย/ใช้ของ", icon: "assign" },
+  wrapping: { href: "/workflow?view=board", menu: "บอร์ดงาน", act: "รับคืน / อัปไฟล์", icon: "assign" },
   done: { href: "/overview", menu: "ภาพรวม", act: "สรุปผล / ฟีด", icon: "overview" },
 };
 
@@ -41,12 +43,15 @@ export default function WorkflowMap({
   users,
   settings,
   now,
+  onOpenBoard,
 }: {
   bookings: WithId<BookingDoc>[];
   deliveries: WithId<DeliveryDoc>[];
   users: WithId<UserDoc>[];
   settings: AppSettings;
   now: number;
+  /** สลับไปมุมมองบอร์ดในที่ (โหนดขั้นที่ชี้ /workflow เอง — Link ข้ามหน้าเดิมไม่รีเฟรช view) */
+  onOpenBoard?: () => void;
 }) {
   const stageCount = useMemo(() => {
     const m = {} as Record<Stage, number>;
@@ -169,27 +174,38 @@ export default function WorkflowMap({
         {STAGE_ORDER.map((stage, i) => {
           const meta = STAGE_META[stage];
           const m = STAGE_MENU[stage];
+          // ขั้นที่ชี้บอร์ด (หน้าเดียวกัน) = ปุ่มสลับ view ในที่ · ขั้นที่ชี้เมนูอื่น = ลิงก์ข้ามหน้า
+          const inPage = m.href.startsWith("/workflow") && !!onOpenBoard;
+          const cls = `group block flex-1 rounded-2xl border p-3 text-left transition active:scale-[.99] hover:brightness-[.98] ${meta.cls}`;
+          const inner = (
+            <>
+              <div className="flex items-center gap-1.5">
+                <span className={`h-2 w-2 shrink-0 rounded-full ${meta.dot}`} aria-hidden />
+                <span className="t-caption font-bold text-[var(--ink)]/45">ขั้น {i + 1}</span>
+                <span className="ml-auto rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold text-[var(--ink)]">
+                  {stageCount[stage] ?? 0}
+                </span>
+              </div>
+              <p className="mt-1 text-sm font-bold text-[var(--ink)]">{meta.label}</p>
+              <p className="t-caption mt-0.5 leading-tight">{meta.hint}</p>
+              <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-semibold text-[var(--faculty)]">
+                <Icon name={m.icon} size={14} />
+                {m.menu}
+              </span>
+              <p className="t-caption mt-1 leading-tight text-[var(--ink)]/55">{m.act}</p>
+            </>
+          );
           return (
             <div key={stage} className="contents lg:flex lg:min-w-0 lg:flex-1 lg:items-center">
-              <Link
-                href={m.href}
-                className={`group block flex-1 rounded-2xl border p-3 transition active:scale-[.99] hover:brightness-[.98] ${meta.cls}`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className={`h-2 w-2 shrink-0 rounded-full ${meta.dot}`} aria-hidden />
-                  <span className="t-caption font-bold text-[var(--ink)]/45">ขั้น {i + 1}</span>
-                  <span className="ml-auto rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold text-[var(--ink)]">
-                    {stageCount[stage] ?? 0}
-                  </span>
-                </div>
-                <p className="mt-1 text-sm font-bold text-[var(--ink)]">{meta.label}</p>
-                <p className="t-caption mt-0.5 leading-tight">{meta.hint}</p>
-                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-semibold text-[var(--faculty)]">
-                  <Icon name={m.icon} size={14} />
-                  {m.menu}
-                </span>
-                <p className="t-caption mt-1 leading-tight text-[var(--ink)]/55">{m.act}</p>
-              </Link>
+              {inPage ? (
+                <button type="button" onClick={onOpenBoard} className={cls}>
+                  {inner}
+                </button>
+              ) : (
+                <Link href={m.href} className={cls}>
+                  {inner}
+                </Link>
+              )}
 
               {/* เส้นเชื่อม + ป้ายข้อมูลที่ส่งต่อ (ไม่โชว์หลังขั้นสุดท้าย) */}
               {i < STAGE_ORDER.length - 1 && <EdgeConnector label={EDGE_LABEL[i]} />}

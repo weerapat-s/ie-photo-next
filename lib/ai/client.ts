@@ -14,9 +14,15 @@ import type { AiConfigDoc } from "@/lib/types";
 
 export { modelChain } from "./models";
 
+/** ชิ้นส่วนข้อความแบบหลายสื่อ — ข้อความ + รูป (data URL) ตามมาตรฐาน OpenAI/Gemini
+ *  ใช้ตอนแนบรูปเอกสาร/โปสเตอร์/ตารางงานให้ AI อ่านและวิเคราะห์ */
+export type ContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
-  content: string;
+  content: string | ContentPart[];
 }
 
 export class AiError extends Error {

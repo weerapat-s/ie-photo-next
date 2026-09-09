@@ -3,13 +3,27 @@
 //
 // หลักที่ยึด: **AI เสนอ ระบบไม่ลงมือเอง** ทุกแอ็กชันต้องให้กรรมการกดยืนยัน
 // และต้องตรวจก่อนว่า id ที่ AI อ้างมามีอยู่จริง — โมเดลแต่ง id ขึ้นมาเองได้เสมอ
-import type { BookingDoc, UserDoc, WithId } from "@/lib/types";
+import type { BookingDoc, EquipmentDoc, UserDoc, WithId } from "@/lib/types";
 
 /** มอบหมายคนเข้างานที่มีอยู่แล้ว */
 export interface AssignAction {
   type: "assign";
   bookingId: string;
   userIds: string[];
+  why?: string;
+}
+
+/** จ่าย/ให้ยืมอุปกรณ์กับสมาชิก (สร้างใบจองใหม่ อนุมัติทันที) */
+export interface LendEquipmentAction {
+  type: "lend_equipment";
+  equipmentId: string;
+  userId: string;
+  /** YYYY-MM-DD — ไม่ใส่ = เริ่มวันนี้ */
+  startDate?: string;
+  /** YYYY-MM-DD — ไม่ใส่ = ค่าเริ่มต้นของระบบ */
+  endDate?: string;
+  /** ยืมเพื่องานอะไร */
+  usageType?: string;
   why?: string;
 }
 
@@ -41,7 +55,7 @@ export interface UpdatePersonAction {
   why?: string;
 }
 
-export type PlanAction = AssignAction | CreateTaskAction | UpdatePersonAction;
+export type PlanAction = AssignAction | CreateTaskAction | UpdatePersonAction | LendEquipmentAction;
 
 export interface AiPlan {
   summary: string;
@@ -133,6 +147,23 @@ function toAction(a: Record<string, unknown>): PlanAction | null {
         why: str(a.why, 300),
       };
     }
+    case "lend_equipment": {
+      const equipmentId = str(a.equipmentId, 60);
+      const userId = str(a.userId, 60);
+      if (!equipmentId || !userId) return null;
+      const s = str(a.startDate, 10);
+      const e = str(a.endDate, 10);
+      const ok = (d?: string) => (d && /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : undefined);
+      return {
+        type: "lend_equipment",
+        equipmentId,
+        userId,
+        startDate: ok(s),
+        endDate: ok(e),
+        usageType: str(a.usageType, 120),
+        why: str(a.why, 300),
+      };
+    }
     case "update_person": {
       const userId = str(a.userId, 60);
       if (!userId) return null;
@@ -211,7 +242,15 @@ export interface ResolvedCreateTask extends CreateTaskAction {
 export interface ResolvedUpdatePerson extends UpdatePersonAction {
   user: WithId<UserDoc>;
 }
-export type ResolvedAction = ResolvedAssign | ResolvedCreateTask | ResolvedUpdatePerson;
+export interface ResolvedLendEquipment extends LendEquipmentAction {
+  equipment: WithId<EquipmentDoc>;
+  user: WithId<UserDoc>;
+}
+export type ResolvedAction =
+  | ResolvedAssign
+  | ResolvedCreateTask
+  | ResolvedUpdatePerson
+  | ResolvedLendEquipment;
 
 /**
  * ทิ้งแอ็กชันที่อ้างของไม่มีอยู่จริง
@@ -220,10 +259,12 @@ export type ResolvedAction = ResolvedAssign | ResolvedCreateTask | ResolvedUpdat
 export function resolvePlan(
   plan: AiPlan,
   bookings: WithId<BookingDoc>[],
-  users: WithId<UserDoc>[]
+  users: WithId<UserDoc>[],
+  equipments: WithId<EquipmentDoc>[] = []
 ): { actions: ResolvedAction[]; dropped: number } {
   const bookingOf = new Map(bookings.map((b) => [b.id, b]));
   const userOf = new Map(users.map((u) => [u.id, u]));
+  const equipOf = new Map(equipments.map((e) => [e.id, e]));
   const out: ResolvedAction[] = [];
   let dropped = 0;
 
@@ -243,6 +284,14 @@ export function resolvePlan(
         continue;
       }
       out.push({ ...a, assignee });
+    } else if (a.type === "lend_equipment") {
+      const equipment = equipOf.get(a.equipmentId);
+      const user = userOf.get(a.userId);
+      if (!equipment || !user) {
+        dropped++;
+        continue;
+      }
+      out.push({ ...a, equipment, user });
     } else {
       const user = userOf.get(a.userId);
       if (!user) {
