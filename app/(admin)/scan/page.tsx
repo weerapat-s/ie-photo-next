@@ -9,14 +9,16 @@
 // ความปลอดภัย: QR เป็นแค่ตัวชี้ตัวคน ไม่ใช่รหัสผ่าน
 // รูปหน้าที่โชว์มีไว้ให้แอดมินเทียบกับคนตรงหน้าก่อนส่งของ
 import { useMemo, useState } from "react";
-import { collection, query, orderBy, doc, writeBatch, addDoc, serverTimestamp } from "firebase/firestore";
+import {
+  collection, query, where, limit, getDocs, getDoc, doc, writeBatch, addDoc, serverTimestamp,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { useCollection, useNow } from "@/lib/hooks";
+import { useNow } from "@/lib/hooks";
 import { PageHeader, Card, Badge, Spinner, Button, Modal, EmptyState } from "@/components/ui";
 import QrScanner from "@/components/qr-scanner";
 import { parseScan } from "@/lib/qr";
 import { fmtDateTime, BOOKING_STATUS } from "@/lib/format";
-import type { BookingDoc, EquipmentDoc, UserDoc, WithId } from "@/lib/types";
+import type { BookingDoc, UserDoc, WithId } from "@/lib/types";
 
 /** เหลือ/เกินกำหนดกี่วัน — ค่าบวก = ยังไม่ถึงกำหนด, ลบ = เลยมาแล้ว */
 function daysLeft(endMs: number, now: number) {
@@ -27,12 +29,6 @@ function durationDays(startMs: number, endMs: number) {
 }
 
 export default function ScanStationPage() {
-  const { data: bookings, loading: l1 } = useCollection<BookingDoc>(
-    () => query(collection(db, "bookings"), orderBy("createdAt", "desc")),
-    []
-  );
-  const { data: users, loading: l2 } = useCollection<UserDoc>(() => collection(db, "users"), []);
-  const { data: equipments, loading: l3 } = useCollection<EquipmentDoc>(() => collection(db, "equipments"), []);
   const now = useNow();
 
   const [scanning, setScanning] = useState(true);
@@ -43,17 +39,34 @@ export default function ScanStationPage() {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  // รายการของคนที่สแกนมา — ดึงเฉพาะตอนสแกน ไม่ subscribe ทั้ง collection
+  // (โปรเจกต์อยู่แพลนฟรี โควตาอ่าน 50,000/วัน หน้านี้เลยต้องประหยัด)
+  const [rows, setRows] = useState<WithId<BookingDoc>[]>([]);
+  const [loading, setLoading] = useState(false);
   // ผู้ยืมติ๊กรับทราบเงื่อนไขชดใช้ของ booking ไหนแล้วบ้าง (ติ๊กต่อหน้าแอดมินตอนรับของ)
   const [accepted, setAccepted] = useState<Set<string>>(new Set());
   // เอกสารแนบที่กำลังเปิดดู (เอกสารขออนุญาต / รูปตอนคืน)
   const [viewImg, setViewImg] = useState<{ src: string; title: string } | null>(null);
 
-  const loading = l1 || l2 || l3;
 
-  const mine = useMemo(
-    () => (person ? bookings.filter((b) => b.userId === person.id) : []),
-    [person, bookings]
-  );
+  /** ดึงเฉพาะรายการที่ยังมีผลของคนคนเดียว — ไม่กี่ read ต่อการสแกน 1 ครั้ง */
+  async function loadFor(uid: string) {
+    setLoading(true);
+    try {
+      const snap = await getDocs(
+        query(
+          collection(db, "bookings"),
+          where("userId", "==", uid),
+          where("status", "in", ["pending", "approved", "pending_return"])
+        )
+      );
+      setRows(snap.docs.map((d) => ({ id: d.id, ...(d.data() as BookingDoc) })));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const mine = rows;
   /** รอแอดมินอนุมัติ + ส่งมอบ — ถ้าสแกนมาจาก QR คำขอ โฟกัสเฉพาะใบนั้น */
   const waiting = useMemo(() => {
     const pending = mine.filter((b) => b.status === "pending");
@@ -66,49 +79,73 @@ export default function ScanStationPage() {
     [mine]
   );
 
-  function handleScan(raw: string) {
+  async function handleScan(raw: string) {
     setErr("");
     setMsg("");
     const parsed = parseScan(raw);
 
-    if (parsed.kind === "request") {
-      const inRequest = bookings.filter((b) => (b.requestId || "").toUpperCase() === parsed.code);
-      if (!inRequest.length) return setErr(`ไม่พบคำขอรหัส ${parsed.code}`);
-      const owner = users.find((u) => u.id === inRequest[0].userId);
-      if (!owner) return setErr("พบคำขอ แต่หาข้อมูลผู้ยืมไม่เจอ");
-      setPerson(owner);
-      setRequestId(parsed.code);
-      setScanning(false);
-      return;
-    }
+    try {
+      // QR ของคำขอ — หา booking ใบนั้นก่อน แล้วค่อยดึงเจ้าของ
+      if (parsed.kind === "request") {
+        const rs = await getDocs(
+          query(collection(db, "bookings"), where("requestId", "==", parsed.code))
+        );
+        if (rs.empty) return setErr(`ไม่พบคำขอรหัส ${parsed.code}`);
+        const uid = rs.docs[0].data().userId as string | null;
+        if (!uid) return setErr("พบคำขอ แต่ไม่มีผู้ยืมผูกอยู่");
+        const u = await getDoc(doc(db, "users", uid));
+        if (!u.exists()) return setErr("พบคำขอ แต่หาข้อมูลผู้ยืมไม่เจอ");
+        setPerson({ id: u.id, ...(u.data() as UserDoc) });
+        setRequestId(parsed.code);
+        setScanning(false);
+        await loadFor(uid);
+        return;
+      }
 
-    if (parsed.kind === "member") {
-      const u = users.find((x) => (x.memberCode || "").toUpperCase() === parsed.code);
-      if (!u) return setErr(`ไม่พบสมาชิกที่ใช้รหัส ${parsed.code}`);
-      setPerson(u);
-      setRequestId(null);
-      setScanning(false);
-      return;
-    }
+      // QR ประจำตัวสมาชิก
+      if (parsed.kind === "member") {
+        const us = await getDocs(
+          query(collection(db, "users"), where("memberCode", "==", parsed.code), limit(1))
+        );
+        if (us.empty) return setErr(`ไม่พบสมาชิกที่ใช้รหัส ${parsed.code}`);
+        const d = us.docs[0];
+        setPerson({ id: d.id, ...(d.data() as UserDoc) });
+        setRequestId(null);
+        setScanning(false);
+        await loadFor(d.id);
+        return;
+      }
 
-    // ยิง QR ของอุปกรณ์ → บอกว่าใครถือชิ้นนี้อยู่ (ทางลัดตอนของวางอยู่ตรงหน้า)
-    if (parsed.kind === "equipment") {
-      const item = equipments.find((x) => (x.code || "").toUpperCase() === parsed.code);
-      if (!item) return setErr(`ไม่พบอุปกรณ์รหัส ${parsed.code}`);
-      const active = bookings.find(
-        (b) => b.itemId === item.id && (b.status === "approved" || b.status === "pending_return")
-      );
-      if (!active?.userId) return setErr(`"${item.name}" ตอนนี้ไม่มีใครยืมอยู่`);
-      const holder = users.find((u) => u.id === active.userId);
-      if (!holder) return setErr(`"${item.name}" ถูกยืมอยู่ แต่หาข้อมูลผู้ยืมไม่เจอ`);
-      setPerson(holder);
-      setRequestId(null);
-      setScanning(false);
-      setMsg(`"${item.name}" อยู่กับคนนี้`);
-      return;
-    }
+      // QR บนอุปกรณ์ — บอกว่าใครถือชิ้นนี้อยู่
+      if (parsed.kind === "equipment") {
+        const es = await getDocs(
+          query(collection(db, "equipments"), where("code", "==", parsed.code), limit(1))
+        );
+        if (es.empty) return setErr(`ไม่พบอุปกรณ์รหัส ${parsed.code}`);
+        const item = es.docs[0];
+        const bs = await getDocs(
+          query(
+            collection(db, "bookings"),
+            where("itemId", "==", item.id),
+            where("status", "in", ["approved", "pending_return"])
+          )
+        );
+        const uid = bs.docs[0]?.data().userId as string | undefined;
+        if (!uid) return setErr(`"${item.data().name}" ตอนนี้ไม่มีใครยืมอยู่`);
+        const u = await getDoc(doc(db, "users", uid));
+        if (!u.exists()) return setErr("ของถูกยืมอยู่ แต่หาข้อมูลผู้ยืมไม่เจอ");
+        setPerson({ id: u.id, ...(u.data() as UserDoc) });
+        setRequestId(null);
+        setScanning(false);
+        setMsg(`"${item.data().name}" อยู่กับคนนี้`);
+        await loadFor(u.id);
+        return;
+      }
 
-    setErr("อ่าน QR ไม่ออก ลองใหม่อีกครั้ง");
+      setErr("อ่าน QR ไม่ออก ลองใหม่อีกครั้ง");
+    } catch {
+      setErr("ค้นหาข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง");
+    }
   }
 
   /** อนุมัติ + ส่งมอบในครั้งเดียว (แอดมินเห็นตัวคนอยู่ตรงหน้าแล้ว) */
@@ -137,6 +174,7 @@ export default function ScanStationPage() {
         createdAt: serverTimestamp(),
       });
       setMsg(`ส่งมอบ "${b.itemName}" แล้ว`);
+      if (person) await loadFor(person.id);
     } catch {
       setErr("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
     } finally {
@@ -155,6 +193,7 @@ export default function ScanStationPage() {
       batch.delete(doc(db, "slots", b.id));
       await batch.commit();
       setMsg(`รับคืน "${b.itemName}" เรียบร้อย`);
+      if (person) await loadFor(person.id);
     } catch {
       setErr("บันทึกการรับคืนไม่สำเร็จ ลองใหม่อีกครั้ง");
     } finally {
