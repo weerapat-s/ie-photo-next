@@ -17,7 +17,7 @@ const inter = Inter({
 const kanit = Kanit({
   variable: "--font-kanit",
   subsets: ["latin", "thai"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700"], // ตัด 300 ออก — ไม่มีที่ไหนในโค้ดใช้ font-light
   display: "swap", // แสดงข้อความทันทีด้วยฟอนต์สำรอง ระหว่างรอ Kanit โหลด
 });
 

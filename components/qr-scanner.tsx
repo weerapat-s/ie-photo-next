@@ -5,7 +5,6 @@
 //   - ต้องเป็น HTTPS (production เป็นอยู่แล้ว)
 //   - เปิดใน in-app browser ของ Line/Facebook กล้องจะไม่ทำงาน ต้องเปิดใน Safari/Chrome
 import { useEffect, useRef, useState } from "react";
-import { Html5Qrcode } from "html5-qrcode";
 
 const REGION_ID = "qr-scanner-region";
 
@@ -21,7 +20,7 @@ export default function QrScanner({
 }) {
   const [err, setErr] = useState("");
   const [starting, setStarting] = useState(true);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerRef = useRef<{ stop: () => Promise<void>; clear: () => void } | null>(null);
   // กันยิงซ้ำรัวๆ จาก frame เดียวกัน — จำค่าล่าสุด + เวลา
   const lastRef = useRef<{ value: string; at: number }>({ value: "", at: 0 });
   const onScanRef = useRef(onScan);
@@ -32,29 +31,42 @@ export default function QrScanner({
 
   useEffect(() => {
     let cancelled = false;
-    const scanner = new Html5Qrcode(REGION_ID, { verbose: false });
-    scannerRef.current = scanner;
 
-    scanner
-      .start(
-        { facingMode: "environment" }, // กล้องหลัง
-        { fps: 10, qrbox: { width: 240, height: 240 } },
-        (decoded) => {
-          const now = Date.now();
-          // ตัวเดิมภายใน 1.5 วิ = ถือค้างอยู่ ไม่นับซ้ำ
-          if (decoded === lastRef.current.value && now - lastRef.current.at < 1500) return;
-          lastRef.current = { value: decoded, at: now };
-          if (navigator.vibrate) navigator.vibrate(60);
-          onScanRef.current(decoded);
-        },
-        () => {
-          // callback ตอนอ่านไม่ออกในแต่ละเฟรม — เงียบไว้ ไม่งั้น log ท่วม
+    // โหลด html5-qrcode ตอนเปิดกล้องเท่านั้น (~250KB) — หน้าอื่นไม่ต้องแบกไปด้วย
+    (async () => {
+      let Html5Qrcode: typeof import("html5-qrcode").Html5Qrcode;
+      try {
+        ({ Html5Qrcode } = await import("html5-qrcode"));
+      } catch {
+        if (!cancelled) {
+          setStarting(false);
+          setErr("โหลดตัวสแกนไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองใหม่");
         }
-      )
-      .then(() => {
+        return;
+      }
+      if (cancelled) return;
+
+      const scanner = new Html5Qrcode(REGION_ID, { verbose: false });
+      scannerRef.current = scanner;
+
+      try {
+        await scanner.start(
+          { facingMode: "environment" }, // กล้องหลัง
+          { fps: 10, qrbox: { width: 240, height: 240 } },
+          (decoded) => {
+            const now = Date.now();
+            // ตัวเดิมภายใน 1.5 วิ = ถือค้างอยู่ ไม่นับซ้ำ
+            if (decoded === lastRef.current.value && now - lastRef.current.at < 1500) return;
+            lastRef.current = { value: decoded, at: now };
+            if (navigator.vibrate) navigator.vibrate(60);
+            onScanRef.current(decoded);
+          },
+          () => {
+            // อ่านไม่ออกในเฟรมนั้น — เงียบไว้ ไม่งั้น log ท่วม
+          }
+        );
         if (!cancelled) setStarting(false);
-      })
-      .catch((e: unknown) => {
+      } catch (e: unknown) {
         if (cancelled) return;
         setStarting(false);
         const msg = e instanceof Error ? e.message : String(e);
@@ -65,14 +77,15 @@ export default function QrScanner({
         } else {
           setErr("เปิดกล้องไม่สำเร็จ — ถ้าเปิดจากแอป Line/Facebook ให้เปิดใน Safari หรือ Chrome แทน");
         }
-      });
+      }
+    })();
 
     return () => {
       cancelled = true;
-      const s = scannerRef.current;
-      if (!s) return;
-      s.stop()
-        .then(() => s.clear())
+      const sc = scannerRef.current;
+      if (!sc) return;
+      sc.stop()
+        .then(() => sc.clear())
         .catch(() => {
           /* ปิดไม่สำเร็จก็ไม่เป็นไร component ถูก unmount แล้ว */
         });
