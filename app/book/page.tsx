@@ -19,7 +19,6 @@ import {
   ChipBar,
 } from "@/components/ui";
 import PublicShell from "@/components/public-shell";
-import SpecularButton from "@/components/reactbits/SpecularButton";
 import { PhotographerCard, PhotographerBookingModal } from "@/components/photographer";
 import Icon, { type IconName } from "@/components/icon";
 import { StudioCard } from "@/components/studio";
@@ -74,13 +73,11 @@ export default function PublicBookPage() {
           ไม่ต้องสมัครสมาชิก กรอกข้อมูลติดต่อแล้วรอทีมงานยืนยัน
         </p>
         <div className="mt-5 flex justify-center">
-          <SpecularButton
-            size="md"
-            tint={settings.accentColor}
+          <Button
             onClick={() => document.getElementById("book-list")?.scrollIntoView({ behavior: "smooth" })}
           >
             ดูรายการที่เปิดจอง
-          </SpecularButton>
+          </Button>
         </div>
       </div>
 

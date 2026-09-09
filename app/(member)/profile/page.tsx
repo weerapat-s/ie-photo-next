@@ -1,6 +1,7 @@
 "use client";
 // app/(member)/profile/page.tsx — แก้ไขข้อมูลส่วนตัว + รูปโปรไฟล์ + การแจ้งเตือน
 import { Suspense, useState } from "react";
+import MemberQrCard from "@/components/member-qr-card";
 import { useRouter, useSearchParams } from "next/navigation";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
@@ -216,6 +217,10 @@ function ProfileInner() {
       >
         ออกจากระบบ
       </Button>
+
+      <div className="mt-4">
+        <MemberQrCard />
+      </div>
 
       {/* ปุ่มลับ — มุมล่างขวา ดูเหมือนของประดับ กดรัว 6 ทีเพื่อสลับโหมด */}
       <div className="mt-8 flex justify-end pr-1">

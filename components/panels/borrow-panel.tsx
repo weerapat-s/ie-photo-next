@@ -6,6 +6,7 @@ import { collection, query, where, orderBy, doc, writeBatch, Timestamp, serverTi
 import { db } from "@/lib/firebase/client";
 import { compressImageToDataUrl } from "@/lib/image";
 import { findSlotConflicts, slotPayload } from "@/lib/slots";
+import { generateRequestId } from "@/lib/qr";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useSettings } from "@/lib/settings-context";
 import { useCollection, useNow } from "@/lib/hooks";
@@ -179,11 +180,15 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
       const startTs = Timestamp.fromDate(startDate);
       const endTs = Timestamp.fromDate(endDate);
 
+      // ของที่กดยืมพร้อมกันใช้ requestId เดียวกัน → ทำ QR ใบเดียวคุมทั้งคำขอได้
+      const requestId = generateRequestId();
+
       // เขียนทั้งหมดใน batch เดียว (2N writes, ลิมิต 500 — เหลือเฟือ)
       const batch = writeBatch(db);
       for (const eq of items) {
         const bRef = doc(collection(db, "bookings"));
         batch.set(bRef, {
+          requestId,
           bookingType: "equipment",
           itemId: eq.id,
           itemName: eq.name,
@@ -223,7 +228,7 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
         );
       }
       await batch.commit();
-      router.push(assigning ? "/workflow" : "/my-bookings");
+      router.push(assigning ? "/workflow" : `/my-bookings?request=${requestId}`);
     } catch (error) {
       setErr(
         error instanceof Error && error.message === "IMAGE_TOO_LARGE"

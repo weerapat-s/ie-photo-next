@@ -22,6 +22,8 @@ import {
 } from "@/components/ui";
 import Icon from "@/components/icon";
 import { fmtRange, fmtRelative, BOOKING_STATUS, BOOKING_TYPE_ICON, BOOKING_TYPE_LABEL } from "@/lib/format";
+import QrImage from "@/components/qr-image";
+import { requestQrPayload } from "@/lib/qr";
 import { canCancel, cancelBooking, cancelPrompt } from "@/lib/bookings";
 import type { BookingDoc, BookingStatus, WithId } from "@/lib/types";
 
@@ -163,6 +165,25 @@ export default function MyBookingsPanel() {
           {detail.location && <Row label="สถานที่">{detail.location}</Row>}
           {detail.crewSize ? <Row label="จำนวนตากล้อง">{detail.crewSize} คน</Row> : null}
           <Row label="วัตถุประสงค์">{detail.usageReason || "—"}</Row>
+
+          {/* QR ของคำขอ — ให้แอดมินสแกนตอนรับของและตอนคืนของ */}
+          {detail.requestId &&
+            detail.status !== "returned" &&
+            detail.status !== "cancelled" &&
+            detail.status !== "rejected" && (
+              <div className="mt-4 border-t border-black/8 pt-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted-ink)]">
+                  {detail.status === "pending" ? "QR สำหรับรับของ" : "QR สำหรับคืนของ"}
+                </p>
+                <div className="flex flex-col items-center">
+                  <div className="rounded-2xl bg-white p-3">
+                    <QrImage value={requestQrPayload(detail.requestId)} size={180} alt="QR คำขอยืมอุปกรณ์" />
+                  </div>
+                  <p className="mt-2 font-mono text-xs tracking-widest text-[var(--muted-ink)]">{detail.requestId}</p>
+                  <p className="mt-1 text-center text-xs text-[var(--muted-ink)]">ให้แอดมินสแกนที่เคาน์เตอร์</p>
+                </div>
+              </div>
+            )}
           {detail.formImageUrl && (
             <div className="mt-3">
               <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[var(--muted-ink)]">เอกสารที่แนบ</p>

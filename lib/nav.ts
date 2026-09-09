@@ -63,6 +63,8 @@ export function navLinks(role: Role | null, s: AppSettings): NavLink[] {
     // "ส่งงาน" ถูกยุบไปเป็นแท็บใน /assign แล้ว — เป็นการจ่ายงานให้คนเหมือนกัน
     { href: "/assign", label: "มอบหมาย", icon: "assign", primary: true },
     { href: "/resources", label: "ทรัพยากร", icon: "inventory", primary: true },
+    { href: "/scan", label: "สถานีสแกน", icon: "equipment", primary: true },
+    { href: "/labels", label: "พิมพ์ QR", icon: "form" },
     { href: "/team", label: "ทีมงาน", icon: "members", primary: true },
     // กรรมการเป็นทั้งคนสั่งงานและคนทำงาน — ต้องเข้าถึงงานของตัวเองได้เหมือนสมาชิก
     { href: "/my", label: "งานของฉัน", icon: "delivery" },
@@ -79,6 +81,8 @@ export function navLinks(role: Role | null, s: AppSettings): NavLink[] {
     if (href === "/assign")
       return s.featureBorrow || s.featureStudio || s.featurePhotographer || s.featureDeliveries;
     if (href === "/resources") return s.featureBorrow || s.featureStudio || s.featurePhotographer;
+    // สถานีสแกน/พิมพ์ QR ใช้กับการยืมของเท่านั้น — ปิดฟีเจอร์ยืม เมนูก็หายไปด้วย
+    if (href === "/scan" || href === "/labels") return s.featureBorrow;
     if (href === "/deliveries") return s.featureDeliveries;
     if (href === "/forms") return s.featureForms;
     return true;
