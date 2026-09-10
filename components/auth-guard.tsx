@@ -11,6 +11,7 @@ import ReminderSweep from "./reminder-sweep";
 import BackBar from "./back-bar";
 import { usePathname } from "next/navigation";
 import { norm } from "@/lib/nav";
+import { recordPath } from "@/lib/nav-history";
 
 function Loading() {
   return (
@@ -28,13 +29,8 @@ function Loading() {
 function TrackPath() {
   const pathname = norm(usePathname());
   useEffect(() => {
-    try {
-      const prev = sessionStorage.getItem("iephoto:currentPath");
-      if (prev && prev !== pathname) sessionStorage.setItem("iephoto:prevPath", prev);
-      sessionStorage.setItem("iephoto:currentPath", pathname);
-    } catch {
-      /* โหมดส่วนตัวเขียนไม่ได้ — ปุ่มย้อนกลับจะถอยไปใช้หน้าแม่แทน */
-    }
+    // เก็บผ่าน store กลาง — เขียนแล้วแถบย้อนกลับรู้ทันที ไม่ได้ค่าเก่าค้างหนึ่งจังหวะ
+    recordPath(pathname);
   }, [pathname]);
   return null;
 }

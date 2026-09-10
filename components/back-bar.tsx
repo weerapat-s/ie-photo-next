@@ -7,12 +7,12 @@
 //
 // แถบนี้จำ "หน้าก่อนหน้า" ไว้เองใน sessionStorage แทนที่จะพึ่ง history.back()
 // เพราะ back อาจพาออกนอกแอปไปเลยถ้าเข้ามาจากลิงก์ตรง
-import { useCallback } from "react";
+import { useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useSettings } from "@/lib/settings-context";
 import { navLinks, norm, samePath } from "@/lib/nav";
-import { useBrowserValue } from "@/lib/hooks";
+import { subscribePath, getPrevPath } from "@/lib/nav-history";
 import Icon from "@/components/icon";
 
 /** ชื่อหน้าที่ไม่ได้อยู่ในเมนูหลัก — ต้องบอกเองว่าอยู่ตรงไหน */
@@ -42,14 +42,8 @@ export default function BackBar() {
   const { role } = useAuth();
   const { settings } = useSettings();
 
-  const readReferrer = useCallback(() => {
-    try {
-      return sessionStorage.getItem("iephoto:prevPath");
-    } catch {
-      return null; // โหมดส่วนตัวอ่านไม่ได้ — ไม่เป็นไร ถอยไปใช้หน้าแม่แทน
-    }
-  }, []);
-  const prev = useBrowserValue(readReferrer, null);
+  // subscribe จริง — พอ TrackPath บันทึกหน้าใหม่ ปุ่มนี้อัปเดตทันทีในจังหวะเดียวกัน
+  const prev = useSyncExternalStore(subscribePath, getPrevPath, () => null);
 
   const links = navLinks(role, settings);
   const inMenu = links.find((l) => samePath(l.href, pathname));
@@ -70,22 +64,39 @@ export default function BackBar() {
   const backLabel =
     links.find((l) => samePath(l.href, backTo))?.label ?? EXTRA_TITLES[backTo]?.label ?? "ย้อนกลับ";
 
+  const goBack = () => router.push(backTo);
+
   return (
-    <div className="mb-3 flex items-center gap-2">
+    <>
+      <div className="mb-3 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={goBack}
+          className="press inline-flex min-h-[40px] items-center gap-1 rounded-full pr-3 pl-2 text-sm font-semibold text-[var(--faculty)] hover:bg-black/5"
+        >
+          <Icon name="chevronRight" size={18} className="rotate-180" />
+          {backLabel}
+        </button>
+        {extra && (
+          <span className="t-caption flex items-center gap-1.5 truncate">
+            <Icon name="chevronRight" size={16} className="opacity-40" />
+            {extra.label}
+          </span>
+        )}
+      </div>
+
+      {/* ปุ่มลอยบนมือถือ — หน้ายาว ๆ (บอร์ดงาน/รายการ) เลื่อนลงไปแล้วแถบบนพ้นจอ
+          ต้องยังกดกลับได้โดยไม่ต้องเลื่อนขึ้นสุด · ลอยเหนือ dock */}
       <button
         type="button"
-        onClick={() => router.push(backTo)}
-        className="press inline-flex min-h-[40px] items-center gap-1 rounded-full pr-3 pl-2 text-sm font-semibold text-[var(--faculty)] hover:bg-black/5"
+        onClick={goBack}
+        aria-label={`ย้อนกลับไป ${backLabel}`}
+        className="press fixed left-3 z-[96] inline-flex items-center gap-1 rounded-full bg-[var(--ink)] py-2.5 pr-4 pl-3 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(0,0,0,0.25)] lg:hidden"
+        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 86px)" }}
       >
         <Icon name="chevronRight" size={18} className="rotate-180" />
-        {backLabel}
+        กลับ
       </button>
-      {extra && (
-        <span className="t-caption flex items-center gap-1.5 truncate">
-          <Icon name="chevronRight" size={16} className="opacity-40" />
-          {extra.label}
-        </span>
-      )}
-    </div>
+    </>
   );
 }
