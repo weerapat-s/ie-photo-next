@@ -76,9 +76,14 @@ export default function ScanStationPage() {
     if (!requestId) return pending;
     return pending.filter((b) => (b.requestId || "").toUpperCase() === requestId);
   }, [mine, requestId]);
-  /** ถืออยู่ตอนนี้ ยังไม่คืน */
+  /** มอบหมาย/อนุมัติแล้ว แต่ยังไม่ได้มารับของจริง — รอสแกนรับทราบ */
+  const toPickUp = useMemo(
+    () => mine.filter((b) => b.status === "approved" && !b.pickedUpAt),
+    [mine]
+  );
+  /** รับของไปแล้ว ยังไม่คืน */
   const holding = useMemo(
-    () => mine.filter((b) => b.status === "approved" || b.status === "pending_return"),
+    () => mine.filter((b) => (b.status === "approved" && b.pickedUpAt) || b.status === "pending_return"),
     [mine]
   );
 
@@ -186,6 +191,35 @@ export default function ScanStationPage() {
         createdAt: serverTimestamp(),
       });
       setMsg(`ส่งมอบ "${b.itemName}" แล้ว`);
+      if (person) await loadFor(person.id);
+    } catch {
+      setErr("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  /** รับทราบว่ามารับของแล้ว — ใช้กับของที่แอดมินมอบหมายไว้ล่วงหน้า (อนุมัติมาแล้ว) */
+  async function confirmPickup(b: WithId<BookingDoc>) {
+    if (busyId) return;
+    setBusyId(b.id);
+    setErr("");
+    try {
+      const approverName =
+        `${adminProfile?.firstName ?? ""} ${adminProfile?.lastName ?? ""}`.trim() ||
+        adminProfile?.nickname ||
+        admin?.email ||
+        "แอดมิน";
+      const batch = writeBatch(db);
+      batch.update(doc(db, "bookings", b.id), {
+        pickedUpAt: serverTimestamp(),
+        liabilityAcceptedAt: serverTimestamp(),
+        approvedById: b.approvedById ?? admin?.uid ?? null,
+        approvedByName: b.approvedByName ?? approverName,
+        approvedAt: b.approvedAt ?? serverTimestamp(),
+      });
+      await batch.commit();
+      setMsg(`รับทราบว่า ${b.userName} รับ "${b.itemName}" ไปแล้ว`);
       if (person) await loadFor(person.id);
     } catch {
       setErr("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
@@ -388,6 +422,75 @@ export default function ScanStationPage() {
                           ต้องให้ผู้ยืมติ๊กรับทราบก่อน จึงจะกดส่งมอบได้
                         </p>
                       )}
+                    </Card>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {/* มอบหมายไว้แล้ว รอเจ้าตัวมารับ — สแกนเพื่อรับทราบว่าของออกไปจริง */}
+          {toPickUp.length > 0 && (
+            <section className="mb-5">
+              <h2 className="mb-2 text-base font-semibold text-foreground">
+                รอมารับของ ({toPickUp.length})
+              </h2>
+              <p className="mb-2 text-sm text-muted-foreground">
+                อนุมัติ/มอบหมายไว้แล้ว แต่ยังไม่ได้บันทึกว่ารับของไป
+              </p>
+              <div className="space-y-3">
+                {toPickUp.map((b) => {
+                  const days = durationDays(b.startAt.toMillis(), b.endAt.toMillis());
+                  return (
+                    <Card key={b.id}>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium text-foreground">{b.itemName}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            ยืม {days} วัน · กำหนดคืน {fmtDateTime(b.endAt)}
+                          </p>
+                          {b.approvedByName && (
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              มอบหมายโดย {b.approvedByName}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-shrink-0 gap-2">
+                          {b.formImageUrl && (
+                            <Button
+                              variant="outline"
+                              onClick={() => setViewImg({ src: b.formImageUrl!, title: `เอกสาร — ${b.itemName}` })}
+                            >
+                              ดูเอกสาร
+                            </Button>
+                          )}
+                          <Button
+                            onClick={() => confirmPickup(b)}
+                            disabled={busyId === b.id || !accepted.has(b.id)}
+                          >
+                            {busyId === b.id ? "กำลังบันทึก…" : "รับของแล้ว"}
+                          </Button>
+                        </div>
+                      </div>
+
+                      <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-border bg-muted/60 p-3">
+                        <input
+                          type="checkbox"
+                          checked={accepted.has(b.id)}
+                          onChange={(e) =>
+                            setAccepted((prev) => {
+                              const next = new Set(prev);
+                              if (e.target.checked) next.add(b.id);
+                              else next.delete(b.id);
+                              return next;
+                            })
+                          }
+                          className="mt-0.5 h-5 w-5 flex-shrink-0 accent-primary"
+                        />
+                        <span className="text-sm text-foreground">
+                          ผู้รับของรับทราบว่า <strong>หากอุปกรณ์สูญหายหรือชำรุดเสียหาย จะรับผิดชอบชดใช้เต็มจำนวนตามราคาสินค้า</strong>
+                        </span>
+                      </label>
                     </Card>
                   );
                 })}
