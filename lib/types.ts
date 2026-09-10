@@ -171,6 +171,10 @@ export interface BookingDoc {
   pickedUpAt?: Timestamp | null;
   /** เวลาที่ผู้ยืมรับทราบเงื่อนไขชดใช้ต่อหน้าแอดมิน — ติ๊กก่อนส่งมอบเท่านั้น */
   liabilityAcceptedAt?: Timestamp | null;
+  /** ใครเป็นคนกดอนุมัติ+ส่งมอบ — เก็บไว้ตามรอยว่าของออกจากมือใคร */
+  approvedById?: string | null;
+  approvedByName?: string | null;
+  approvedAt?: Timestamp | null;
   /** รหัสคำขอ — ของที่กดยืมพร้อมกันในครั้งเดียวใช้รหัสนี้ร่วมกัน ใช้ทำ QR ใบเดียวต่อคำขอ */
   requestId?: string;
 }

@@ -14,6 +14,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { useNow } from "@/lib/hooks";
+import { useAuth } from "@/lib/firebase/auth-context";
 import { PageHeader, Card, Badge, Spinner, Button, Modal, EmptyState } from "@/components/ui";
 import QrScanner from "@/components/qr-scanner";
 import { parseScan } from "@/lib/qr";
@@ -30,6 +31,8 @@ function durationDays(startMs: number, endMs: number) {
 
 export default function ScanStationPage() {
   const now = useNow();
+  // แอดมินที่ล็อกอินอยู่ — บันทึกไว้ว่าใครเป็นคนปล่อยของออกไป
+  const { user: admin, profile: adminProfile } = useAuth();
 
   const [scanning, setScanning] = useState(true);
   const [manual, setManual] = useState("");
@@ -154,17 +157,26 @@ export default function ScanStationPage() {
     setBusyId(b.id);
     setErr("");
     try {
+      const approverName =
+        `${adminProfile?.firstName ?? ""} ${adminProfile?.lastName ?? ""}`.trim() ||
+        adminProfile?.nickname ||
+        admin?.email ||
+        "แอดมิน";
+
       const batch = writeBatch(db);
       batch.update(doc(db, "bookings", b.id), {
         status: "approved",
         pickedUpAt: serverTimestamp(),
         liabilityAcceptedAt: serverTimestamp(),
+        approvedById: admin?.uid ?? null,
+        approvedByName: approverName,
+        approvedAt: serverTimestamp(),
       });
       batch.update(doc(db, "slots", b.id), { status: "approved" });
       await batch.commit();
 
       await addDoc(collection(db, "feeds"), {
-        message: `${b.userName} ยืม "${b.itemName}" ไปแล้ว`,
+        message: `${approverName} อนุมัติให้ ${b.userName} ยืม "${b.itemName}"`,
         bookingId: b.id,
         userId: b.userId,
         formImageUrl: null,
@@ -418,6 +430,12 @@ export default function ScanStationPage() {
                             รับไปเมื่อ {b.pickedUpAt ? fmtDateTime(b.pickedUpAt) : fmtDateTime(b.startAt)}
                           </p>
                           <p className="text-sm text-muted-foreground">กำหนดคืน {fmtDateTime(b.endAt)}</p>
+                          {b.approvedByName && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              อนุมัติโดย {b.approvedByName}
+                              {b.approvedAt ? ` · ${fmtDateTime(b.approvedAt)}` : ""}
+                            </p>
+                          )}
                           {b.liabilityAcceptedAt && (
                             <p className="mt-1 text-xs text-muted-foreground">
                               รับทราบเงื่อนไขชดใช้แล้วเมื่อ {fmtDateTime(b.liabilityAcceptedAt)}
