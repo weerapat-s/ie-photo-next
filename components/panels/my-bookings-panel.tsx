@@ -1,6 +1,6 @@
 "use client";
 // app/(member)/my-bookings/page.tsx — การจองของฉัน + คืนอุปกรณ์
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { collection, query, where, orderBy, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { compressImageToDataUrl } from "@/lib/image";
@@ -41,6 +41,13 @@ export default function MyBookingsPanel() {
   const [filter, setFilter] = useState<Filter>("active");
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
+  // เพิ่งกดส่งคำขอมา → โชว์ QR ของคำขอนั้นทันที ไม่ต้องให้ไปกดหาเอง
+  // อ่านจาก window ตอน mount (static export ไม่มี searchParams ตอน prerender)
+  const [justSent, setJustSent] = useState<string | null>(() =>
+    typeof window === "undefined"
+      ? null
+      : (new URLSearchParams(window.location.search).get("request") || "").toUpperCase() || null
+  );
   const now = useNow(60_000);
   const { show, node: toastNode } = useToast();
 
@@ -61,6 +68,12 @@ export default function MyBookingsPanel() {
   const isActive = (b: BookingDoc) =>
     b.status === "pending" || b.status === "approved" || b.status === "pending_return";
 
+  /** รายการทั้งหมดในคำขอที่เพิ่งกดส่ง — ใช้ทำการ์ด QR ด้านบน */
+  const sentItems = useMemo(
+    () => (justSent ? bookings.filter((b) => (b.requestId || "").toUpperCase() === justSent) : []),
+    [justSent, bookings]
+  );
+
   const shown =
     filter === "all"
       ? bookings
@@ -71,6 +84,46 @@ export default function MyBookingsPanel() {
   return (
     <div>
       {err && <Alert onClose={() => setErr("")}>{err}</Alert>}
+
+      {/* เพิ่งส่งคำขอ → โชว์ QR ทันที ให้เอาไปให้แอดมินสแกนที่เคาน์เตอร์ */}
+      {sentItems.length > 0 && (
+        <Card className="mb-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-semibold text-foreground">ส่งคำขอเรียบร้อย</p>
+              <p className="mt-0.5 text-sm text-[var(--muted-ink)]">
+                เอา QR นี้ไปให้แอดมินสแกนตอนรับของ
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setJustSent(null)}
+              className="text-sm text-[var(--muted-ink)] hover:text-foreground"
+            >
+              ปิด
+            </button>
+          </div>
+
+          <div className="mt-3 flex flex-col items-center">
+            <div className="rounded-2xl bg-white p-3">
+              <QrImage value={requestQrPayload(justSent!)} size={200} alt="QR คำขอยืมอุปกรณ์" />
+            </div>
+            <p className="mt-2 font-mono text-xs tracking-widest text-[var(--muted-ink)]">{justSent}</p>
+          </div>
+
+          <ul className="mt-3 space-y-0.5 border-t border-black/8 pt-3 text-sm text-[var(--muted-ink)]">
+            {sentItems.map((b) => (
+              <li key={b.id}>· {b.itemName}</li>
+            ))}
+            <li className="pt-1">กำหนดคืน {fmtRange(sentItems[0].startAt, sentItems[0].endAt)}</li>
+          </ul>
+
+          <p className="mt-3 text-xs text-[var(--muted-ink)]">
+            ยังไม่ถือว่าอนุมัติ จนกว่าแอดมินจะสแกนและส่งมอบของ · เปิดซ้ำได้จากรายการด้านล่าง
+          </p>
+        </Card>
+      )}
+
       <ChipBar
         className="mb-4"
         value={filter}
@@ -208,7 +261,6 @@ function ReturnModal({ booking, onClose }: { booking: WithId<BookingDoc>; onClos
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-
   async function submit() {
     if (!file) return setErr("กรุณาแนบรูปอุปกรณ์ก่อนยืนยัน");
     setBusy(true);
