@@ -55,10 +55,18 @@ export default function BackBar() {
   const inMenu = links.find((l) => samePath(l.href, pathname));
   const extra = EXTRA_TITLES[pathname];
 
-  // หน้าที่อยู่ในเมนูหลักอยู่แล้ว — dock ไฮไลต์ให้แล้ว ไม่ต้องมีแถบนี้ซ้ำ
-  if (inMenu || !extra) return null;
+  // "มาจากหน้าอื่นจริง ๆ" — มี prev ที่ไม่ใช่หน้านี้เอง และไม่ใช่ราก/หน้า login/หน้า redirect
+  // (กันวนลูป: /dashboard เด้งไป /overview เอง ถ้าถอยกลับไปจะเด้งกลับมาที่เดิม)
+  const REDIRECT_STUBS = ["/", "/login", "/dashboard"];
+  const prevN = prev ? norm(prev) : null;
+  const cameFrom =
+    prevN && !samePath(prevN, pathname) && !REDIRECT_STUBS.includes(prevN) ? prevN : null;
 
-  const backTo = prev && !samePath(prev, pathname) ? norm(prev) : extra.parent;
+  // ไม่ต้องโชว์เมื่อ: เป็นหน้าย่อยที่ไม่รู้จัก (ไม่มี extra) และไม่ได้มาจากหน้าอื่น
+  // PWA ไม่มีปุ่ม back ของเบราว์เซอร์ — หน้าเมนูหลักที่ "กดเข้ามาจากที่อื่น" ก็ควรถอยกลับได้
+  if (!extra && !(inMenu && cameFrom)) return null;
+
+  const backTo = cameFrom ?? extra?.parent ?? "/";
   const backLabel =
     links.find((l) => samePath(l.href, backTo))?.label ?? EXTRA_TITLES[backTo]?.label ?? "ย้อนกลับ";
 
@@ -72,10 +80,12 @@ export default function BackBar() {
         <Icon name="chevronRight" size={18} className="rotate-180" />
         {backLabel}
       </button>
-      <span className="t-caption flex items-center gap-1.5 truncate">
-        <Icon name="chevronRight" size={16} className="opacity-40" />
-        {extra.label}
-      </span>
+      {extra && (
+        <span className="t-caption flex items-center gap-1.5 truncate">
+          <Icon name="chevronRight" size={16} className="opacity-40" />
+          {extra.label}
+        </span>
+      )}
     </div>
   );
 }
