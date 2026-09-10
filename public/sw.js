@@ -5,7 +5,9 @@
 //   - อย่างอื่นทั้งหมด (Firebase/Firestore/Google APIs ฯลฯ) — ปล่อยผ่านตามปกติ ไม่แตะ
 // เลข version เปลี่ยน = cache เก่าถูกลบทิ้งตอน activate
 // (v2 = ยกเครื่อง UI ธีม Liquid Glass — ต้องล้าง shell เก่าที่เป็นธีมเดิม)
-const CACHE_VERSION = "iephoto-v4";
+// (v5 = หลัง deploy หลายรอบ (รวม QR เข้ากับ v2) shell/chunk เก่าค้างใน cache
+//       ปนกับใหม่ ทำให้เมนู/สิทธิ์ซ้อนตอน refresh — บั๊มเวอร์ชันล้างทิ้งทุกเครื่อง)
+const CACHE_VERSION = "iephoto-v5";
 
 self.addEventListener("install", (e) => {
   self.skipWaiting();
