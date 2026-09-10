@@ -71,18 +71,23 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 }
 
 export function RequireAdmin({ children }: { children: React.ReactNode }) {
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, roleConfirmed } = useAuth();
   const router = useRouter();
   const isAdmin = role === "admin" || role === "super_admin";
 
+  // เด้งออกเฉพาะตอน "เซิร์ฟเวอร์ยืนยันแล้ว" ว่าไม่ใช่แอดมิน
+  // ถ้าเชื่อ role จาก cache ทันที คนที่เพิ่งได้สิทธิ์จะโดนเด้งไป /feed
+  // แล้วเด้งกลับเมื่อค่าจริงมาถึง = สิทธิ์สลับไปมา
   useEffect(() => {
     if (loading) return;
     if (!user) router.replace("/login");
-    else if (!isAdmin) router.replace("/feed");
-  }, [loading, user, isAdmin, router]);
+    else if (!isAdmin && roleConfirmed) router.replace("/feed");
+  }, [loading, user, isAdmin, roleConfirmed, router]);
 
   if (loading) return <Loading />;
-  if (!user || !isAdmin) return null;
+  if (!user) return null;
+  // ยังไม่ยืนยันและ cache บอกว่าไม่ใช่แอดมิน → รอก่อน อย่าเพิ่งวาบหน้าสมาชิก
+  if (!isAdmin) return <Loading />;
 
   return (
     <ProfileGate>
