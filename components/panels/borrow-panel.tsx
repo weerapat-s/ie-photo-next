@@ -6,7 +6,8 @@ import { collection, query, where, orderBy, doc, writeBatch, Timestamp, serverTi
 import { db } from "@/lib/firebase/client";
 import { compressImageToDataUrl } from "@/lib/image";
 import { findSlotConflicts, slotPayload } from "@/lib/slots";
-import { generateRequestId } from "@/lib/qr";
+import { generateRequestId, requestQrPayload } from "@/lib/qr";
+import QrImage from "@/components/qr-image";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useSettings } from "@/lib/settings-context";
 import { useCollection, useNow } from "@/lib/hooks";
@@ -88,6 +89,12 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  // มอบหมายเสร็จแล้ว → โชว์ QR ให้แอดมินสแกนตอนคนมารับของ
+  const [assigned, setAssigned] = useState<{
+    requestId: string;
+    holderName: string;
+    items: string[];
+  } | null>(null);
 
   // อุปกรณ์อาจถูกยืม/ถูกลบระหว่างที่ผู้ใช้กรอกฟอร์ม — คัดเฉพาะที่ยังว่างจริงตอน render
   // (ไม่ sync ด้วย effect เพื่อเลี่ยง render ซ้อน)
@@ -228,7 +235,12 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
         );
       }
       await batch.commit();
-      router.push(assigning ? "/workflow" : `/my-bookings?request=${requestId}`);
+      if (assigning) {
+        setAssigned({ requestId, holderName: ownerName, items: items.map((i) => i.name) });
+        setBusy(false);
+        return;
+      }
+      router.push(`/my-bookings?request=${requestId}`);
     } catch (error) {
       setErr(
         error instanceof Error && error.message === "IMAGE_TOO_LARGE"
@@ -237,6 +249,40 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
       );
       setBusy(false);
     }
+  }
+
+  // มอบหมายเสร็จ — โชว์ QR ให้สแกนรับทราบตอนส่งของจริง
+  if (assigned) {
+    return (
+      <Card>
+        <p className="font-semibold text-foreground">มอบหมายเรียบร้อย</p>
+        <p className="mt-0.5 text-sm text-[var(--muted-ink)]">
+          ให้ <strong>{assigned.holderName}</strong> สแกน QR นี้ที่สถานีตอนมารับของ
+          เพื่อบันทึกว่ารับของไปแล้วจริง
+        </p>
+
+        <div className="mt-4 flex flex-col items-center">
+          <div className="rounded-2xl bg-white p-3">
+            <QrImage value={requestQrPayload(assigned.requestId)} size={200} alt="QR การมอบหมายอุปกรณ์" />
+          </div>
+          <p className="mt-2 font-mono text-xs tracking-widest text-[var(--muted-ink)]">{assigned.requestId}</p>
+        </div>
+
+        <ul className="mt-4 space-y-0.5 border-t border-black/8 pt-4 text-sm text-[var(--muted-ink)]">
+          {assigned.items.map((n) => (
+            <li key={n}>· {n}</li>
+          ))}
+        </ul>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button onClick={() => router.push("/scan")}>ไปสถานีสแกน</Button>
+          <Button variant="outline" onClick={() => window.print()}>พิมพ์</Button>
+          <Button variant="outline" onClick={() => { setAssigned(null); setSelected(new Set()); }}>
+            มอบหมายชิ้นอื่นต่อ
+          </Button>
+        </div>
+      </Card>
+    );
   }
 
   return (
