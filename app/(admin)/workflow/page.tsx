@@ -46,6 +46,7 @@ import {
 } from "@/lib/format";
 import { groupByStage, STAGE_META, STAGE_ORDER, type Stage } from "@/lib/analytics";
 import { deriveClubJobs, type ClubJob, type JobStatus } from "@/lib/jobs";
+import { slotPayload } from "@/lib/slots";
 import type { AvailabilityDoc, BookingDoc, BookingType, DeliveryDoc, UserDoc, WithId } from "@/lib/types";
 
 type TypeFilter = BookingType | "all";
@@ -206,6 +207,47 @@ export default function WorkflowPage() {
     }
   }
 
+  /**
+   * ย้อนการคืน — เผลอกดรับคืนทั้งที่ของยังไม่ถึงกำหนดใช้/ยังไม่ได้คืนจริง
+   * คืนสถานะเป็น approved แล้วสร้าง slot กลับ ไม่งั้นคิวจะว่างให้คนอื่นจองทับ
+   * firestore.rules บังคับ slot.startAt > now-5m — ถ้าเริ่มไปแล้วต้องขยับมาเป็นตอนนี้
+   */
+  async function undoReturn(b: WithId<BookingDoc>) {
+    if (busy) return;
+    const startMs = Math.max(b.startAt.toMillis(), now + 60_000);
+    const endMs = b.endAt.toMillis();
+    if (endMs <= startMs) {
+      setErr("งานนี้เลยเวลาไปแล้ว ย้อนกลับไม่ได้ — สร้างรายการใหม่แทน");
+      return;
+    }
+    if (!confirm(`ย้อนการคืน "${b.itemName}" กลับเป็นยังไม่คืน?`)) return;
+    setBusy(b.id);
+    setErr("");
+    try {
+      const batch = writeBatch(db);
+      batch.update(doc(db, "bookings", b.id), { status: "approved" });
+      batch.set(
+        doc(db, "slots", b.id),
+        slotPayload({
+          bookingId: b.id,
+          itemId: b.itemId,
+          itemName: b.itemName,
+          bookingType: b.bookingType,
+          startAt: Timestamp.fromMillis(startMs),
+          endAt: Timestamp.fromMillis(endMs),
+          status: "approved",
+        })
+      );
+      await batch.commit();
+      show("ย้อนการคืนแล้ว — กลับไปเป็นยังไม่คืน");
+      setDetail(null);
+    } catch {
+      setErr("ย้อนการคืนไม่สำเร็จ — อาจมีคนจองคิวนี้ไปแล้ว");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
@@ -270,6 +312,7 @@ export default function WorkflowPage() {
               onOpen={setDetail}
               onApprove={approve}
               onReturn={confirmReturn}
+              onUndoReturn={undoReturn}
               onAssign={setAssigning}
               onCreateDelivery={createDelivery}
               nameOf={nameOf}
@@ -371,6 +414,7 @@ function StageColumn({
   onOpen,
   onApprove,
   onReturn,
+  onUndoReturn,
   onAssign,
   onCreateDelivery,
   nameOf,
@@ -384,6 +428,7 @@ function StageColumn({
   onOpen: (b: WithId<BookingDoc>) => void;
   onApprove: (b: WithId<BookingDoc>) => void;
   onReturn: (b: WithId<BookingDoc>) => void;
+  onUndoReturn: (b: WithId<BookingDoc>) => void;
   onAssign: (b: WithId<BookingDoc>) => void;
   onCreateDelivery: (b: WithId<BookingDoc>) => void;
   nameOf: Map<string, string>;
@@ -391,6 +436,16 @@ function StageColumn({
 }) {
   const meta = STAGE_META[stage];
   const index = STAGE_ORDER.indexOf(stage) + 1;
+
+  // "ปิดงาน" กองสะสมไปเรื่อย ๆ จนเลื่อนหาของที่ต้องดูไม่เจอ
+  // → โชว์เฉพาะที่เพิ่งปิดใน 1 วันล่าสุด ที่เก่ากว่านั้นเก็บไว้หลังปุ่ม
+  // (คอลัมน์อื่นคืองานที่ยังต้องลงมือ ไม่ตัดออก)
+  const [showOld, setShowOld] = useState(false);
+  const collapses = stage === "done";
+  const cutoff = now - 86_400_000;
+  const older = collapses ? items.filter((b) => b.endAt.toMillis() < cutoff) : [];
+  const shown = collapses && !showOld ? items.filter((b) => b.endAt.toMillis() >= cutoff) : items;
+  const visible = shown.slice(0, 20);
 
   return (
     <section className="w-[84vw] max-w-[340px] shrink-0 lg:w-auto lg:max-w-none">
@@ -412,8 +467,12 @@ function StageColumn({
           <div className="rounded-2xl border border-dashed border-black/10 py-7 text-center text-xs text-[var(--muted-ink)]">
             ว่าง
           </div>
+        ) : visible.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-black/10 py-6 text-center text-xs text-[var(--muted-ink)]">
+            ไม่มีงานที่ปิดใน 1 วันล่าสุด
+          </div>
         ) : (
-          items.slice(0, 20).map((b) => {
+          visible.map((b) => {
             const d = deliveryOf.get(b.id);
             const late = b.status === "approved" && b.endAt.toMillis() < now;
             return (
@@ -494,6 +553,21 @@ function StageColumn({
                     </Button>
                   )}
 
+                  {/* เผลอกดรับคืนทั้งที่ยังไม่ถึงเวลาใช้จริง — ย้อนกลับได้
+                      เปิดให้เฉพาะงานที่ยังไม่เลยเวลาคืน (เลยไปแล้วสร้าง slot กลับไม่ได้) */}
+                  {b.status === "returned" && b.endAt.toMillis() > now && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      icon="reset"
+                      onClick={() => onUndoReturn(b)}
+                      loading={busyId === b.id}
+                      className="flex-1"
+                    >
+                      ย้อนการคืน
+                    </Button>
+                  )}
+
                   {/* มอบหมายผู้รับผิดชอบ — ใช้ได้กับทุกงานที่อนุมัติแล้ว ไม่เฉพาะงานถ่าย
                       เพราะของที่ยืมไปก็ต้องมีคนรับผิดชอบเหมือนกัน */}
                   {/* มอบหมายได้ตั้งแต่ยังเป็นคำขอ — กรรมการมักอยากล็อกตัวคนไว้ก่อนอนุมัติ */}
@@ -523,10 +597,21 @@ function StageColumn({
             );
           })
         )}
-        {items.length > 20 && (
+        {shown.length > 20 && (
           <p className="py-1 text-center text-[11px] text-[var(--muted-ink)]">
-            และอีก {items.length - 20} รายการ
+            และอีก {shown.length - 20} รายการ
           </p>
+        )}
+
+        {/* งานที่ปิดเกิน 1 วัน — ซ่อนไว้ให้คอลัมน์ไม่ยาวจนหาของที่ต้องดูไม่เจอ */}
+        {collapses && older.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowOld((v) => !v)}
+            className="press w-full rounded-2xl border border-dashed border-black/12 py-2.5 text-xs font-semibold text-[var(--muted-ink)] hover:bg-black/5"
+          >
+            {showOld ? "ซ่อนงานที่เก่ากว่า 1 วัน" : `ดูงานที่เก่ากว่า 1 วัน (${older.length})`}
+          </button>
         )}
       </div>
     </section>
