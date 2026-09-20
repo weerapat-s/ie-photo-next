@@ -233,6 +233,16 @@ export interface MailDoc {
   refId: string | null;
   /** คีย์กันส่งซ้ำรายวัน kind:refId:uid:วันที่ */
   dedupeKey?: string | null;
+  /** ปลายทางเมื่อผู้รับกดตอบกลับ — อีเมลของคนที่ตั้งเป็นผู้ส่ง */
+  replyTo?: string | null;
+  /** uid ของกรรมการที่กดส่ง — ไว้ตามรอยว่าเมลฉบับนี้ใครสั่ง */
+  sentById?: string | null;
+  /**
+   * true = ส่งตรงถึงผู้รับไม่ได้ ไปโผล่กล่องกลางของชุมนุมแทน
+   * เกิดเมื่อยังไม่ได้ยืนยันโดเมนกับผู้ให้บริการ ต้องแยกจาก "ส่งแล้ว"
+   * ไม่งั้นหน้าจอจะบอกว่าถึงแล้วทั้งที่เจ้าตัวไม่ได้รับ
+   */
+  forwarded?: boolean | null;
   error?: string | null;
   createdAt: Timestamp;
   sentAt?: Timestamp | null;
@@ -406,6 +416,12 @@ export interface AppSettings {
   notifyEmail: boolean;
   /** อีเมลกลางของชุมนุม — สำเนาการแจ้งเตือนสำคัญ */
   notifyEmailAddress: string;
+  /**
+   * รหัสนักศึกษาของคนที่จะปรากฏเป็นผู้ส่งอีเมลของชุมนุม
+   * ที่อยู่ผู้ส่งจริงเปลี่ยนไม่ได้ (ต้องเป็นโดเมนที่ยืนยันแล้ว) ตัวนี้คุมแค่
+   * ชื่อที่แสดงกับปลายทางของการกดตอบกลับ — ดู lib/mail-sender.ts
+   */
+  mailSenderStudentId: string;
   memberTitles: string[];
 
   // ส่งงาน / NAS
@@ -459,6 +475,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 
   notifyEmail: true,
   notifyEmailAddress: "ietechphoto@gmail.com",
+  mailSenderStudentId: "68030271",
   memberTitles: [
     "ประธานชุมนุม",
     "รองประธาน",

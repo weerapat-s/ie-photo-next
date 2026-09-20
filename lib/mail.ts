@@ -12,7 +12,7 @@
 // ถ้า Worker ยังไม่ได้ตั้งคีย์ อีเมลจะค้างสถานะ "queued" ให้กรรมการเห็นในหน้าตั้งค่า
 // ว่ามีอะไรรอส่งอยู่ — ดีกว่าเงียบหายแล้วไม่มีใครรู้
 import { addDoc, collection, doc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { auth, db } from "@/lib/firebase/client";
 import { DEFAULT_BASE_URL } from "@/lib/ai/client";
 
 export interface MailInput {
@@ -24,6 +24,13 @@ export interface MailInput {
   refId?: string | null;
   /** คีย์กันส่งซ้ำ kind:refId:uid:วันที่ — ตัวกวาดใช้เช็คว่าวันนี้ส่งไปแล้วหรือยัง */
   dedupeKey?: string;
+  /**
+   * ตัวตนผู้ส่งที่อยากให้ผู้รับเห็น (ดู lib/mail-sender.ts)
+   * ที่อยู่ผู้ส่งจริงเปลี่ยนไม่ได้ ต้องเป็นโดเมนที่ยืนยันกับผู้ให้บริการแล้ว
+   * เปลี่ยนได้แค่ชื่อที่แสดงกับปลายทางของการกดตอบกลับ
+   */
+  replyTo?: string | null;
+  fromName?: string | null;
 }
 
 /** ที่อยู่ Worker /send — อิงจาก baseUrl ของ AI (Worker ตัวเดียวกัน) */
@@ -38,6 +45,9 @@ function sendUrl(aiBaseUrl?: string): string {
  * @returns true = ส่งออกไปแล้ว · false = ค้างคิวรอคีย์
  */
 export async function sendMail(mail: MailInput, aiBaseUrl?: string): Promise<boolean> {
+  // Worker ตรวจบทบาทจาก users/{uid} ก่อนยอมส่ง — ไม่มี token = ส่งไม่ได้
+  const me = auth.currentUser;
+
   let ref;
   try {
     ref = await addDoc(collection(db, "mailQueue"), {
@@ -48,6 +58,9 @@ export async function sendMail(mail: MailInput, aiBaseUrl?: string): Promise<boo
       kind: mail.kind,
       refId: mail.refId ?? null,
       dedupeKey: mail.dedupeKey ?? null,
+      replyTo: mail.replyTo ?? null,
+      // ใครเป็นคนสั่งส่ง — ไว้ตามรอยตอนมีคนถามว่าเมลนี้มาจากไหน
+      sentById: me?.uid ?? null,
       createdAt: serverTimestamp(),
     });
   } catch {
@@ -55,10 +68,17 @@ export async function sendMail(mail: MailInput, aiBaseUrl?: string): Promise<boo
   }
 
   try {
+    const idToken = me ? await me.getIdToken() : "";
     const res = await fetch(sendUrl(aiBaseUrl), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ to: mail.to.trim(), subject: mail.subject, body: mail.body }),
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+      body: JSON.stringify({
+        to: mail.to.trim(),
+        subject: mail.subject,
+        body: mail.body,
+        replyTo: mail.replyTo ?? undefined,
+        fromName: mail.fromName ?? undefined,
+      }),
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
@@ -68,11 +88,20 @@ export async function sendMail(mail: MailInput, aiBaseUrl?: string): Promise<boo
         error:
           res.status === 404
             ? "Worker ยังไม่มีปลายทาง /send — รัน npm run worker:deploy แล้ว npm run worker:mail"
-            : `${res.status} ${text.slice(0, 200)}`,
+            : res.status === 401
+              ? `Worker ปฏิเสธสิทธิ์ส่งอีเมล: ${text.slice(0, 160)}`
+              : `${res.status} ${text.slice(0, 200)}`,
       });
       return false;
     }
-    await updateDoc(doc(db, "mailQueue", ref.id), { status: "sent", sentAt: serverTimestamp() });
+    // Worker บอกมาว่าส่งตรงถึงเจ้าตัวไม่ได้ ต้องส่งต่อเข้ากล่องกลาง
+    // (ยังไม่ได้ยืนยันโดเมนกับผู้ให้บริการ) — บันทึกไว้ ไม่งั้นหน้าจอจะบอกว่าถึงแล้ว
+    const out = (await res.json().catch(() => ({}))) as { forwarded?: boolean };
+    await updateDoc(doc(db, "mailQueue", ref.id), {
+      status: "sent",
+      forwarded: out.forwarded === true,
+      sentAt: serverTimestamp(),
+    });
     return true;
   } catch {
     await updateDoc(doc(db, "mailQueue", ref.id), {

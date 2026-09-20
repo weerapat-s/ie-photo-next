@@ -6,6 +6,9 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    // ให้เขียน import "./roles.ts" ได้ — สคริปต์เทสต์รันด้วย node ตรง ๆ
+    // (--experimental-strip-types) ซึ่งต้องมีนามสกุลไฟล์ ไม่มี bundler มาเดาให้
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
