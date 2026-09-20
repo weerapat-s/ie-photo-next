@@ -15,6 +15,16 @@ const { FieldValue } = require("firebase-admin/firestore");
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || "";
 const BOOKING_TYPE_LABEL = { equipment: "📷 อุปกรณ์", studio: "🎬 สตูดิโอ" };
 
+/** เวลาไทย = UTC+7 คงที่ ไม่มี DST — บวกเอาตรง ๆ ได้ ไม่ต้องพึ่งไลบรารี timezone */
+const BKK_OFFSET_MS = 7 * 3600 * 1000;
+/** ชั่วโมงที่ประกาศรายชื่อของค้างเข้า Discord (เวลาไทย) */
+const OVERDUE_DIGEST_HOUR = 8;
+
+function bkkParts(d) {
+  const t = new Date(d.getTime() + BKK_OFFSET_MS);
+  return { hour: t.getUTCHours(), dateKey: t.toISOString().slice(0, 10) };
+}
+
 webpush.setVapidDetails(
   "https://iephoto.web.app",
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || process.env.VAPID_PUBLIC_KEY,
@@ -140,7 +150,8 @@ async function notifyDiscordNewBookings(db) {
     .where("status", "==", "pending")
     .select(
       "bookingType", "itemName", "userId", "userName", "userPhone",
-      "guestName", "startAt", "endAt", "discordNotifiedAt"
+      "guestName", "startAt", "endAt", "discordNotifiedAt",
+      "overnight", "overnightStorage"
     )
     .get();
 
@@ -159,8 +170,11 @@ async function notifyDiscordNewBookings(db) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           content:
-            `📥 **คำขอจองใหม่รอตรวจสอบ**\n` +
+            (b.overnight
+              ? `🌙 **คำขอยืมข้ามคืน — ต้องให้กรรมการดู**\n`
+              : `📥 **คำขอจองใหม่รอตรวจสอบ**\n`) +
             `${label} — **${b.itemName}**\n` +
+            (b.overnight ? `🏠 เก็บไว้ที่: ${b.overnightStorage || "ไม่ระบุ"}\n` : "") +
             `👤 ${who}${b.userPhone ? ` · 📞 ${b.userPhone}` : ""}\n` +
             `🕐 ${timeStr}\n` +
             `🔗 https://iephoto.web.app/bookings`,
@@ -177,6 +191,76 @@ async function notifyDiscordNewBookings(db) {
   return sent;
 }
 
+/**
+ * ประกาศรายชื่อของที่เลยกำหนดคืนเข้า Discord วันละครั้ง
+ *
+ * cron รันทุกครึ่งชั่วโมง จึงต้องกันส่งซ้ำเอง — ใช้ transaction จองสิทธิ์ส่งของวันนั้น
+ * ก่อนยิง webhook ถ้าสองรอบทับกันจะมีแค่รอบเดียวที่จองได้
+ * (systemState ไม่มี rules รองรับ = ฝั่ง client อ่านไม่ได้ มีแต่ Admin SDK ที่แตะได้)
+ */
+async function notifyDiscordOverdue(db) {
+  if (!DISCORD_WEBHOOK_URL) return 0;
+
+  const now = new Date();
+  const { hour, dateKey } = bkkParts(now);
+  if (hour !== OVERDUE_DIGEST_HOUR) return 0;
+
+  const ref = db.collection("systemState").doc("overdueDigest");
+  const claimed = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (snap.exists && snap.data().lastSentDate === dateKey) return false;
+    tx.set(ref, { lastSentDate: dateKey, sentAt: FieldValue.serverTimestamp() }, { merge: true });
+    return true;
+  });
+  if (!claimed) return 0;
+
+  // แยกเป็นสอง query ที่ใช้ == แทน in เพราะ == คู่กับช่วงเวลา ใช้ index รายฟิลด์
+  // ที่ Firestore สร้างให้เองได้เลย ไม่ต้องเพิ่ม composite index (โปรเจกต์นี้ไม่มีสักอัน)
+  const fields = ["itemName", "userName", "userPhone", "endAt", "overnight"];
+  const snaps = await Promise.all(
+    ["approved", "pending_return"].map((status) =>
+      db
+        .collection("bookings")
+        .where("status", "==", status)
+        .where("endAt", "<", now)
+        .select(...fields)
+        .get()
+    )
+  );
+
+  const rows = snaps.flatMap((snap) => snap.docs.map((d) => d.data()));
+  if (rows.length === 0) {
+    console.log("  overdue: ไม่มีของค้าง — ไม่ต้องประกาศ");
+    return 0;
+  }
+
+  rows.sort((a, z) => a.endAt.toMillis() - z.endAt.toMillis());
+  const shown = rows.slice(0, 25);
+  const lines = shown.map((b) => {
+    const late = Math.max(1, Math.floor((now.getTime() - b.endAt.toMillis()) / 86400000));
+    const phone = b.userPhone ? ` · 📞 ${b.userPhone}` : "";
+    const night = b.overnight ? " · 🌙 ยืมข้ามคืน" : "";
+    return `• **${b.itemName}** — ${b.userName} · เลยกำหนด ${late} วัน${phone}${night}`;
+  });
+  const more =
+    rows.length > shown.length ? `\n…และอีก ${rows.length - shown.length} รายการ` : "";
+
+  const res = await fetch(DISCORD_WEBHOOK_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      content:
+        `⏰ **ของค้างเลยกำหนดคืน ${rows.length} รายการ**\n` +
+        lines.join("\n") +
+        more +
+        `\n🔗 https://iephoto.web.app/borrow-log`,
+    }),
+  });
+  if (!res.ok && res.status !== 204) throw new Error(`HTTP ${res.status}`);
+  console.log(`  overdue: ประกาศ ${rows.length} รายการแล้ว`);
+  return rows.length;
+}
+
 (async () => {
   const db = getDb();
   console.log("=== ตรวจงานใกล้ครบกำหนด ===");
@@ -185,7 +269,12 @@ async function notifyDiscordNewBookings(db) {
   const bookingSent = await notifyBookings(db);
   console.log("=== แจ้งคำขอจองใหม่เข้า Discord ===");
   const discordSent = await notifyDiscordNewBookings(db);
-  console.log(`\n✅ ส่งแจ้งเตือนสำเร็จ: งาน ${taskSent} รายการ, การจอง ${bookingSent} รายการ, Discord ${discordSent} รายการ`);
+  console.log("=== ประกาศของค้างเลยกำหนด ===");
+  const overdueSent = await notifyDiscordOverdue(db);
+  console.log(
+    `\n✅ ส่งแจ้งเตือนสำเร็จ: งาน ${taskSent} รายการ, การจอง ${bookingSent} รายการ, ` +
+      `Discord ${discordSent} รายการ, ของค้าง ${overdueSent} รายการ`
+  );
   process.exit(0);
 })().catch((e) => {
   // โควตาอ่านรายวันหมด = สภาพแวดล้อม ไม่ใช่โค้ดพัง

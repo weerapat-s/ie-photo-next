@@ -205,7 +205,14 @@ service cloud.firestore {
              && (!('crewSize' in d) || d.crewSize == null
                  || (d.crewSize is int && d.crewSize >= 1 && d.crewSize <= 20))
              && (!('usageType' in d) || d.usageType == null
-                 || (d.usageType is string && d.usageType.size() <= 120));
+                 || (d.usageType is string && d.usageType.size() <= 120))
+             // ยืมข้ามคืน — ที่เก็บของตอนกลางคืน (ดู lib/borrow-policy.ts)
+             && (!('overnight' in d) || d.overnight == null || d.overnight is bool)
+             && (!('overnightStorage' in d) || d.overnightStorage == null
+                 || (d.overnightStorage is string && d.overnightStorage.size() <= 200))
+             // รูปตอนส่งมอบ เก็บเป็น path บน NAS เหมือน formImageUrl
+             && (!('handoverImageUrl' in d) || d.handoverImageUrl == null
+                 || (d.handoverImageUrl is string && d.handoverImageUrl.size() <= 500));
     }
 
     function validBookingCore(d) {
@@ -231,6 +238,14 @@ service cloud.firestore {
       return validBookingCore(d)
              && d.userId == request.auth.uid
              && d.endAt < d.startAt + duration.value(7,'d')
+             // ยืมอุปกรณ์ยาวกว่า 12 ชม. = คาบเกี่ยวกลางคืน ต้องบอกที่เก็บของเสมอ
+             // เทียบ duration ตรง ๆ เพราะ rules คำนวณวันตามเขตเวลาไทยไม่ได้
+             // (ต้องตรงกับ OVERNIGHT_AFTER_MS ใน lib/borrow-policy.ts)
+             && (d.bookingType != 'equipment'
+                 || d.endAt <= d.startAt + duration.value(12,'h')
+                 || (d.overnight == true
+                     && d.overnightStorage is string
+                     && d.overnightStorage.size() > 0))
              && (d.formImageUrl == null
                  || (d.formImageUrl is string && d.formImageUrl.size() <= 500));
     }
