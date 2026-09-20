@@ -15,6 +15,7 @@
 // ทางลัดบนโฮมสกรีนของคนที่ติดตั้ง PWA ไว้แล้วจึงไม่พัง
 import type { IconName } from "@/components/icon";
 import type { AppSettings, Role } from "./types";
+import { isAdminRole } from "./roles";
 
 export interface NavLink {
   href: string;
@@ -93,6 +94,55 @@ export function navLinks(role: Role | null, s: AppSettings): NavLink[] {
 }
 
 /** ช่องใน dock บนมือถือ — สูงสุด 5 ไม่งั้นเป้ากดแคบเกินนิ้วโป้ง */
+/** กลุ่มเมนูบนแถบบน (จอใหญ่) — กลุ่มที่มี children จะกลายเป็นดรอปดาวน์ */
+export interface NavGroup {
+  label: string;
+  icon: IconName;
+  /** ลิงก์เดี่ยว (ไม่มีดรอปดาวน์) */
+  href?: string;
+  children?: NavLink[];
+}
+
+/**
+ * จัดเมนูแถบบนเป็นกลุ่ม เพื่อไม่ให้ล้นจนต้องเลื่อนแนวนอน
+ * มือถือไม่ใช้ฟังก์ชันนี้ — ใช้ navLinks() แบบเรียงแบนเหมือนเดิม เพราะเมนูสไลด์เลื่อนได้อยู่แล้ว
+ *
+ * รวมเฉพาะหน้าที่ "ทำงานเรื่องเดียวกัน" ไว้ด้วยกัน ไม่ยุบมั่วเพื่อให้สั้นอย่างเดียว
+ */
+export function navGroups(role: Role | null, s: AppSettings): NavGroup[] {
+  const links = navLinks(role, s);
+  const pick = (...hrefs: string[]) => links.filter((l) => hrefs.includes(l.href));
+  const one = (href: string): NavGroup | null => {
+    const l = links.find((x) => x.href === href);
+    return l ? { label: l.label, icon: l.icon, href: l.href } : null;
+  };
+
+  const groups: (NavGroup | null)[] = [];
+
+  if (isAdminRole(role)) {
+    groups.push(one("/overview"), one("/workflow"), one("/assign"));
+
+    // ทุกอย่างที่เกี่ยวกับของ: คลัง · สแกนรับ-ส่ง · ทะเบียน · สติกเกอร์
+    const equip = pick("/resources", "/scan", "/borrow-log", "/labels");
+    if (equip.length) groups.push({ label: "อุปกรณ์", icon: "inventory", children: equip });
+
+    groups.push(one("/team"));
+
+    // กรรมการเป็นทั้งคนสั่งงานและคนทำงาน — ของส่วนตัวแยกออกมาไม่ให้ปนกับงานบริหาร
+    const mine = pick("/my", "/availability", "/calendar");
+    if (mine.length) groups.push({ label: "ของฉัน", icon: "user", children: mine });
+
+    groups.push(one("/settings"));
+  } else {
+    groups.push(one("/feed"), one("/borrow-equipment"));
+    const mine = pick("/my", "/my-bookings", "/availability", "/calendar");
+    if (mine.length) groups.push({ label: "ของฉัน", icon: "user", children: mine });
+    groups.push(one("/forms"));
+  }
+
+  return groups.filter((g): g is NavGroup => g !== null && (!!g.href || !!g.children?.length));
+}
+
 export function tabLinks(role: Role | null, s: AppSettings): NavLink[] {
   return navLinks(role, s)
     .filter((l) => l.primary)

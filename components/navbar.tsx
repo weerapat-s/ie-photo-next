@@ -1,10 +1,12 @@
 "use client";
 // components/navbar.tsx — แถบบน: โลโก้ + ลิงก์ (จอใหญ่) + เมนูสไลด์ (จอเล็ก)
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useSettings } from "@/lib/settings-context";
-import { navLinks, samePath } from "@/lib/nav";
+import { navGroups, navLinks, samePath } from "@/lib/nav";
+import type { NavGroup } from "@/lib/nav";
 import StaggeredMenu from "@/components/reactbits/StaggeredMenu";
 import Icon from "@/components/icon";
 
@@ -16,6 +18,7 @@ export default function Navbar() {
 
   const isAdmin = role === "admin" || role === "super_admin";
   const links = navLinks(role, settings);
+  const groups = navGroups(role, settings);
   const home = isAdmin ? "/dashboard" : settings.featureFeed ? "/feed" : "/my-bookings";
 
   async function handleLogout() {
@@ -48,21 +51,10 @@ export default function Navbar() {
 
           {/* ลิงก์เต็มบนจอใหญ่ — จอเล็กใช้เมนูสไลด์ + แถบล่างแทน */}
           <div className="ml-3 hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto no-scrollbar lg:flex">
-            {links
-              .filter((l) => l.href !== "/profile")
-              .map((l) => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  aria-current={samePath(pathname, l.href) ? "page" : undefined}
-                  className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm transition ${
-                    samePath(pathname, l.href)
-                      ? "bg-[var(--faculty)] font-semibold text-white shadow-[0_6px_16px_rgba(239,57,97,0.28)]"
-                      : "text-[var(--ink)]/75 hover:bg-black/5 hover:text-[var(--ink)]"
-                  }`}
-                >
-                  {l.label}
-                </Link>
+            {groups
+              .filter((g) => g.href !== "/profile")
+              .map((g) => (
+                <NavItem key={g.label} group={g} pathname={pathname} />
               ))}
           </div>
 
@@ -105,5 +97,94 @@ export default function Navbar() {
         </div>
       </nav>
     </>
+  );
+}
+
+
+/** ลิงก์เดี่ยว หรือปุ่มที่กางเมนูย่อย — ใช้เฉพาะแถบบนจอใหญ่ */
+function NavItem({ group, pathname }: { group: NavGroup; pathname: string | null }) {
+  // hooks ต้องถูกเรียกทุกครั้งก่อน early return — ไม่งั้นลำดับ hook เพี้ยนเมื่อสลับระหว่างลิงก์เดี่ยว/กลุ่ม
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const activeClass =
+    "bg-[var(--faculty)] font-semibold text-white shadow-[0_6px_16px_rgba(239,57,97,0.28)]";
+  const idleClass = "text-[var(--ink)]/75 hover:bg-black/5 hover:text-[var(--ink)]";
+  const base = "shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm transition";
+
+  // ลิงก์เดี่ยว ไม่มีเมนูย่อย
+  if (!group.children?.length) {
+    const active = samePath(pathname, group.href);
+    return (
+      <Link
+        href={group.href!}
+        aria-current={active ? "page" : undefined}
+        className={`${base} ${active ? activeClass : idleClass}`}
+      >
+        {group.label}
+      </Link>
+    );
+  }
+
+  // กลุ่ม — ถือว่า active ถ้าอยู่หน้าใดหน้าหนึ่งข้างใน
+  const active = group.children.some((c) => samePath(pathname, c.href));
+
+  return (
+    <div ref={boxRef} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className={`${base} inline-flex items-center gap-1 ${active ? activeClass : idleClass}`}
+      >
+        {group.label}
+        <Icon name="chevronDown" size={14} className={open ? "rotate-180 transition" : "transition"} />
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute left-0 top-full z-50 mt-1 min-w-[11rem] overflow-hidden rounded-2xl border border-black/8 bg-white py-1 shadow-[0_18px_44px_rgba(52,37,46,.18)]"
+        >
+          {group.children.map((c) => {
+            const on = samePath(pathname, c.href);
+            return (
+              <Link
+                key={c.href}
+                href={c.href}
+                role="menuitem"
+                aria-current={on ? "page" : undefined}
+                onClick={() => setOpen(false)}
+                className={`flex items-center gap-2 px-3.5 py-2 text-sm transition ${
+                  on
+                    ? "bg-[var(--faculty)]/10 font-semibold text-[var(--faculty)]"
+                    : "text-[var(--ink)]/80 hover:bg-black/5"
+                }`}
+              >
+                <Icon name={c.icon} size={16} />
+                {c.label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
