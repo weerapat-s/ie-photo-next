@@ -96,8 +96,16 @@ try {
   die(
     "deploy Worker ไม่สำเร็จ",
     "    ถ้าขึ้น Authentication error [code: 10000] = ล็อกอินผิดบัญชี\n" +
-      "    okmd-proxy อยู่บัญชีชุมนุม (account_id 18d2d741… ใน workers/wrangler.toml)\n" +
-      "    แก้ด้วย:  npm run worker:login   แล้วเลือกบัญชีชุมนุม"
+      "    okmd-proxy อยู่บัญชีชุมนุม (account_id 18d2d741… ใน workers/wrangler.toml)\n\n" +
+      "    ทาง A — API token (แนะนำ เพราะบัญชีนี้ใช้ร่วมกัน เก็บครั้งเดียวจบ):\n" +
+      "      สร้าง token ใน Cloudflare dashboard ของบัญชีชุมนุม (เทมเพลต Edit Cloudflare Workers)\n" +
+      "      ตั้งเป็น env var CLOUDFLARE_API_TOKEN — wrangler ใช้ตัวนี้ ไม่ต้อง login เลย\n\n" +
+      "    ทาง B — login ด้วยเบราว์เซอร์:\n" +
+      "      npx wrangler logout      ← ต้อง logout ก่อน ไม่งั้น authorize บัญชีเดิมซ้ำแล้วพังเหมือนเดิม\n" +
+      "      npm run worker:login     ← หน้าเบราว์เซอร์ต้องเป็นบัญชี Wooden Date\n" +
+      "      npx wrangler whoami      ← ต้องเห็น 18d2d741… ถึงจะไปต่อได้\n\n" +
+      "    ถ้าทำแล้วยังไม่เห็น 18d2d741… = บัญชีที่มีไม่ได้อยู่ในทีมนั้น\n" +
+      "    ต้องให้เจ้าของเชิญเข้าทีม หรือย้าย Worker มาบัญชีตัวเอง (URL เปลี่ยน + ตั้ง secret ใหม่ 5 ตัว)"
   );
 }
 
