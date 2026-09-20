@@ -28,87 +28,12 @@
  *                                       เพราะ <img src> ส่งหัว Authorization ไม่ได้)
  */
 
+import { uidFromRequest } from "./firebase-auth.js";
+
 const MAX_UPLOAD_BYTES = 6 * 1024 * 1024;
 
 /** รูปแบบ path ที่ยอมรับ — กัน ../ และกันไล่เดาไฟล์คนอื่น */
 const PATH_RE = /^borrow\/\d{4}-\d{2}\/(form|return)-[A-Za-z0-9_-]{16,32}\.jpg$/;
-
-/* ── ตรวจ Firebase ID token ────────────────────────────────────────
- * ใช้ JWKS (รูปแบบ JWK) ไม่ใช่ปลายทาง x509 เพราะ importKey("jwk") ใช้ได้ตรง ๆ
- * ส่วน x509 ต้องแกะ ASN.1 เองซึ่งพังง่ายกว่ามาก
- */
-const JWKS_URL =
-  "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
-
-let jwksCache = { keys: null, expires: 0 };
-
-async function getJwks() {
-  const now = Date.now();
-  if (jwksCache.keys && now < jwksCache.expires) return jwksCache.keys;
-
-  const res = await fetch(JWKS_URL);
-  if (!res.ok) throw new Error(`jwks ${res.status}`);
-  const body = await res.json();
-
-  // Google บอกอายุมาใน Cache-Control — เคารพตามนั้น เผื่อมีการหมุนกุญแจ
-  const cc = res.headers.get("Cache-Control") || "";
-  const maxAge = Number((cc.match(/max-age=(\d+)/) || [])[1] || 3600);
-  jwksCache = { keys: body.keys || [], expires: now + maxAge * 1000 };
-  return jwksCache.keys;
-}
-
-function b64urlToBytes(s) {
-  const b64 = s.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(s.length / 4) * 4, "=");
-  const bin = atob(b64);
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
-}
-
-function b64urlToJson(s) {
-  return JSON.parse(new TextDecoder().decode(b64urlToBytes(s)));
-}
-
-/**
- * คืน uid ถ้า token ใช้ได้จริง — โยน Error ถ้าไม่ผ่าน
- * ตรวจครบทั้งลายเซ็น, aud, iss, exp, sub ตามที่เอกสาร Firebase กำหนด
- */
-async function verifyIdToken(idToken, projectId) {
-  const parts = String(idToken || "").split(".");
-  if (parts.length !== 3) throw new Error("รูปแบบ token ไม่ถูกต้อง");
-
-  const header = b64urlToJson(parts[0]);
-  const payload = b64urlToJson(parts[1]);
-
-  if (header.alg !== "RS256") throw new Error("alg ต้องเป็น RS256");
-
-  const now = Math.floor(Date.now() / 1000);
-  if (!payload.exp || payload.exp <= now) throw new Error("token หมดอายุ");
-  if (payload.iat && payload.iat > now + 300) throw new Error("iat อยู่ในอนาคต");
-  if (payload.aud !== projectId) throw new Error("aud ไม่ตรงโปรเจกต์");
-  if (payload.iss !== `https://securetoken.google.com/${projectId}`) throw new Error("iss ไม่ถูกต้อง");
-  if (!payload.sub) throw new Error("ไม่มี sub");
-
-  const jwk = (await getJwks()).find((k) => k.kid === header.kid);
-  if (!jwk) throw new Error("ไม่พบกุญแจที่ตรงกับ kid");
-
-  const key = await crypto.subtle.importKey(
-    "jwk",
-    jwk,
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["verify"]
-  );
-  const ok = await crypto.subtle.verify(
-    "RSASSA-PKCS1-v1_5",
-    key,
-    b64urlToBytes(parts[2]),
-    new TextEncoder().encode(`${parts[0]}.${parts[1]}`)
-  );
-  if (!ok) throw new Error("ลายเซ็นไม่ถูกต้อง");
-
-  return payload.sub;
-}
 
 /* ── Nextcloud ──────────────────────────────────────────────────── */
 
@@ -168,10 +93,9 @@ export async function handleNas(request, env, cors) {
     return reply({ error: "ยังไม่ได้ตั้ง FIREBASE_PROJECT_ID ใน wrangler.toml" }, 503);
   }
 
-  const bearer = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   let uid;
   try {
-    uid = await verifyIdToken(bearer, env.FIREBASE_PROJECT_ID);
+    uid = await uidFromRequest(request, env);
   } catch (e) {
     return reply({ error: `ยืนยันตัวตนไม่ผ่าน: ${String(e.message || e).slice(0, 120)}` }, 401);
   }

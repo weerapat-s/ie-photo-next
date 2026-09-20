@@ -7,11 +7,15 @@ import { runReminders } from "../workers/cron-reminders.js";
 import { readFileSync } from "node:fs";
 const src = readFileSync(new URL("../workers/cron-reminders.js", import.meta.url), "utf8");
 
-// ตัดเอาเฉพาะฟังก์ชัน pure ที่ไม่พึ่ง fetch/crypto มาประเมิน
+// ตัดเอาเฉพาะส่วนที่ไม่เรียก network ตอนโหลด มาประเมิน
+//
+// เดิมตัดทิ้งตั้งแต่ "export async function" ตัวแรก ซึ่งพังทันทีที่มีใคร export
+// ฟังก์ชัน async เพิ่มไว้ก่อน computeReminders (เคยเกิดแล้ว: getAccessToken)
+// ตอนนี้แค่ถอดคีย์เวิร์ด export ออก ลำดับในไฟล์จึงไม่มีผล
+// ฟังก์ชันที่เรียก fetch/crypto ถูกประกาศเฉย ๆ ไม่ได้ถูกเรียก จึงไม่มีปัญหา
 const pure = src
-  .split("/* ═══ ตัวรัน cron")[0]           // ตัดส่วนที่มี fetch ออก
-  .replace(/export async function[\s\S]*/, "")
-  .replace(/export function/g, "function") + "\nglobalThis.__t={computeReminders,dedupeKey,daysLate,ms};";
+  .split("/* ═══ ตัวรัน cron")[0]
+  .replace(/^export /gm, "") + "\nglobalThis.__t={computeReminders,dedupeKey,daysLate,ms};";
 new Function(pure)();
 const { computeReminders, dedupeKey } = globalThis.__t;
 

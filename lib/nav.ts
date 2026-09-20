@@ -15,7 +15,7 @@
 // ทางลัดบนโฮมสกรีนของคนที่ติดตั้ง PWA ไว้แล้วจึงไม่พัง
 import type { IconName } from "@/components/icon";
 import type { AppSettings, Role } from "./types";
-import { isAdminRole } from "./roles";
+import { isAdminRole } from "./roles.ts";
 
 export interface NavLink {
   href: string;
@@ -68,6 +68,7 @@ export function navLinks(role: Role | null, s: AppSettings): NavLink[] {
     { href: "/borrow-log", label: "ทะเบียนการยืม", icon: "inventory" },
     { href: "/labels", label: "พิมพ์ QR", icon: "form" },
     { href: "/team", label: "ทีมงาน", icon: "members", primary: true },
+    { href: "/mail", label: "ส่งอีเมล", icon: "form" },
     // กรรมการเป็นทั้งคนสั่งงานและคนทำงาน — ต้องเข้าถึงงานของตัวเองได้เหมือนสมาชิก
     { href: "/my", label: "งานของฉัน", icon: "delivery" },
     { href: "/availability", label: "วันว่างของฉัน", icon: "availability" },
@@ -85,6 +86,8 @@ export function navLinks(role: Role | null, s: AppSettings): NavLink[] {
     if (href === "/resources") return s.featureBorrow || s.featureStudio || s.featurePhotographer;
     // สถานีสแกน/พิมพ์ QR ใช้กับการยืมของเท่านั้น — ปิดฟีเจอร์ยืม เมนูก็หายไปด้วย
     if (href === "/scan" || href === "/labels" || href === "/borrow-log") return s.featureBorrow;
+    // ส่งอีเมลเองต้องเปิดการแจ้งเตือนทางอีเมลไว้ ไม่งั้นท่อส่งก็ไม่ได้ตั้ง
+    if (href === "/mail") return s.notifyEmail;
     if (href === "/deliveries") return s.featureDeliveries;
     if (href === "/forms") return s.featureForms;
     return true;
@@ -126,7 +129,10 @@ export function navGroups(role: Role | null, s: AppSettings): NavGroup[] {
     const equip = pick("/resources", "/scan", "/borrow-log", "/labels");
     if (equip.length) groups.push({ label: "อุปกรณ์", icon: "inventory", children: equip });
 
-    groups.push(one("/team"));
+    // ทีมงาน + การติดต่อทีมงาน อยู่ด้วยกัน
+    const people = pick("/team", "/mail");
+    if (people.length > 1) groups.push({ label: "ทีมงาน", icon: "members", children: people });
+    else groups.push(one("/team"));
 
     // กรรมการเป็นทั้งคนสั่งงานและคนทำงาน — ของส่วนตัวแยกออกมาไม่ให้ปนกับงานบริหาร
     const mine = pick("/my", "/availability", "/calendar");

@@ -71,7 +71,8 @@ async function importPrivateKey(pem) {
 }
 
 /** ขอ access token จาก Google ด้วย JWT ที่เซ็นด้วย service account */
-async function getAccessToken(saJson) {
+// export เพื่อให้ firebase-auth.js อ่านบทบาทผู้ใช้ได้ด้วย service account เดียวกัน
+export async function getAccessToken(saJson) {
   const sa = JSON.parse(saJson);
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "RS256", typ: "JWT" };
@@ -111,7 +112,7 @@ async function listAll(token, collection) {
   return out;
 }
 
-async function getDocFields(token, path) {
+export async function getDocFields(token, path) {
   const r = await fetch(`${BASE}/${path}`, { headers: { Authorization: `Bearer ${token}` } });
   if (!r.ok) return null;
   const j = await r.json();
