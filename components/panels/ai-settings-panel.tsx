@@ -220,6 +220,24 @@ export default function AiSettingsPanel() {
             />
           </Field>
 
+          <Field
+            label="รหัสนักศึกษาของคนที่เป็นผู้ส่ง"
+            help="ผู้รับจะเห็นชื่อคนนี้เป็นผู้ส่ง และกดตอบกลับแล้วเข้ากล่องของคนนี้"
+          >
+            <input
+              defaultValue={settings.mailSenderStudentId}
+              onBlur={(e) => void saveSettings({ mailSenderStudentId: e.target.value.trim() })}
+              className={inputClass}
+              maxLength={20}
+              inputMode="numeric"
+            />
+          </Field>
+
+          <p className="t-caption mt-2">
+            ที่อยู่ผู้ส่งเปลี่ยนไม่ได้ ต้องเป็นโดเมนที่ยืนยันกับผู้ให้บริการแล้ว ไม่งั้นใครก็ปลอมเป็นใครก็ได้
+            ตั้งได้แค่ชื่อที่แสดงกับปลายทางของการกดตอบกลับ
+          </p>
+
           <p className="t-caption mt-2">
             ตัวส่งจริงคือ Cloudflare Worker ตัวเดียวกับ AI ซึ่งถือคีย์ผู้ให้บริการไว้ฝั่งเซิร์ฟเวอร์แล้ว
             สถานะทุกฉบับดูได้ด้านล่าง — ล้มเหลวก็จะบอกเหตุผล ไม่หายเงียบ

@@ -12,8 +12,12 @@
  * คีย์จึงไม่เคยเดินทางมาถึงเบราว์เซอร์เลย
  *
  * สถานะตอนนี้: https://okmd-proxy.wooden-date.workers.dev (claim เข้าบัญชีชุมนุมแล้ว)
- * แต่ตัวที่รันอยู่บนนั้นยังเป็นโค้ดรุ่นแรก — **ยังไม่มี /send และยังไม่มีคีย์ฝั่งเซิร์ฟเวอร์**
- * ต้องรัน worker:deploy + worker:key + worker:mail ถึงจะครบตามไฟล์นี้
+ * ตรวจเมื่อ 20 ก.ย. 2026: /send ขึ้นแล้ว (ตอบ "bad json" = เส้นทางมีจริง)
+ * ส่วน /nas ยังไม่ขึ้น (ตอบ "path not allowed") ต้อง worker:deploy + worker:nas เพิ่ม
+ *
+ * ⚠️ บัญชี Cloudflare ที่ deploy ได้คือบัญชีชุมนุม (account_id 18d2d741… ใน wrangler.toml)
+ * ถ้า wrangler ล็อกอินบัญชีอื่นอยู่ deploy จะได้ "Authentication error [code: 10000]"
+ * แก้ด้วย npm run worker:login แล้วเลือกบัญชีชุมนุม
  * ตัวแอปตั้งค่านี้เป็นปลายทางเริ่มต้นให้อยู่แล้ว (ดู DEFAULT_BASE_URL ใน lib/ai/client.ts)
  *
  * ขั้นที่ควรทำต่อ — ย้ายคีย์มาเก็บฝั่ง Worker เพื่อไม่ให้คีย์ผ่านเบราว์เซอร์:
@@ -31,6 +35,7 @@
 
 import { runReminders } from "./cron-reminders.js";
 import { handleNas } from "./nas-files.js";
+import { requireAdmin } from "./firebase-auth.js";
 
 const UPSTREAM = "https://gen.ai.kku.ac.th/okmd/api/v1";
 
@@ -91,6 +96,17 @@ export default {
     // ตั้งคีย์ด้วย: npm run worker:mail
     if (url.pathname === "/send") {
       if (request.method !== "POST") return json({ error: { message: "POST only" } }, 405, cors);
+
+      // ส่งอีเมลออกจากบัญชีของชุมนุม = ต้องรู้ให้ได้ว่าใครสั่ง
+      // หัว Origin ปลอมได้ถ้ายิงจากนอกเบราว์เซอร์ ถ้าเชื่อแค่นั้น ใครก็เอา Worker
+      // ไปส่งอีเมลในนามชุมนุมได้ จึงตรวจลายเซ็น ID token + บทบาทใน users/{uid}
+      let sender;
+      try {
+        sender = await requireAdmin(request, env);
+      } catch (e) {
+        return json({ error: { message: `ส่งอีเมลไม่ได้: ${String(e.message || e).slice(0, 140)}` } }, 401, cors);
+      }
+
       if (!env.RESEND_API_KEY) {
         return json(
           { error: { message: "ยังไม่ได้ตั้ง RESEND_API_KEY บน worker — รัน npm run worker:mail" } },
@@ -108,8 +124,13 @@ export default {
         return json({ error: { message: "ต้องมี to, subject, body" } }, 400, cors);
       }
       try {
-        await sendResend(env, mail.to, mail.subject, mail.body);
-        return json({ ok: true }, 200, cors);
+        const out = await sendResend(env, mail.to, mail.subject, mail.body, {
+          replyTo: mail.replyTo,
+          fromName: mail.fromName,
+        });
+        // forwarded = ส่งตรงถึงผู้รับไม่ได้ ไปโผล่กล่องกลางแทน
+        // ต้องบอกกลับไป ไม่งั้นหน้าจอจะขึ้นว่า "ส่งแล้ว" ทั้งที่เจ้าตัวไม่ได้รับ
+        return json({ ok: true, sentBy: sender.uid, forwarded: out.forwarded }, 200, cors);
       } catch (e) {
         return json({ error: { message: String(e).slice(0, 300) } }, 502, cors);
       }
@@ -164,24 +185,40 @@ export default {
 
 /** ส่งอีเมลผ่าน Resend — ใช้ร่วมกันทั้ง /send และ cron
  *  คืน true ถ้าปลายทางรับ (ส่งตรงหรือส่งต่อเข้ากล่องกลางสำเร็จ) */
-async function sendResend(env, to, subject, body) {
-  const from = env.MAIL_FROM || "IE-Photo <onboarding@resend.dev>";
+async function sendResend(env, to, subject, body, opts = {}) {
+  const base = env.MAIL_FROM || "IE-Photo <onboarding@resend.dev>";
+
+  // ที่อยู่ผู้ส่งเปลี่ยนไม่ได้ ต้องเป็นโดเมนที่ยืนยันกับผู้ให้บริการแล้วเท่านั้น
+  // เปลี่ยนได้แค่ "ชื่อที่แสดง" กับ reply_to — คนกดตอบกลับจึงไปถึงตัวคนส่งจริง
+  const address = (base.match(/<(.+)>/) || [null, base])[1];
+  const name = String(opts.fromName || "").trim().slice(0, 80);
+  const from = name ? `${name} <${address}>` : base;
+  const replyTo = String(opts.replyTo || "").trim().slice(0, 200);
+
   const call = (recipient, subj, text) =>
     fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.RESEND_API_KEY}` },
-      body: JSON.stringify({ from, to: [recipient], subject: subj, text }),
+      body: JSON.stringify({
+        from,
+        to: [recipient],
+        subject: subj,
+        text,
+        ...(replyTo ? { reply_to: replyTo } : {}),
+      }),
     });
 
+  let forwarded = false;
   let res = await call(String(to).slice(0, 200), String(subject).slice(0, 200), String(body).slice(0, 4000));
   if (res.status === 403 && env.MAIL_FALLBACK_TO && to !== env.MAIL_FALLBACK_TO) {
+    forwarded = true;
     const note =
       `[ส่งต่อจากระบบ] อีเมลนี้ตั้งใจส่งถึง: ${to}\n` +
       `ส่งตรงไม่ได้เพราะยังไม่ได้ยืนยันโดเมน กรุณาส่งต่อให้เจ้าตัว\n\n${"─".repeat(40)}\n\n`;
     res = await call(env.MAIL_FALLBACK_TO, `[ถึง ${to}] ${subject}`, note + body);
   }
   if (!res.ok) throw new Error(`resend ${res.status}: ${(await res.text()).slice(0, 120)}`);
-  return true;
+  return { forwarded };
 }
 
 function json(obj, status, cors) {

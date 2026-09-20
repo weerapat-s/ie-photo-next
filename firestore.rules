@@ -49,7 +49,12 @@ service cloud.firestore {
              && d.subject is string && d.subject.size() > 0 && d.subject.size() <= 200
              && d.body is string && d.body.size() > 0 && d.body.size() <= 4000
              && d.status == 'queued'
-             && d.kind is string && d.kind.size() <= 40;
+             && d.kind is string && d.kind.size() <= 40
+             && (!('replyTo' in d) || d.replyTo == null
+                 || (d.replyTo is string && d.replyTo.size() <= 200))
+             // ต้องเป็น uid ตัวเอง — ไม่งั้นบันทึกว่าคนอื่นเป็นคนสั่งส่งได้
+             && (!('sentById' in d) || d.sentById == null || d.sentById == request.auth.uid)
+             && (!('forwarded' in d) || d.forwarded == null || d.forwarded is bool);
     }
 
     // ── users ──────────────────────────────────────────────────
