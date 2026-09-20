@@ -3,6 +3,10 @@
  * ต้องมี env: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY,
  *             FIREBASE_DATABASE_ID, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY
  * ไม่บังคับ: DISCORD_WEBHOOK_URL (ไม่ตั้งค่า = ข้ามการแจ้ง Discord เงียบๆ)
+ *
+ * ทุก query ใช้ .select() เลือกเฉพาะฟิลด์ที่ใช้จริง — booking บางใบฝังรูป base64
+ * หลักแสน byte ไว้ใน formImageUrl/returnImageUrl และ Firestore รุ่นนี้คิดโควตาเป็น
+ * "read units" ตามขนาดเอกสาร ดึงมาทั้งใบทั้งที่ไม่ได้ใช้รูปเลยจึงกินโควตาฟรีจนหมดวัน
  */
 const webpush = require("web-push");
 const { getDb } = require("./lib-admin.cjs");
@@ -22,7 +26,9 @@ const BOOKING_WINDOW_MS = 3 * 3600 * 1000; // แจ้งการจองท�
 
 async function sendTo(db, userId, payload) {
   const ref = db.collection("users").doc(userId);
-  const u = (await ref.get()).data() || {};
+  // fieldMask: เอาเฉพาะ subscription — รูปโปรไฟล์เป็น data URL ก้อนใหญ่ ไม่ต้องดึงมา
+  const [doc] = await db.getAll(ref, { fieldMask: ["pushSubscriptions", "pushSubscription"] });
+  const u = doc.data() || {};
   const subs = Array.isArray(u.pushSubscriptions)
     ? u.pushSubscriptions
     : (u.pushSubscription ? [u.pushSubscription] : []);
@@ -57,6 +63,7 @@ async function notifyTasks(db) {
     .where("status", "in", ["pending", "in_progress"])
     .where("dueDate", ">", lowerBound)
     .where("dueDate", "<=", cutoff)
+    .select("title", "dueDate", "assignedToId", "assignedToName", "reminderSentAt")
     .get();
 
   let sent = 0;
@@ -92,6 +99,7 @@ async function notifyBookings(db) {
     .where("status", "==", "approved")
     .where("startAt", ">", lowerBound)
     .where("startAt", "<=", cutoff)
+    .select("itemName", "startAt", "userId", "userName", "reminderSentAt")
     .get();
 
   let sent = 0;
@@ -127,7 +135,14 @@ async function notifyDiscordNewBookings(db) {
 
   // ดึง booking ที่ยัง pending ทั้งหมด แล้วกรอง discordNotifiedAt ฝั่งนี้
   // (เหมือน pattern reminderSentAt เดิม — pending มีจำนวนจำกัดเพราะแอดมินตัดสินใจแล้วก็หลุดจาก filter)
-  const snap = await db.collection("bookings").where("status", "==", "pending").get();
+  const snap = await db
+    .collection("bookings")
+    .where("status", "==", "pending")
+    .select(
+      "bookingType", "itemName", "userId", "userName", "userPhone",
+      "guestName", "startAt", "endAt", "discordNotifiedAt"
+    )
+    .get();
 
   let sent = 0;
   for (const d of snap.docs) {
@@ -173,6 +188,12 @@ async function notifyDiscordNewBookings(db) {
   console.log(`\n✅ ส่งแจ้งเตือนสำเร็จ: งาน ${taskSent} รายการ, การจอง ${bookingSent} รายการ, Discord ${discordSent} รายการ`);
   process.exit(0);
 })().catch((e) => {
+  // โควตาอ่านรายวันหมด = สภาพแวดล้อม ไม่ใช่โค้ดพัง
+  // ปล่อยให้ job แดงจะได้เมลแจ้งเตือนทุกครึ่งชั่วโมงจนกว่าโควตาจะรีเซ็ต ซึ่งไม่ช่วยอะไร
+  if (e.code === 8 || /RESOURCE_EXHAUSTED|Quota/i.test(e.message || "")) {
+    console.warn("⚠ ข้ามรอบนี้: โควตาอ่าน Firestore รายวันหมด — จะลองใหม่รอบหน้า");
+    process.exit(0);
+  }
   console.error("✗ FAILED:", e.message);
   process.exit(1);
 });
