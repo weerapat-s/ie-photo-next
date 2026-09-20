@@ -27,6 +27,7 @@ import {
   BOOKING_TYPE_LABEL,
 } from "@/lib/format";
 import type { BookingDoc, BookingStatus, WithId } from "@/lib/types";
+import NasImage from "@/components/nas-image";
 
 const FILTERS: { key: BookingStatus | "all"; label: string }[] = [
   { key: "pending", label: "รอดำเนินการ" },
@@ -260,18 +261,15 @@ export default function AdminBookingsPage() {
 
       <Modal open={!!viewImg} onClose={() => setViewImg(null)} title="หลักฐาน" maxWidth="max-w-2xl">
         {viewImg && (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={viewImg} alt="หลักฐาน" className="max-h-[70vh] w-full rounded-2xl border border-black/8 object-contain" />
-            <a
-              href={viewImg}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-3 block text-center text-sm font-semibold text-[var(--faculty)] hover:underline"
-            >
-              เปิดในแท็บใหม่ ↗
-            </a>
-          </>
+          <NasImage
+            value={viewImg}
+            alt="หลักฐาน"
+            className="max-h-[70vh] w-full rounded-2xl border border-black/8 object-contain"
+            openLink={{
+              label: "เปิดในแท็บใหม่ ↗",
+              className: "mt-3 block text-center text-sm font-semibold text-[var(--faculty)] hover:underline",
+            }}
+          />
         )}
       </Modal>
 

@@ -14,6 +14,7 @@
     "test:ai": "node --experimental-strip-types scripts/test-ai-contract.mts",
     "worker:mail": "wrangler secret put RESEND_API_KEY --config workers/wrangler.toml",
     "worker:sa": "wrangler secret put SERVICE_ACCOUNT --config workers/wrangler.toml",
+    "worker:nas": "wrangler secret put NAS_SHARE_TOKEN --config workers/wrangler.toml",
     "worker:cron-token": "wrangler secret put CRON_TOKEN --config workers/wrangler.toml"
   },
   "dependencies": {
