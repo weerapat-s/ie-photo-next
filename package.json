@@ -8,14 +8,14 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --experimental-strip-types scripts/test-analytics.mts && node --experimental-strip-types scripts/test-pairing.mts && node --experimental-strip-types scripts/test-model-chain.mts && node --experimental-strip-types scripts/test-reminders.mts && node --experimental-strip-types scripts/test-crew-status.mts && node --experimental-strip-types scripts/test-nav-path.mts && node --experimental-strip-types scripts/test-ai-parse.mts && node --experimental-strip-types scripts/test-jobs.mts && node --experimental-strip-types scripts/test-borrow-policy.mts && node scripts/test-cron.mjs",
-    "worker:login": "wrangler login",
-    "worker:deploy": "wrangler deploy --config workers/wrangler.toml",
-    "worker:key": "wrangler secret put OKMD_API_KEY --config workers/wrangler.toml",
+    "worker:login": "npx wrangler login",
+    "worker:deploy": "npx wrangler deploy --config workers/wrangler.toml",
+    "worker:key": "npx wrangler secret put OKMD_API_KEY --config workers/wrangler.toml",
     "test:ai": "node --experimental-strip-types scripts/test-ai-contract.mts",
-    "worker:mail": "wrangler secret put RESEND_API_KEY --config workers/wrangler.toml",
-    "worker:sa": "wrangler secret put SERVICE_ACCOUNT --config workers/wrangler.toml",
-    "worker:nas": "wrangler secret put NAS_SHARE_TOKEN --config workers/wrangler.toml",
-    "worker:cron-token": "wrangler secret put CRON_TOKEN --config workers/wrangler.toml"
+    "worker:mail": "npx wrangler secret put RESEND_API_KEY --config workers/wrangler.toml",
+    "worker:sa": "npx wrangler secret put SERVICE_ACCOUNT --config workers/wrangler.toml",
+    "worker:nas": "npx wrangler secret put NAS_SHARE_TOKEN --config workers/wrangler.toml",
+    "worker:cron-token": "npx wrangler secret put CRON_TOKEN --config workers/wrangler.toml"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

@@ -12,8 +12,12 @@
  * คีย์จึงไม่เคยเดินทางมาถึงเบราว์เซอร์เลย
  *
  * สถานะตอนนี้: https://okmd-proxy.wooden-date.workers.dev (claim เข้าบัญชีชุมนุมแล้ว)
- * แต่ตัวที่รันอยู่บนนั้นยังเป็นโค้ดรุ่นแรก — **ยังไม่มี /send และยังไม่มีคีย์ฝั่งเซิร์ฟเวอร์**
- * ต้องรัน worker:deploy + worker:key + worker:mail ถึงจะครบตามไฟล์นี้
+ * ตรวจเมื่อ 20 ก.ย. 2026: /send ขึ้นแล้ว (ตอบ "bad json" = เส้นทางมีจริง)
+ * ส่วน /nas ยังไม่ขึ้น (ตอบ "path not allowed") ต้อง worker:deploy + worker:nas เพิ่ม
+ *
+ * ⚠️ บัญชี Cloudflare ที่ deploy ได้คือบัญชีชุมนุม (account_id 18d2d741… ใน wrangler.toml)
+ * ถ้า wrangler ล็อกอินบัญชีอื่นอยู่ deploy จะได้ "Authentication error [code: 10000]"
+ * แก้ด้วย npm run worker:login แล้วเลือกบัญชีชุมนุม
  * ตัวแอปตั้งค่านี้เป็นปลายทางเริ่มต้นให้อยู่แล้ว (ดู DEFAULT_BASE_URL ใน lib/ai/client.ts)
  *
  * ขั้นที่ควรทำต่อ — ย้ายคีย์มาเก็บฝั่ง Worker เพื่อไม่ให้คีย์ผ่านเบราว์เซอร์:
