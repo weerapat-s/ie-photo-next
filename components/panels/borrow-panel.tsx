@@ -6,6 +6,7 @@ import { collection, query, where, orderBy, doc, writeBatch, Timestamp, serverTi
 import { db } from "@/lib/firebase/client";
 import { uploadBorrowImage } from "@/lib/nas";
 import { findSlotConflicts, slotPayload } from "@/lib/slots";
+import { needsOvernightApproval, overdueItems, overdueBlockMessage } from "@/lib/borrow-policy";
 import { generateRequestId, requestQrPayload } from "@/lib/qr";
 import QrImage from "@/components/qr-image";
 import { useAuth } from "@/lib/firebase/auth-context";
@@ -70,11 +71,36 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
   const busyMap = useMemo(() => buildBusyMap(availability), [availability]);
   const [holder, setHolder] = useState<string[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  /**
+   * ของที่ "คนที่จะถือของ" ยังไม่ได้คืน — ใช้กันคนที่มีของค้างเลยกำหนดไม่ให้ยืมเพิ่ม
+   * โหมดมอบหมายเช็คของผู้รับ ไม่ใช่ของกรรมการที่กดสั่ง
+   *
+   * กันได้แค่ฝั่งหน้าเว็บ: firestore.rules รวมยอดข้ามเอกสารไม่ได้ (ไม่มี query ใน rules)
+   * ถ้าจะบังคับในฐานข้อมูลต้อง denormalize กำหนดคืนที่ใกล้สุดไว้บน users ซึ่งเสี่ยง
+   * ข้อมูลไม่ตรงกันแล้วบล็อกคนที่ไม่ได้ค้างจริง — ด่านจริงคือตอนส่งมอบที่ /scan
+   */
+  const borrowerId = assigning ? (holder[0] ?? null) : (user?.uid ?? null);
+  const { data: holdingBookings } = useCollection<BookingDoc>(
+    () =>
+      borrowerId
+        ? query(
+            collection(db, "bookings"),
+            where("userId", "==", borrowerId),
+            where("status", "in", ["approved", "pending_return"])
+          )
+        : null,
+    [borrowerId]
+  );
+  const overdue = useMemo(
+    () => (now === null ? [] : overdueItems(holdingBookings, now)),
+    [holdingBookings, now]
+  );
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [range, setRange] = useState<TimeRange>({ start: null, end: null });
   const [reason, setReason] = useState("");
+  const [overnightStorage, setOvernightStorage] = useState("");
   /**
    * งานชุมนุมหรืองานส่วนตัว — เก็บลง usageType ใช้ฟิลด์เดียวกับงานถ่าย
    * จึงไปโผล่ในระบบสั่งงาน/ภาระงาน/รายงานได้เหมือนกันโดยไม่ต้องเพิ่มฟิลด์ใหม่
@@ -118,6 +144,9 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
   // ของที่ต้องเบิกคู่กัน — คำนวณจากสิ่งที่เลือกไว้ตอนนี้ (ดู lib/pairing.ts)
   const pairs = useMemo(() => pairRequirements(selectedIds, equipments), [selectedIds, equipments]);
   const unmet = useMemo(() => unmetRequirements(selectedIds, equipments), [selectedIds, equipments]);
+  /** ช่วงที่เลือกยาวจนคาบเกี่ยวกลางคืน — ต้องบอกที่เก็บของก่อนถึงจะส่งคำขอได้ */
+  const overnight =
+    range.start !== null && range.end !== null && needsOvernightApproval(range.start, range.end);
   // กรรมการสั่งงานเองไม่ต้องแนบใบขออนุญาต — เอกสารมีไว้กันสมาชิกยืมตามอำเภอใจ
   const docRequired = settings.requireBorrowDocument && !assigning;
 
@@ -129,6 +158,8 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
     unmet.length === 0 &&
     (!assigning || holder.length === 1) &&
     (!docRequired || file) &&
+    (!overnight || overnightStorage.trim().length > 0) &&
+    overdue.length === 0 &&
     range.end > range.start &&
     !busy;
 
@@ -139,6 +170,7 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
     if (docRequired && !file) return setErr("กรุณาแนบเอกสารขออนุญาต");
     if (assigning && holder.length !== 1) return setErr("เลือกผู้รับผิดชอบ 1 คน");
     if (unmet.length > 0) return setErr(describeUnmet(unmet));
+    if (overdue.length > 0 && now !== null) return setErr(overdueBlockMessage(overdue, now));
 
     if (forClub && !clubJob.trim()) {
       setErr("เลือกงานชุมนุม หรือสร้างงานใหม่ก่อน");
@@ -146,6 +178,8 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
       return;
     }
     if (range.start === null || range.end === null) return setErr("กรุณาเลือกวันและเวลาให้ครบ");
+    if (needsOvernightApproval(range.start, range.end) && !overnightStorage.trim())
+      return setErr("ยืมข้ามคืนต้องระบุที่เก็บของตอนกลางคืน");
     const startDate = new Date(range.start);
     const endDate = new Date(range.end);
     if (endDate <= startDate) return setErr("เวลาคืนต้องอยู่หลังเวลายืม");
@@ -209,6 +243,9 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
           formImageUrl,
           returnImageUrl: null,
           usageReason: reason.trim(),
+          overnight,
+          overnightStorage: overnight ? overnightStorage.trim() : null,
+          handoverImageUrl: null,
           usageType: forClub ? (clubJob.trim() ? `ชุมนุม: ${clubJob.trim()}` : "งานชุมนุม") : "งานส่วนตัว",
           location: null,
           crewSize: null,
@@ -528,6 +565,22 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
             )}
           </Field>
 
+          {overnight && (
+            <Field
+              label="ยืมข้ามคืน — เก็บของไว้ที่ไหน"
+              required
+              help="กรรมการจะเห็นคำขอนี้แยกจากคำขอปกติ ของหายตอนกลางคืนคนยืมรับผิดชอบเต็มจำนวน"
+            >
+              <input
+                value={overnightStorage}
+                onChange={(e) => setOvernightStorage(e.target.value)}
+                className={inputClass}
+                maxLength={200}
+                placeholder="เช่น หอพัก ตึก A ห้อง 512 / ตู้ล็อกเกอร์ชั้น 3"
+              />
+            </Field>
+          )}
+
           <Field label="รายละเอียด" required>
             <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} className={inputClass} maxLength={500} placeholder="ใช้ทำอะไร ที่ไหน" />
           </Field>
@@ -546,6 +599,10 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
             />
           </Field>
         </Card>
+
+        {overdue.length > 0 && now !== null && (
+          <Alert>{overdueBlockMessage(overdue, now)}</Alert>
+        )}
 
         {err && <Alert onClose={() => setErr("")}>{err}</Alert>}
 

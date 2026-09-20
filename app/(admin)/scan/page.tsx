@@ -8,16 +8,18 @@
 //
 // ความปลอดภัย: QR เป็นแค่ตัวชี้ตัวคน ไม่ใช่รหัสผ่าน
 // รูปหน้าที่โชว์มีไว้ให้แอดมินเทียบกับคนตรงหน้าก่อนส่งของ
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   collection, query, where, limit, getDocs, getDoc, doc, writeBatch, addDoc, serverTimestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { useNow } from "@/lib/hooks";
 import { useAuth } from "@/lib/firebase/auth-context";
-import { PageHeader, Card, Badge, Spinner, Button, Modal, EmptyState } from "@/components/ui";
+import { PageHeader, Card, Badge, Spinner, Button, Modal, EmptyState, ImagePicker } from "@/components/ui";
 import QrScanner from "@/components/qr-scanner";
 import { parseScan } from "@/lib/qr";
+import { uploadBorrowImage } from "@/lib/nas";
+import { overdueItems, overdueBlockMessage } from "@/lib/borrow-policy";
 import { fmtDateTime, BOOKING_STATUS } from "@/lib/format";
 import type { BookingDoc, UserDoc, WithId } from "@/lib/types";
 import NasImage from "@/components/nas-image";
@@ -51,7 +53,43 @@ export default function ScanStationPage() {
   const [accepted, setAccepted] = useState<Set<string>>(new Set());
   // เอกสารแนบที่กำลังเปิดดู (เอกสารขออนุญาต / รูปตอนคืน)
   const [viewImg, setViewImg] = useState<{ src: string; title: string } | null>(null);
+  /**
+   * รูปตอนส่งมอบ — แอดมินถ่ายเอง 1 รูปต่อการส่งมอบ 1 ครั้ง แล้วใช้กับทุกชิ้นในรอบนั้น
+   * (ถ่ายทีละชิ้นช้าเกินไปเวลาคนต่อแถว) อัปขึ้น NAS ครั้งเดียว แล้วใช้ path ซ้ำ
+   * ต่างจากเอกสารขออนุญาตที่ผู้ยืมแนบมาเอง — อันนี้เป็นหลักฐานฝั่งชุมนุม
+   * ว่าของออกไปสภาพไหนและใครเป็นคนรับ
+   */
+  const [handoverFile, setHandoverFile] = useState<File | null>(null);
+  const [handoverPreview, setHandoverPreview] = useState<string | null>(null);
+  const [handoverPath, setHandoverPath] = useState<string | null>(null);
+  // เก็บ object URL ปัจจุบันไว้นอก state เพื่อคืนหน่วยความจำได้โดยไม่ต้องใส่
+  // side effect ลงใน state updater (React เรียก updater ซ้ำได้)
+  const previewUrlRef = useRef<string | null>(null);
 
+  /** เปลี่ยนรูปที่เลือก — คืน object URL เดิมทุกครั้งกันหลุดค้าง */
+  function pickHandover(f: File | null) {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = f ? URL.createObjectURL(f) : null;
+    setHandoverPreview(previewUrlRef.current);
+    setHandoverFile(f);
+    // รูปเปลี่ยนแล้ว path ที่อัปไว้รอบก่อนใช้ไม่ได้ ต้องอัปใหม่
+    setHandoverPath(null);
+  }
+
+
+  /** เริ่มรอบส่งมอบใหม่ — รูปของคนก่อนหน้าต้องไม่ติดมากับคนถัดไปเด็ดขาด */
+  function resetHandover() {
+    pickHandover(null);
+  }
+
+  /** อัปรูปส่งมอบขึ้น NAS ครั้งเดียว แล้วใช้ path เดิมกับของชิ้นถัดไปในรอบเดียวกัน */
+  async function ensureHandoverPath(): Promise<string> {
+    if (handoverPath) return handoverPath;
+    if (!handoverFile) throw new Error("ถ่ายรูปตอนส่งมอบก่อนจึงจะกดส่งมอบได้");
+    const path = await uploadBorrowImage(handoverFile, "form");
+    setHandoverPath(path);
+    return path;
+  }
 
   /** ดึงเฉพาะรายการที่ยังมีผลของคนคนเดียว — ไม่กี่ read ต่อการสแกน 1 ครั้ง */
   async function loadFor(uid: string) {
@@ -87,6 +125,8 @@ export default function ScanStationPage() {
     () => mine.filter((b) => (b.status === "approved" && b.pickedUpAt) || b.status === "pending_return"),
     [mine]
   );
+  /** ค้างเลยกำหนดคืน — มีแม้ชิ้นเดียวก็ห้ามปล่อยของเพิ่ม */
+  const overdue = useMemo(() => (now === null ? [] : overdueItems(mine, now)), [mine, now]);
 
   async function handleScan(raw: string) {
     setErr("");
@@ -105,6 +145,7 @@ export default function ScanStationPage() {
         const u = await getDoc(doc(db, "users", uid));
         if (!u.exists()) return setErr("พบคำขอ แต่หาข้อมูลผู้ยืมไม่เจอ");
         setPerson({ id: u.id, ...(u.data() as UserDoc) });
+        resetHandover();
         setRequestId(parsed.code);
         setScanning(false);
         await loadFor(uid);
@@ -119,6 +160,7 @@ export default function ScanStationPage() {
         if (us.empty) return setErr(`ไม่พบสมาชิกที่ใช้รหัส ${parsed.code}`);
         const d = us.docs[0];
         setPerson({ id: d.id, ...(d.data() as UserDoc) });
+        resetHandover();
         setRequestId(null);
         setScanning(false);
         await loadFor(d.id);
@@ -144,6 +186,7 @@ export default function ScanStationPage() {
         const u = await getDoc(doc(db, "users", uid));
         if (!u.exists()) return setErr("ของถูกยืมอยู่ แต่หาข้อมูลผู้ยืมไม่เจอ");
         setPerson({ id: u.id, ...(u.data() as UserDoc) });
+        resetHandover();
         setRequestId(null);
         setScanning(false);
         setMsg(`"${item.data().name}" อยู่กับคนนี้`);
@@ -160,6 +203,8 @@ export default function ScanStationPage() {
   /** อนุมัติ + ส่งมอบในครั้งเดียว (แอดมินเห็นตัวคนอยู่ตรงหน้าแล้ว) */
   async function approveAndHandOver(b: WithId<BookingDoc>) {
     if (busyId) return;
+    // ค้างเลยกำหนด = ไม่ปล่อยของเพิ่ม ด่านนี้คือด่านจริง เพราะของอยู่ในมือแอดมิน
+    if (now !== null && overdue.length > 0) return setErr(overdueBlockMessage(overdue, now));
     setBusyId(b.id);
     setErr("");
     try {
@@ -169,11 +214,14 @@ export default function ScanStationPage() {
         admin?.email ||
         "แอดมิน";
 
+      const handover = await ensureHandoverPath();
+
       const batch = writeBatch(db);
       batch.update(doc(db, "bookings", b.id), {
         status: "approved",
         pickedUpAt: serverTimestamp(),
         liabilityAcceptedAt: serverTimestamp(),
+        handoverImageUrl: handover,
         approvedById: admin?.uid ?? null,
         approvedByName: approverName,
         approvedAt: serverTimestamp(),
@@ -193,8 +241,9 @@ export default function ScanStationPage() {
       });
       setMsg(`ส่งมอบ "${b.itemName}" แล้ว`);
       if (person) await loadFor(person.id);
-    } catch {
-      setErr("บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
+    } catch (e) {
+      // ข้อความจาก NAS/ตรวจสิทธิ์มีประโยชน์กว่า "ลองใหม่อีกครั้ง" ลอย ๆ
+      setErr(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
     } finally {
       setBusyId(null);
     }
@@ -351,13 +400,36 @@ export default function ScanStationPage() {
               </div>
               <button
                 type="button"
-                onClick={() => { setPerson(null); setRequestId(null); setMsg(""); setScanning(true); }}
+                onClick={() => { setPerson(null); setRequestId(null); setMsg(""); setScanning(true); resetHandover(); }}
                 className="flex-shrink-0 text-sm text-muted-foreground hover:text-foreground"
               >
                 สแกนคนถัดไป
               </button>
             </div>
           </Card>
+
+          {overdue.length > 0 && now !== null && (
+            <Card className="mb-4 border-red-300 bg-red-50">
+              <p className="text-sm font-semibold text-red-700">ห้ามปล่อยของเพิ่ม</p>
+              <p className="mt-0.5 text-sm text-red-700">{overdueBlockMessage(overdue, now)}</p>
+            </Card>
+          )}
+
+          {/* รูปตอนส่งมอบ — ถ่ายครั้งเดียว ใช้กับทุกชิ้นที่ส่งมอบในรอบนี้ */}
+          {(waiting.length > 0 || toPickUp.length > 0) && overdue.length === 0 && (
+            <Card className="mb-4">
+              <p className="text-sm font-semibold text-foreground">รูปตอนส่งมอบ (บังคับ)</p>
+              <p className="mb-2 mt-0.5 text-sm text-muted-foreground">
+                ถ่ายสภาพของ + คนรับ ให้เห็นในรูปเดียว ถ่ายครั้งเดียวใช้ได้กับทุกชิ้นในรอบนี้
+              </p>
+              <ImagePicker
+                file={handoverFile}
+                preview={handoverPreview}
+                hint="ของหายแล้วเถียงกันทีหลัง รูปนี้คือหลักฐานว่าของออกไปสภาพไหน"
+                onPick={pickHandover}
+              />
+            </Card>
+          )}
 
           {/* รอรับของ — กดอนุมัติ+ส่งมอบตรงนี้ */}
           {waiting.length > 0 && (
@@ -391,7 +463,12 @@ export default function ScanStationPage() {
                           )}
                           <Button
                             onClick={() => approveAndHandOver(b)}
-                            disabled={busyId === b.id || !accepted.has(b.id)}
+                            disabled={
+                              busyId === b.id ||
+                              !accepted.has(b.id) ||
+                              overdue.length > 0 ||
+                              (!handoverFile && !handoverPath)
+                            }
                           >
                             {busyId === b.id ? "กำลังบันทึก…" : "อนุมัติ + ส่งมอบ"}
                           </Button>

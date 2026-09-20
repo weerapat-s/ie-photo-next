@@ -177,6 +177,17 @@ export interface BookingDoc {
   approvedAt?: Timestamp | null;
   /** รหัสคำขอ — ของที่กดยืมพร้อมกันในครั้งเดียวใช้รหัสนี้ร่วมกัน ใช้ทำ QR ใบเดียวต่อคำขอ */
   requestId?: string;
+  /**
+   * ยืมคาบเกี่ยวกลางคืน (ยาวกว่า OVERNIGHT_AFTER_MS ดู lib/borrow-policy.ts)
+   * ต้องระบุที่เก็บของตอนกลางคืนเสมอ และกรรมการจะเห็นแยกใน Discord ไม่ปนกับคำขอปกติ
+   */
+  overnight?: boolean;
+  overnightStorage?: string | null;
+  /**
+   * รูปสภาพของ + ผู้รับ ถ่ายโดยแอดมินตอนส่งมอบที่เคาน์เตอร์ (path บน NAS)
+   * ต่างจาก formImageUrl ตรงที่อันนั้นผู้ยืมแนบมาเอง อันนี้เป็นหลักฐานฝั่งชุมนุม
+   */
+  handoverImageUrl?: string | null;
 }
 
 // ── tasks/{id} ────────────────────────────────────────────────

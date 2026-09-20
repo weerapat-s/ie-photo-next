@@ -72,33 +72,30 @@ export async function fetchNasImage(path: string): Promise<string> {
  *   • data: URL หรือลิงก์นอก (ของเก่า) → คืนกลับไปตรง ๆ
  */
 export function useNasSrc(value: string | null | undefined) {
-  const [src, setSrc] = useState<string | null>(() => (isNasPath(value) ? null : value ?? null));
-  const [error, setError] = useState("");
+  // ผลลัพธ์ผูกกับค่าที่ขอไว้เสมอ — พอ value เปลี่ยน ของรอบก่อนจะไม่ถูกนับทันที
+  // โดยไม่ต้อง setState ตอนเปลี่ยน (setState ตรง ๆ ใน effect ทำให้ render ซ้อน)
+  const [done, setDone] = useState<{ key: string; url: string } | null>(null);
+  const [failed, setFailed] = useState<{ key: string; message: string } | null>(null);
 
   useEffect(() => {
-    if (!isNasPath(value)) {
-      setSrc(value ?? null);
-      setError("");
-      return;
-    }
+    if (!isNasPath(value)) return;
 
     let cancelled = false;
     let objectUrl = "";
-    setSrc(null);
-    setError("");
 
     fetchNasImage(value)
       .then((url) => {
-        // unmount ก่อนโหลดเสร็จ — คืนหน่วยความจำทันที ไม่งั้น blob ค้าง
+        // unmount หรือเปลี่ยนรูปก่อนโหลดเสร็จ — คืนหน่วยความจำทันที ไม่งั้น blob ค้าง
         if (cancelled) {
           URL.revokeObjectURL(url);
           return;
         }
         objectUrl = url;
-        setSrc(url);
+        setDone({ key: value, url });
       })
       .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : "โหลดรูปไม่สำเร็จ");
+        if (cancelled) return;
+        setFailed({ key: value, message: e instanceof Error ? e.message : "โหลดรูปไม่สำเร็จ" });
       });
 
     return () => {
@@ -107,5 +104,9 @@ export function useNasSrc(value: string | null | undefined) {
     };
   }, [value]);
 
-  return { src, error, loading: isNasPath(value) && !src && !error };
+  if (!isNasPath(value)) return { src: value ?? null, error: "", loading: false };
+
+  const src = done?.key === value ? done.url : null;
+  const error = failed?.key === value ? failed.message : "";
+  return { src, error, loading: !src && !error };
 }
