@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { collection, query, where, orderBy, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { compressImageToDataUrl } from "@/lib/image";
+import { uploadBorrowImage } from "@/lib/nas";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useCollection, useNow } from "@/lib/hooks";
 import { useToast } from "@/components/ui";
@@ -26,6 +26,7 @@ import QrImage from "@/components/qr-image";
 import { requestQrPayload } from "@/lib/qr";
 import { canCancel, cancelBooking, cancelPrompt } from "@/lib/bookings";
 import type { BookingDoc, BookingStatus, WithId } from "@/lib/types";
+import NasImage from "@/components/nas-image";
 
 type Filter = "active" | "all" | BookingStatus;
 
@@ -240,8 +241,7 @@ export default function MyBookingsPanel() {
           {detail.formImageUrl && (
             <div className="mt-3">
               <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-[var(--muted-ink)]">เอกสารที่แนบ</p>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={detail.formImageUrl} alt="เอกสาร" className="w-full rounded-2xl border border-black/8" />
+              <NasImage value={detail.formImageUrl} alt="เอกสาร" className="w-full rounded-2xl border border-black/8" />
             </div>
           )}
           <Button onClick={() => setDetail(null)} fullWidth className="mt-5">
@@ -267,7 +267,7 @@ function ReturnModal({ booking, onClose }: { booking: WithId<BookingDoc>; onClos
     setErr("");
     try {
       // ย่อ+บีบอัดเป็น data URL เก็บใน Firestore ตรง (ไม่ต้องใช้ Storage)
-      const returnImageUrl = await compressImageToDataUrl(file, 1000, 0.75);
+      const returnImageUrl = await uploadBorrowImage(file, "return");
       await updateDoc(doc(db, "bookings", booking.id), {
         status: "pending_return",
         returnImageUrl,

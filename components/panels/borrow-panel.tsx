@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { collection, query, where, orderBy, doc, writeBatch, Timestamp, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { compressImageToDataUrl } from "@/lib/image";
+import { uploadBorrowImage } from "@/lib/nas";
 import { findSlotConflicts, slotPayload } from "@/lib/slots";
 import { generateRequestId, requestQrPayload } from "@/lib/qr";
 import QrImage from "@/components/qr-image";
@@ -174,8 +174,8 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
         return;
       }
 
-      // ย่อ+บีบอัดเอกสารเป็น data URL เก็บใน Firestore ตรง (ไม่ต้องใช้ Storage)
-      const formImageUrl = file ? await compressImageToDataUrl(file, 1400, 0.75) : null;
+      // เก็บบน NAS แล้วใส่แค่ path ลง booking — เดิมฝัง base64 ทั้งก้อนจนกินโควตาอ่าน Firestore
+      const formImageUrl = file ? await uploadBorrowImage(file, "form") : null;
 
       // ผู้ถือของคือเจ้าของรายการจอง — เขาจะเห็นในหน้า "ของฉัน" และกดคืนเองได้
       const holderDoc = assigning ? users.find((u) => u.id === holder[0]) : null;

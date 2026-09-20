@@ -7,7 +7,7 @@ import { useState } from "react";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { describeWriteError } from "@/lib/errors";
-import { compressImageToDataUrl } from "@/lib/image";
+import { uploadBorrowImage } from "@/lib/nas";
 import { Modal, Alert, Button, ImagePicker } from "@/components/ui";
 import Icon from "@/components/icon";
 import type { BookingDoc, WithId } from "@/lib/types";
@@ -36,7 +36,7 @@ export default function ReturnModal({
     setBusy(true);
     setErr("");
     try {
-      const returnImageUrl = file ? await compressImageToDataUrl(file, 1000, 0.75) : link.trim();
+      const returnImageUrl = file ? await uploadBorrowImage(file, "return") : link.trim();
       await updateDoc(doc(db, "bookings", booking.id), { status: "pending_return", returnImageUrl });
       onDone();
     } catch (e) {

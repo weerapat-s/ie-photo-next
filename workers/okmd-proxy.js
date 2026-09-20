@@ -30,6 +30,7 @@
  */
 
 import { runReminders } from "./cron-reminders.js";
+import { handleNas } from "./nas-files.js";
 
 const UPSTREAM = "https://gen.ai.kku.ac.th/okmd/api/v1";
 
@@ -78,6 +79,12 @@ export default {
     }
 
     const url = new URL(request.url);
+
+    // ── /nas/* — รูปเอกสารการยืมบน NAS (ดู workers/nas-files.js) ──
+    // วางไว้หลังด่าน origin/CLUB_TOKEN แล้ว แต่ตัวมันตรวจ Firebase ID token ซ้ำอีกชั้น
+    // เพราะ Origin ปลอมได้ถ้ายิงจากนอกเบราว์เซอร์
+    const nas = await handleNas(request, env, cors);
+    if (nas) return nas;
 
     // ── /send — ส่งอีเมลแจ้งเตือน ────────────────────────────────
     // แยกจากเส้นทาง AI เพราะใช้คีย์คนละตัว (ผู้ให้บริการอีเมล ไม่ใช่ OKMD)

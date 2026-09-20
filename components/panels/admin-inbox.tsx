@@ -28,6 +28,7 @@ import { sendMail, bookingApproved, bookingRejected, borrowApproved } from "@/li
 import { Badge, Button, Alert, useToast } from "@/components/ui";
 import Icon from "@/components/icon";
 import type { BookingDoc, UserDoc, WithId } from "@/lib/types";
+import NasImage from "@/components/nas-image";
 
 export default function AdminInbox() {
   const { profile } = useAuth();
@@ -330,8 +331,7 @@ function ProofModal({
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div className="max-h-[85dvh] max-w-lg overflow-auto rounded-3xl bg-white p-3" onClick={(e) => e.stopPropagation()}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        {src ? <img src={src} alt="หลักฐาน" className="w-full rounded-2xl" /> : <p className="p-4">ไม่มีรูป</p>}
+        {src ? <NasImage value={src} alt="หลักฐาน" className="w-full rounded-2xl" /> : <p className="p-4">ไม่มีรูป</p>}
         <Button onClick={onClose} fullWidth className="mt-3">
           ปิด
         </Button>

@@ -50,3 +50,29 @@ export async function compressImageToDataUrl(file: File, maxSize = 256, quality 
 
   throw new Error("IMAGE_TOO_LARGE");
 }
+
+/**
+ * ย่อ+บีบอัดเป็น JPEG แล้วคืนเป็น Blob (ไม่ใช่ data URL)
+ * ใช้ตอนอัปขึ้น NAS — ส่งไบต์ดิบไปเลย ไม่ต้องเสียขนาด +33% จาก base64
+ * เพดานที่นี่ใหญ่กว่าฝั่ง Firestore ได้ เพราะไม่ได้ไปกินโควตาอ่านของฐานข้อมูล
+ */
+export async function compressImageToBlob(
+  file: File,
+  maxSize = 1600,
+  quality = 0.8
+): Promise<Blob> {
+  const img = await loadImage(file);
+  const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(img.width * scale));
+  canvas.height = Math.max(1, Math.round(img.height * scale));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("no canvas ctx");
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/jpeg", quality)
+  );
+  if (!blob) throw new Error("encode failed");
+  return blob;
+}

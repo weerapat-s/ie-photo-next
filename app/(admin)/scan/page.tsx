@@ -20,6 +20,7 @@ import QrScanner from "@/components/qr-scanner";
 import { parseScan } from "@/lib/qr";
 import { fmtDateTime, BOOKING_STATUS } from "@/lib/format";
 import type { BookingDoc, UserDoc, WithId } from "@/lib/types";
+import NasImage from "@/components/nas-image";
 
 /** เหลือ/เกินกำหนดกี่วัน — ค่าบวก = ยังไม่ถึงกำหนด, ลบ = เลยมาแล้ว */
 function daysLeft(endMs: number, now: number) {
@@ -578,22 +579,12 @@ export default function ScanStationPage() {
 
       <Modal open={!!viewImg} onClose={() => setViewImg(null)} title={viewImg?.title || "เอกสาร"} maxWidth="max-w-2xl">
         {viewImg && (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={viewImg.src}
-              alt={viewImg.title}
-              className="max-h-[70vh] w-full rounded-2xl border border-border object-contain"
-            />
-            <a
-              href={viewImg.src}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-3 block text-center text-sm font-medium text-primary hover:underline"
-            >
-              เปิดเต็มจอในแท็บใหม่
-            </a>
-          </>
+          <NasImage
+            value={viewImg.src}
+            alt={viewImg.title}
+            className="max-h-[70vh] w-full rounded-2xl border border-border object-contain"
+            openLink={{ label: "เปิดเต็มจอในแท็บใหม่" }}
+          />
         )}
       </Modal>
     </div>

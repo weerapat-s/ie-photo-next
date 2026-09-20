@@ -197,6 +197,8 @@ service cloud.firestore {
              && d.startAt > request.time - duration.value(5,'m')
              && d.startAt < request.time + duration.value(365,'d')
              && d.returnImageUrl == null
+             // เพดาน 500 ตัวอักษร = เก็บได้แค่ path บน NAS หรือลิงก์ ไม่ใช่ base64 ทั้งรูป
+             // (รูปย้ายไปอยู่บน Nextcloud แล้ว ดู lib/nas.ts — Firestore คิดโควตาอ่านตามขนาดเอกสาร)
              // ฟิลด์งานตากล้อง — ไม่บังคับต้องมี แต่ถ้ามีต้องอยู่ในกรอบ
              && (!('location' in d) || d.location == null
                  || (d.location is string && d.location.size() <= 200))
@@ -221,7 +223,7 @@ service cloud.firestore {
                  || (d.assigneeIds is list && d.assigneeIds.size() <= 20))
              && d.endAt < d.startAt + duration.value(30,'d')
              && (d.formImageUrl == null
-                 || (d.formImageUrl is string && d.formImageUrl.size() <= 900000));
+                 || (d.formImageUrl is string && d.formImageUrl.size() <= 500));
     }
 
     function validMemberBooking() {
@@ -230,7 +232,7 @@ service cloud.firestore {
              && d.userId == request.auth.uid
              && d.endAt < d.startAt + duration.value(7,'d')
              && (d.formImageUrl == null
-                 || (d.formImageUrl is string && d.formImageUrl.size() <= 900000));
+                 || (d.formImageUrl is string && d.formImageUrl.size() <= 500));
     }
 
     function validGuestBooking() {
@@ -262,9 +264,12 @@ service cloud.firestore {
     }
 
     function onlyReturnChanged() {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','returnImageUrl'])
-             && request.resource.data.status == 'pending_return'
-             && resource.data.status == 'approved';
+      let after = request.resource.data;
+      return after.diff(resource.data).affectedKeys().hasOnly(['status','returnImageUrl'])
+             && after.status == 'pending_return'
+             && resource.data.status == 'approved'
+             && (after.returnImageUrl == null
+                 || (after.returnImageUrl is string && after.returnImageUrl.size() <= 500));
     }
 
     // ทีมงานเข้า/ออกจากงานเองได้ — แตะได้แค่ assigneeIds และเฉพาะ uid ตัวเอง

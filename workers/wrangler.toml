@@ -20,6 +20,13 @@ MAIL_FROM = "IE-Photo <onboarding@resend.dev>"
 # (Resend โหมดทดสอบส่งได้เฉพาะอีเมลเจ้าของบัญชี จนกว่าจะยืนยันโดเมน)
 MAIL_FALLBACK_TO = "ietechphoto@gmail.com"
 
+# ── NAS (Nextcloud) เก็บรูปเอกสารการยืม ──────────────────────────
+# ปลายทาง WebDAV ของ public share — ตัวนี้ไม่ลับ (ไม่มี token อยู่ในนั้น)
+NAS_WEBDAV_BASE = "https://nextcloud.ienas.site/public.php/webdav"
+# token ของ share เก็บเป็น Secret: npm run worker:nas  (ห้ามใส่ในไฟล์นี้)
+# ใช้ตรวจลายเซ็น Firebase ID token ว่าออกให้โปรเจกต์นี้จริง
+FIREBASE_PROJECT_ID = "iephoto"
+
 # เตือนอัตโนมัติทุกวัน 08:00 เวลาไทย (= 01:00 UTC)
 [triggers]
 crons = ["0 1 * * *"]
