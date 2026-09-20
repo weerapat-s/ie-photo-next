@@ -174,7 +174,6 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
         return;
       }
 
-      // ย่อ+บีบอัดเอกสารเป็น data URL เก็บใน Firestore ตรง (ไม่ต้องใช้ Storage)
       // เก็บบน NAS แล้วใส่แค่ path ลง booking — เดิมฝัง base64 ทั้งก้อนจนกินโควตาอ่าน Firestore
       const formImageUrl = file ? await uploadBorrowImage(file, "form") : null;
 
