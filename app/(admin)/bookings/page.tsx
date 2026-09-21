@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { collection, query, orderBy, doc, writeBatch, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { useCollection } from "@/lib/hooks";
+import { useCollection, useNow } from "@/lib/hooks";
 import {
   PageHeader,
   Card,
@@ -28,6 +28,9 @@ import {
 } from "@/lib/format";
 import type { BookingDoc, BookingStatus, WithId } from "@/lib/types";
 import NasImage from "@/components/nas-image";
+import { useAuth } from "@/lib/firebase/auth-context";
+import { approvalBlockReason } from "@/lib/borrow-policy";
+import { approvePatch, approverName, missingLiability } from "@/lib/approve";
 
 const FILTERS: { key: BookingStatus | "all"; label: string }[] = [
   { key: "pending", label: "รอดำเนินการ" },
@@ -43,6 +46,8 @@ export default function AdminBookingsPage() {
     []
   );
   const { show, node: toastNode } = useToast();
+  const { user, profile } = useAuth();
+  const now = useNow(60_000);
 
   const [filter, setFilter] = useState<BookingStatus | "all">("pending");
   const [search, setSearch] = useState("");
@@ -68,6 +73,20 @@ export default function AdminBookingsPage() {
     if (actionBusy) return;
     setActionErr("");
 
+    if (status === "approved") {
+      // กติกาเดียวกับสถานีสแกน — คนค้างของอยู่อนุมัติเพิ่มไม่ได้ (ดู lib/borrow-policy.ts)
+      const blocked = now === null ? null : approvalBlockReason(b, bookings, now);
+      if (blocked) return setActionErr(blocked);
+      if (
+        missingLiability(b) &&
+        !confirm(
+          `"${b.itemName}" ส่งคำขอก่อนมีช่องรับทราบเงื่อนไขชดใช้ในหน้ายืม\n` +
+            "ผู้ยืมยังไม่เคยติ๊กรับทราบว่าของหาย/เสียหายต้องชดใช้เต็มราคา\n\nอนุมัติต่อหรือไม่?"
+        )
+      )
+        return;
+    }
+
     // เตือนถ้ามีการจองที่ "อนุมัติแล้ว" ของ item เดียวกัน ช่วงเวลาทับกัน
     if (status === "approved") {
       const overlap = bookings.find(
@@ -91,7 +110,13 @@ export default function AdminBookingsPage() {
     setActionBusy(b.id);
     try {
       const batch = writeBatch(db);
-      batch.update(doc(db, "bookings", b.id), { status });
+      // อุปกรณ์: อนุมัติจากปุ่ม = บันทึกส่งมอบไปในตัว ไม่ต้องสแกนซ้ำ (ดู lib/approve.ts)
+      batch.update(
+        doc(db, "bookings", b.id),
+        status === "approved"
+          ? approvePatch(b, { uid: user?.uid, name: approverName(profile, user?.email) })
+          : { status }
+      );
       // slot: อนุมัติ = ยืนยันช่วงเวลา / ปฏิเสธ = ปล่อยช่วงเวลาคืน (ห้าม update ทิ้งไว้)
       if (status === "approved") batch.update(doc(db, "slots", b.id), { status: "approved" });
       else batch.delete(doc(db, "slots", b.id));

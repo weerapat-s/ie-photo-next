@@ -10,6 +10,7 @@ const { initializeApp: clientInit } = require("firebase/app");
 const { getAuth, signInWithCustomToken, signOut } = require("firebase/auth");
 const {
   getFirestore, doc, getDoc, getDocs, collection, addDoc, setDoc, updateDoc, deleteDoc, writeBatch, query, where,
+  serverTimestamp,
 } = require("firebase/firestore");
 
 const DB_ID = process.env.FIREBASE_DATABASE_ID || "default";
@@ -101,12 +102,24 @@ async function signAs(uid) {
       userPhone: "0900000000", guestName: null, guestEmail: null, startAt, endAt,
       formImageUrl: null, returnImageUrl: null, usageReason: "test", usageType: null, status: "pending",
       responsibleUserId: null, responsibleUserName: null, consentToken: null, createdAt: new Date(),
+      liabilityAcceptedAt: serverTimestamp(),
     });
     batch.set(doc(cDb, "slots", ref.id), {
       bookingId: ref.id, itemId: eqId, itemName: "Test", bookingType: "equipment", startAt, endAt, status: "pending",
     });
     await batch.commit();
     bookingId = ref.id;
+  });
+  // กรรมการอนุมัติจากปุ่มได้โดยไม่ผ่านสถานีสแกน ผู้ยืมจึงต้องรับทราบเงื่อนไขชดใช้ตอนส่งคำขอ
+  await expectDenied("member ยืมอุปกรณ์โดยไม่ติ๊กรับทราบเงื่อนไขชดใช้ (ต้องบล็อก)", () => {
+    const now = new Date();
+    return setDoc(doc(collection(cDb, "bookings")), {
+      bookingType: "equipment", itemId: eqId, itemName: "Test", userId: MEMBER.uid, userName: "Test",
+      userPhone: "0900000000", guestName: null, guestEmail: null,
+      startAt: now, endAt: new Date(now.getTime() + 3600000),
+      formImageUrl: null, returnImageUrl: null, usageReason: "test", usageType: null, status: "pending",
+      responsibleUserId: null, responsibleUserName: null, consentToken: null, createdAt: now,
+    });
   });
   await expectDenied("member สร้าง booking สถานะ approved (ต้องบล็อก)", () =>
     addDoc(collection(cDb, "bookings"), { bookingType: "studio", itemId: "x", itemName: "x", userId: MEMBER.uid, status: "approved", createdAt: new Date() })

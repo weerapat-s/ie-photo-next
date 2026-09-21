@@ -9,6 +9,7 @@ import {
   isHolding,
   overdueItems,
   overdueBlockMessage,
+  approvalBlockReason,
 } from "../lib/borrow-policy.ts";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyBooking = any;
@@ -83,6 +84,30 @@ console.log("— ของค้างเลยกำหนด —");
   check("เพิ่งเลยกำหนดไม่ขึ้น 0 วัน", overdueBlockMessage(justLate, NOW).includes("เลยกำหนด 1 วัน"));
 
   check("ไม่มีของค้าง = รายการว่าง", overdueItems([bk({ id: "7", status: "approved", endMs: NOW + DAY })], NOW).length === 0);
+}
+
+console.log("— อนุมัติจากปุ่ม (ไม่ผ่านสถานีสแกน) —");
+{
+  const mk = (id: string, userId: string, status: string, endMs: number, bookingType = "equipment") =>
+    ({ ...bk({ id, status, endMs }), userId, bookingType });
+  const target = mk("t", "u1", "pending", NOW + DAY);
+
+  check("คนนี้ไม่มีของค้าง = อนุมัติได้", approvalBlockReason(target, [target, mk("x", "u1", "returned", NOW - 9 * DAY)], NOW) === null);
+
+  const blocked = approvalBlockReason(target, [target, mk("o", "u1", "approved", NOW - 2 * DAY)], NOW);
+  check("คนนี้ค้างของอยู่ = บล็อก พร้อมบอกเหตุ", blocked !== null && blocked.includes("เลยกำหนด 2 วัน"), String(blocked));
+
+  check("ของค้างของ 'คนอื่น' ไม่ทำให้คนนี้โดนบล็อก",
+    approvalBlockReason(target, [target, mk("o", "u2", "approved", NOW - 5 * DAY)], NOW) === null);
+
+  check("ไม่นับตัวคำขอที่กำลังอนุมัติเอง",
+    approvalBlockReason(mk("t", "u1", "approved", NOW - DAY), [mk("t", "u1", "approved", NOW - DAY)], NOW) === null);
+
+  check("สตูดิโอ/งานตากล้องไม่ใช้กติกานี้",
+    approvalBlockReason(mk("s", "u1", "pending", NOW, "studio"), [mk("o", "u1", "approved", NOW - 5 * DAY)], NOW) === null);
+
+  check("คำขอของบุคคลภายนอก (ไม่มี userId) ไม่ใช้กติกานี้",
+    approvalBlockReason({ ...target, userId: null }, [target], NOW) === null);
 }
 
 console.log(`Borrow policy: ${pass} passed, ${fail} failed`);

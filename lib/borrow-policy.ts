@@ -41,3 +41,25 @@ export function overdueBlockMessage(overdue: WithId<BookingDoc>[], now: number):
     .join(", ");
   return `ยังมีของค้างเลยกำหนดคืน: ${names} — ต้องคืนของให้ครบก่อนจึงจะยืมชิ้นใหม่ได้`;
 }
+
+/**
+ * ก่อนกรรมการกด "อนุมัติ" จากปุ่ม (ไม่ผ่านสถานีสแกน) — คืนเหตุที่ต้องบล็อก, null = ผ่าน
+ *
+ * สถานีสแกนบล็อกคนค้างของอยู่แล้ว แต่ปุ่มอนุมัติในหน้าภาพรวม/รายการจองไม่ได้ผ่านตรงนั้น
+ * ถ้าไม่เช็คซ้ำตรงนี้ กติกา "ค้างแล้วยืมใหม่ไม่ได้" จะมีรูให้ลอดได้
+ * (น้องส่งคำขอตอนยังไม่ค้าง แล้วมาค้างทีหลังก่อนกรรมการกดอนุมัติ)
+ *
+ * @param all คำขอทั้งหมดที่หน้าจอโหลดไว้ — ต้องมีของคนนี้ครบถึงจะตัดสินได้ถูก
+ */
+export function approvalBlockReason<T extends BookingDoc>(
+  b: WithId<T>,
+  all: WithId<T>[],
+  now: number
+): string | null {
+  if (b.bookingType !== "equipment" || !b.userId) return null;
+  const late = overdueItems(
+    all.filter((x) => x.userId === b.userId && x.id !== b.id),
+    now
+  );
+  return late.length ? overdueBlockMessage(late, now) : null;
+}

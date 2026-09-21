@@ -259,7 +259,8 @@ async function borrowRequest(env, claims, me, body, reply) {
       r0.overnight ? `ยืมข้ามคืน — เก็บไว้ที่ ${r0.overnightStorage}` : "",
       "",
       `รหัสคำขอ ${requestId}`,
-      `ตอนมารับของ เปิด QR ให้กรรมการสแกน: ${myLink}`,
+      "กรรมการอนุมัติแล้วสถานะในหน้า \"ของฉัน\" จะเปลี่ยน มารับของได้เลย ไม่ต้องสแกน",
+      `QR ของคำขอนี้ (ใช้ยืนยันตัวที่เคาน์เตอร์ถ้ากรรมการขอ): ${myLink}`,
       "",
       "ของหายหรือเสียหายระหว่างยืม ผู้ยืมรับผิดชอบเต็มราคา · คืนให้ตรงกำหนด ถ้ายังค้างเลยกำหนดจะยืมชิ้นใหม่ไม่ได้",
     ]
@@ -273,7 +274,8 @@ async function borrowRequest(env, claims, me, body, reply) {
         (r0.usageReason ? `<p>เพื่อ ${esc(r0.usageReason)}</p>` : "") +
         (r0.overnight ? `<p>ยืมข้ามคืน — เก็บไว้ที่ ${esc(r0.overnightStorage)}</p>` : "") +
         `<p>รหัสคำขอ <code style="font-size:16px;letter-spacing:2px">${esc(requestId)}</code></p>` +
-        `<p><a href="${myLink}">เปิด QR ให้กรรมการสแกนตอนมารับของ</a></p>` +
+        `<p>กรรมการอนุมัติแล้วสถานะในหน้า "ของฉัน" จะเปลี่ยน มารับของได้เลย ไม่ต้องสแกน</p>` +
+        `<p><a href="${myLink}">เปิดคำขอนี้ / QR ยืนยันตัว</a></p>` +
         `<p style="color:#888;font-size:13px">ของหายหรือเสียหายระหว่างยืม ผู้ยืมรับผิดชอบเต็มราคา · ` +
         `คืนให้ตรงกำหนด ถ้ายังค้างเลยกำหนดจะยืมชิ้นใหม่ไม่ได้</p>`
     );
@@ -300,7 +302,7 @@ async function borrowRequest(env, claims, me, body, reply) {
       r0.overnight ? `⚠ ยืมข้ามคืน — เก็บไว้ที่ ${r0.overnightStorage}` : "",
       "",
       `รหัสคำขอ ${requestId}`,
-      `อนุมัติ + ส่งมอบที่สถานีสแกน: ${SITE}/scan/`,
+      `อนุมัติได้เลยที่หน้าภาพรวม ไม่ต้องสแกน: ${SITE}/overview/`,
     ]
       .filter((l, i, a) => l !== "" || a[i - 1] !== "")
       .join("\n");
@@ -313,7 +315,7 @@ async function borrowRequest(env, claims, me, body, reply) {
         (r0.usageReason ? `<p>เพื่อ ${esc(r0.usageReason)}</p>` : "") +
         (r0.overnight ? `<p style="color:#b45309"><b>ยืมข้ามคืน</b> — เก็บไว้ที่ ${esc(r0.overnightStorage)}</p>` : "") +
         `<p>รหัสคำขอ <code style="font-size:16px;letter-spacing:2px">${esc(requestId)}</code></p>` +
-        `<p><a href="${SITE}/scan/">อนุมัติ + ส่งมอบที่สถานีสแกน</a></p>`
+        `<p><a href="${SITE}/overview/">อนุมัติได้เลยที่หน้าภาพรวม</a> (ไม่ต้องสแกน)</p>`
     );
     const subject = `${r0.overnight ? "🌙 ยืมข้ามคืน: " : "คำขอยืมใหม่: "}${who} (${items.length} ชิ้น)`;
     try {

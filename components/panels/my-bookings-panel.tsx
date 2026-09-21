@@ -86,14 +86,14 @@ export default function MyBookingsPanel() {
     <div>
       {err && <Alert onClose={() => setErr("")}>{err}</Alert>}
 
-      {/* เพิ่งส่งคำขอ → โชว์ QR ทันที ให้เอาไปให้แอดมินสแกนที่เคาน์เตอร์ */}
+      {/* เพิ่งส่งคำขอ → โชว์ QR ทันที (กรรมการอนุมัติจากปุ่มได้เลย QR ไว้ยืนยันตัวที่เคาน์เตอร์) */}
       {sentItems.length > 0 && (
         <Card className="mb-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="font-semibold text-foreground">ส่งคำขอเรียบร้อย</p>
               <p className="mt-0.5 text-sm text-[var(--muted-ink)]">
-                เอา QR นี้ไปให้แอดมินสแกนตอนรับของ
+                รอกรรมการอนุมัติ — อนุมัติแล้วมารับของได้เลย ไม่ต้องสแกน
               </p>
             </div>
             <button
@@ -120,7 +120,8 @@ export default function MyBookingsPanel() {
           </ul>
 
           <p className="mt-3 text-xs text-[var(--muted-ink)]">
-            ยังไม่ถือว่าอนุมัติ จนกว่าแอดมินจะสแกนและส่งมอบของ · เปิดซ้ำได้จากรายการด้านล่าง
+            สถานะในรายการด้านล่างจะเปลี่ยนเป็น “อนุมัติแล้ว” เมื่อกรรมการกดอนุมัติ ·
+            QR นี้ใช้ยืนยันตัวที่เคาน์เตอร์ถ้ากรรมการขอ เปิดซ้ำได้จากรายการ
           </p>
         </Card>
       )}
@@ -234,7 +235,7 @@ export default function MyBookingsPanel() {
                     <QrImage value={requestQrPayload(detail.requestId)} size={180} alt="QR คำขอยืมอุปกรณ์" />
                   </div>
                   <p className="mt-2 font-mono text-xs tracking-widest text-[var(--muted-ink)]">{detail.requestId}</p>
-                  <p className="mt-1 text-center text-xs text-[var(--muted-ink)]">ให้แอดมินสแกนที่เคาน์เตอร์</p>
+                  <p className="mt-1 text-center text-xs text-[var(--muted-ink)]">ใช้ยืนยันตัวที่เคาน์เตอร์ถ้ากรรมการขอ</p>
                 </div>
               </div>
             )}
