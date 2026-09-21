@@ -14,6 +14,27 @@ import { compressImageToDataUrl } from "@/lib/image";
 import Icon from "@/components/icon";
 import type { UserDoc, WithId } from "@/lib/types";
 
+/**
+ * รอเซิร์ฟเวอร์ยืนยันการบันทึกไม่เกินเท่านี้ แล้วค่อยบอกผู้ใช้ว่าช้า
+ *
+ * updateDoc รอจนเซิร์ฟเวอร์ยืนยัน ถ้า Firestore ตอบกลับเป็น error ที่ลองใหม่ได้
+ * (เช่นโควตารายวันเต็ม) SDK จะลองส่งซ้ำไปเรื่อย ๆ ไม่ throw — ปุ่มเลยหมุนไม่มีวันจบ
+ * (เจอจริง: หน้าใส่รูปโปรไฟล์ค้างตอนโควตาอ่านหมดทั้งโปรเจกต์)
+ * ข้อมูลไม่ได้หาย — SDK เก็บการเขียนที่ค้างไว้ในเครื่อง แล้วส่งให้เองเมื่อระบบกลับมา
+ */
+const SAVE_WAIT_MS = 10_000;
+
+function settleWithin<T>(p: Promise<T>, ms: number): Promise<"done" | "slow"> {
+  return Promise.race([
+    p.then(() => "done" as const),
+    new Promise<"slow">((resolve) => setTimeout(() => resolve("slow"), ms)),
+  ]);
+}
+
+const SLOW_MSG =
+  "ระบบฐานข้อมูลตอบช้าผิดปกติ — ข้อมูลเก็บไว้ในเครื่องแล้ว จะบันทึกขึ้นระบบให้เองเมื่อกลับมาใช้ได้ " +
+  "กดรีเฟรชหน้าเพื่อใช้งานต่อ";
+
 /** ช่องที่ต้องมีค่าถึงจะถือว่าโปรไฟล์ครบ */
 export function missingFields(p: WithId<UserDoc> | null): string[] {
   if (!p) return [];
@@ -48,6 +69,8 @@ function OnboardingForm({ profile }: { profile: WithId<UserDoc> }) {
   const [step, setStep] = useState<1 | 2>(1);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  /** เซิร์ฟเวอร์ไม่ยืนยันการบันทึกในเวลาที่ควร — โชว์ปุ่มรีเฟรชแทนปุ่มหมุนค้าง */
+  const [slow, setSlow] = useState(false);
 
   const ready =
     firstName.trim() !== "" && lastName.trim() !== "" && nickname.trim() !== "" && phone.trim().length >= 9;
@@ -58,17 +81,21 @@ function OnboardingForm({ profile }: { profile: WithId<UserDoc> }) {
     setBusy(true);
     setErr("");
     try {
-      await updateDoc(doc(db, "users", profile.id), {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        nickname: nickname.trim(),
-        phone: phone.trim(),
-        skills: skills
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean)
-          .slice(0, 12),
-      });
+      const result = await settleWithin(
+        updateDoc(doc(db, "users", profile.id), {
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          nickname: nickname.trim(),
+          phone: phone.trim(),
+          skills: skills
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .slice(0, 12),
+        }),
+        SAVE_WAIT_MS
+      );
+      if (result === "slow") setSlow(true);
       setStep(2);
     } catch (e) {
       setErr(describeWriteError(e, "บันทึกข้อมูล"));
@@ -88,8 +115,16 @@ function OnboardingForm({ profile }: { profile: WithId<UserDoc> }) {
     setErr("");
     try {
       const patch: Record<string, unknown> = { profileCompleted: true };
-      if (withPhoto && photo) patch.profileImageUrl = await compressImageToDataUrl(photo, 600, 0.8);
-      await updateDoc(doc(db, "users", profile.id), patch);
+      // 256px พอ — รูปโปรไฟล์โชว์ใหญ่สุดราว 96px (บัตรที่สถานีสแกน)
+      // เดิม 600px ทำให้เอกสาร users หนักหลายเท่า และทุกหน้าที่ดึงรายชื่อสมาชิก
+      // (ภาพรวม · ทะเบียนการยืม · ทีมงาน · ส่งอีเมล) ต้องโหลดรูปของทุกคนมาด้วย
+      // Firestore รุ่นนี้คิดโควตาอ่านตามขนาดเอกสาร — ขนาดเดียวกับหน้าโปรไฟล์
+      if (withPhoto && photo) patch.profileImageUrl = await compressImageToDataUrl(photo, 256, 0.8);
+      const result = await settleWithin(updateDoc(doc(db, "users", profile.id), patch), SAVE_WAIT_MS);
+      if (result === "slow") {
+        setSlow(true);
+        setBusy(false);
+      }
     } catch (e) {
       setErr(
         e instanceof Error && e.message === "IMAGE_TOO_LARGE"
@@ -117,6 +152,14 @@ function OnboardingForm({ profile }: { profile: WithId<UserDoc> }) {
 
         <div className="surface-raised rounded-3xl p-5">
           {err && <Alert onClose={() => setErr("")}>{err}</Alert>}
+          {slow && (
+            <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 p-3" role="status">
+              <p className="text-sm text-amber-800">{SLOW_MSG}</p>
+              <Button variant="outline" size="sm" className="mt-2" onClick={() => window.location.reload()}>
+                รีเฟรชหน้า
+              </Button>
+            </div>
+          )}
           <ImagePicker
             file={photo}
             preview={preview}
