@@ -289,7 +289,23 @@ node --env-file=.env.local scripts/set-role.cjs 68030271@kmitl.ac.th super_admin
    git push origin ui/<ชื่องาน>
    ```
 3. **deploy จากที่เดียว** หลัง merge เข้า master แล้วเท่านั้น
-4. ก่อน deploy ทุกครั้ง: `git pull origin master` แล้ว `npm run build` ให้ผ่านก่อน
+4. **deploy ด้วย `npm run deploy` เท่านั้น** ห้ามยิง `firebase deploy` ตรง ๆ
+
+### ทำไมต้องใช้ `npm run deploy`
+
+ลำดับ deploy ผิด = เว็บจริงพัง ไม่ใช่แค่ฟีเจอร์ใหม่ไม่ทำงาน:
+
+| ลำดับ | ถ้าทำผิด |
+|---|---|
+| Worker ต้องก่อน hosting | โค้ดใหม่ยิง `/nas/upload` ได้ 404 → **ยืมของไม่ได้เลย** (เพราะบังคับแนบเอกสาร) |
+| `NAS_SHARE_TOKEN` ต้องตั้งก่อน hosting | Worker ตอบ 503 ผลเหมือนข้างบน |
+| rules ต้องหลัง hosting | rules ใหม่จำกัด 500 ตัวอักษร → client รุ่นเก่าเขียน base64 ไม่ผ่าน |
+
+`scripts/deploy-all.mjs` บังคับลำดับนี้ให้ และ**ยิงเข้า Worker จริงเพื่อเช็คว่าขึ้นแล้ว**
+ก่อนจะแตะ hosting ถ้ายังไม่พร้อมมันหยุดพร้อมบอกว่าต้องทำอะไรต่อ
+ดีกว่าปล่อย hosting ขึ้นไปแล้วต้องรีบ rollback
+
+ดูสถานะปัจจุบันโดยไม่แตะอะไร: `npm run deploy:check`
 
 ### เช็คว่าเว็บจริงตรงกับ git ไหม
 ```bash
