@@ -1,0 +1,21 @@
+# workers/wrangler.nas.toml — Worker รูปเอกสารการยืมบน NAS (แยกจาก okmd-proxy)
+#
+# ทำไมแยก: ดูหัวไฟล์ workers/nas-entry.js — okmd-proxy อยู่บัญชีชุมนุมที่ตอนนี้ไม่มีใครเข้าได้
+# ตัวนี้อยู่บัญชีส่วนตัวที่ทีมใช้งานอยู่ (vaumgasem@gmail.com)
+#
+# deploy:  npm run worker:nas-deploy
+# ใส่ token ของ share:  npm run worker:nas   (เก็บเป็น Secret ฝั่ง Cloudflare ไม่อยู่ในไฟล์นี้)
+#
+# ไม่มี [triggers] ตั้งใจ — cron เตือนอีเมลรันอยู่ที่ okmd-proxy แล้ว
+# ถ้าใส่ตรงนี้ด้วยจะได้อีเมลเตือนซ้ำสองฉบับ
+account_id = "c120ec1f85adbda4cb1a94e4e79cf22d"
+name = "iephoto-nas"
+main = "nas-entry.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+ALLOWED_ORIGIN = "https://iephoto.web.app"
+# ปลายทาง WebDAV ของ public share — ไม่ลับ (ไม่มี token อยู่ในนี้)
+NAS_WEBDAV_BASE = "https://nextcloud.ienas.site/public.php/webdav"
+# ใช้ตรวจลายเซ็น Firebase ID token ว่าออกให้โปรเจกต์นี้จริง
+FIREBASE_PROJECT_ID = "iephoto"

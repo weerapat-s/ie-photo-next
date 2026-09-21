@@ -23,7 +23,11 @@
 // และหยุดทันทีถ้ายังไม่พร้อม — ดีกว่าปล่อยให้ hosting ขึ้นไปแล้วต้องรีบ rollback
 import { execSync } from "node:child_process";
 
-const WORKER = "https://okmd-proxy.wooden-date.workers.dev";
+// /nas อยู่ Worker แยกในบัญชีส่วนตัว — okmd-proxy อยู่บัญชีชุมนุมที่ตอนนี้ไม่มีใครเข้าได้
+// (รายละเอียดดูหัวไฟล์ workers/nas-entry.js)
+const NAS_WORKER = "https://iephoto-nas.vaumgasem.workers.dev";
+// AI + /send + cron ยังอยู่ okmd-proxy ตัวเดิม deploy จากที่นี่ไม่ได้ ตรวจได้อย่างเดียว
+const MAIL_WORKER = "https://okmd-proxy.wooden-date.workers.dev";
 const SITE = "https://iephoto.web.app";
 const ORIGIN = { Origin: SITE };
 
@@ -88,24 +92,15 @@ head("รันเทสต์");
 run("npm test");
 ok("เทสต์ผ่าน");
 
-/* ═══ 3. Worker (ต้องก่อน hosting — เหตุผลอยู่หัวไฟล์) ══════════ */
-head("เอา Worker ขึ้น");
+/* ═══ 3. Worker ของ NAS (ต้องก่อน hosting — เหตุผลอยู่หัวไฟล์) ═══ */
+head("เอา Worker ของ NAS ขึ้น");
 try {
-  run("npx wrangler deploy --config workers/wrangler.toml");
+  run("npx wrangler deploy --config workers/wrangler.nas.toml");
 } catch {
   die(
     "deploy Worker ไม่สำเร็จ",
-    "    ถ้าขึ้น Authentication error [code: 10000] = ล็อกอินผิดบัญชี\n" +
-      "    okmd-proxy อยู่บัญชีชุมนุม (account_id 18d2d741… ใน workers/wrangler.toml)\n\n" +
-      "    ทาง A — API token (แนะนำ เพราะบัญชีนี้ใช้ร่วมกัน เก็บครั้งเดียวจบ):\n" +
-      "      สร้าง token ใน Cloudflare dashboard ของบัญชีชุมนุม (เทมเพลต Edit Cloudflare Workers)\n" +
-      "      ตั้งเป็น env var CLOUDFLARE_API_TOKEN — wrangler ใช้ตัวนี้ ไม่ต้อง login เลย\n\n" +
-      "    ทาง B — login ด้วยเบราว์เซอร์:\n" +
-      "      npx wrangler logout      ← ต้อง logout ก่อน ไม่งั้น authorize บัญชีเดิมซ้ำแล้วพังเหมือนเดิม\n" +
-      "      npm run worker:login     ← หน้าเบราว์เซอร์ต้องเป็นบัญชี Wooden Date\n" +
-      "      npx wrangler whoami      ← ต้องเห็น 18d2d741… ถึงจะไปต่อได้\n\n" +
-      "    ถ้าทำแล้วยังไม่เห็น 18d2d741… = บัญชีที่มีไม่ได้อยู่ในทีมนั้น\n" +
-      "    ต้องให้เจ้าของเชิญเข้าทีม หรือย้าย Worker มาบัญชีตัวเอง (URL เปลี่ยน + ตั้ง secret ใหม่ 5 ตัว)"
+    "    iephoto-nas อยู่บัญชี vaumgasem@gmail.com (account_id c120ec1f… ใน workers/wrangler.nas.toml)\n" +
+      "    เช็คว่า wrangler ล็อกอินบัญชีนี้อยู่:  npx wrangler whoami"
   );
 }
 
@@ -113,19 +108,13 @@ try {
  * เส้นทาง /nas ตรวจ NAS_SHARE_TOKEN ก่อนตรวจตัวตน จึงแยกได้ว่า
  * 404 = โค้ดยังไม่ขึ้น · 503 = ขึ้นแล้วแต่ยังไม่ตั้ง token · 401 = พร้อม
  */
-head("ตรวจว่า Worker พร้อมจริง");
-if (checkOnly) {
-  log("  [ตรวจอย่างเดียว] ยิงเช็คสถานะ Worker ปัจจุบัน");
-}
+head("ตรวจว่า Worker ของ NAS พร้อมจริง");
 {
-  const res = await fetch(`${WORKER}/nas/upload`, { method: "POST", headers: ORIGIN });
+  const res = await fetch(`${NAS_WORKER}/nas/upload`, { method: "POST", headers: ORIGIN });
   const body = await res.text();
 
   if (res.status === 404) {
-    die(
-      "Worker ยังไม่มีเส้นทาง /nas (ตอบ 404)",
-      "    โค้ด Worker ยังไม่ขึ้น — ดูข้อความ error ของขั้นที่แล้ว"
-    );
+    die("Worker ยังไม่มีเส้นทาง /nas (ตอบ 404)", "    โค้ด Worker ยังไม่ขึ้น — ดูข้อความ error ของขั้นที่แล้ว");
   }
   if (res.status === 503) {
     die(
@@ -141,28 +130,30 @@ if (checkOnly) {
   ok("/nas พร้อม และบังคับตรวจตัวตนอยู่");
 }
 
-/* ═══ 5. /send ต้องไม่ปล่อยให้ใครก็ส่งอีเมลในนามชุมนุมได้ ═══════
- * เดิมกันด้วยหัว Origin อย่างเดียว ซึ่งปลอมได้ถ้ายิงจากนอกเบราว์เซอร์
- * ยิงแบบไม่มี token แล้วต้องได้ 401 — ถ้าได้ 200 คือรูรั่วยังเปิด
+/* ═══ 5. /send — เตือนอย่างเดียว ไม่หยุด ═══════════════════════
+ * /send รุ่นใหม่ตรวจสิทธิ์กรรมการด้วย ID token แต่อยู่ใน okmd-proxy ซึ่ง deploy
+ * จากที่นี่ไม่ได้ (บัญชีชุมนุมเข้าไม่ได้) ตัวที่รันอยู่ยังกันด้วยหัว Origin อย่างเดียว
+ * ซึ่งปลอมได้ถ้ายิงจากนอกเบราว์เซอร์
  *
- * ส่ง body ไม่ครบ (ไม่มี to/subject/body) เพื่อไม่ให้เผลอส่งอีเมลจริงออกไป
- * ถ้ารูรั่วยังเปิด จะได้ 400 "bad json"/"ต้องมี to..." ไม่ใช่ 200
+ * ไม่หยุด deploy เพราะ client ใหม่ยังคุยกับ /send ตัวเก่าได้ปกติ
+ * (หัว Authorization ที่ส่งเพิ่มไปถูกเมินเฉย ๆ) แค่รูรั่วยังไม่ปิด
+ *
+ * ส่ง body ว่างให้ตกที่ด่านตรวจฟิลด์ จะได้ไม่เผลอส่งอีเมลจริงออกไป
  */
-head("ตรวจว่า /send ปิดรูรั่วแล้ว");
+head("ตรวจ /send (เตือนอย่างเดียว)");
 {
-  const res = await fetch(`${WORKER}/send`, {
+  const res = await fetch(`${MAIL_WORKER}/send`, {
     method: "POST",
     headers: { ...ORIGIN, "Content-Type": "application/json" },
     body: "{}",
   });
-  if (res.status !== 401) {
-    die(
-      `/send ตอบ ${res.status} ทั้งที่ไม่ได้ส่ง token มา (ควรได้ 401)`,
-      "    แปลว่า Worker ที่รันอยู่ยังเป็นรุ่นที่ไม่ตรวจสิทธิ์ = ใครก็ส่งอีเมลในนามชุมนุมได้\n" +
-        "    ต้อง deploy Worker รุ่นใหม่ให้สำเร็จก่อน"
-    );
+  if (res.status === 401) {
+    ok("/send บังคับตรวจสิทธิ์กรรมการแล้ว");
+  } else {
+    log(`  ⚠ /send ตอบ ${res.status} ทั้งที่ไม่ได้ส่ง token มา — ยังเป็นรุ่นที่ไม่ตรวจสิทธิ์`);
+    log("    ใครรู้ URL ก็ส่งอีเมลในนามชุมนุมได้ โค้ดแก้แล้วแต่ขึ้นไม่ได้จนกว่าจะเข้าบัญชีชุมนุมได้");
+    log("    ไปต่อได้ — client ใหม่ยังส่งอีเมลผ่านตัวเก่าได้ปกติ");
   }
-  ok("/send บังคับตรวจสิทธิ์กรรมการแล้ว");
 }
 
 /* ═══ 6-7. build แล้วเอา hosting ขึ้น ═══════════════════════════ */

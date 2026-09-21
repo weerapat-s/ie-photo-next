@@ -96,10 +96,13 @@ export async function sendMail(mail: MailInput, aiBaseUrl?: string): Promise<boo
     }
     // Worker บอกมาว่าส่งตรงถึงเจ้าตัวไม่ได้ ต้องส่งต่อเข้ากล่องกลาง
     // (ยังไม่ได้ยืนยันโดเมนกับผู้ให้บริการ) — บันทึกไว้ ไม่งั้นหน้าจอจะบอกว่าถึงแล้ว
+    //
+    // Worker รุ่นเก่าไม่ส่งฟิลด์นี้มาเลย ต้องเก็บเป็น null (ไม่รู้) ไม่ใช่ false
+    // ถ้าเก็บ false หน้าจอจะขึ้น "ถึงผู้รับแล้ว" ทั้งที่อาจเข้ากล่องกลาง
     const out = (await res.json().catch(() => ({}))) as { forwarded?: boolean };
     await updateDoc(doc(db, "mailQueue", ref.id), {
       status: "sent",
-      forwarded: out.forwarded === true,
+      forwarded: typeof out.forwarded === "boolean" ? out.forwarded : null,
       sentAt: serverTimestamp(),
     });
     return true;

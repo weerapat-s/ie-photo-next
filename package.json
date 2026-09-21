@@ -16,7 +16,8 @@
     "test:ai": "node --experimental-strip-types scripts/test-ai-contract.mts",
     "worker:mail": "npx wrangler secret put RESEND_API_KEY --config workers/wrangler.toml",
     "worker:sa": "npx wrangler secret put SERVICE_ACCOUNT --config workers/wrangler.toml",
-    "worker:nas": "npx wrangler secret put NAS_SHARE_TOKEN --config workers/wrangler.toml",
+    "worker:nas": "npx wrangler secret put NAS_SHARE_TOKEN --config workers/wrangler.nas.toml",
+    "worker:nas-deploy": "npx wrangler deploy --config workers/wrangler.nas.toml",
     "worker:cron-token": "npx wrangler secret put CRON_TOKEN --config workers/wrangler.toml"
   },
   "dependencies": {

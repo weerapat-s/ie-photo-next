@@ -12,8 +12,11 @@ import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase/client";
 import { compressImageToBlob } from "@/lib/image";
 
-/** ฐานของ Worker — ตัดท้าย /v1 ออก เพราะ /nas ไม่ได้อยู่ใต้ /v1 */
-const WORKER_BASE = "https://okmd-proxy.wooden-date.workers.dev";
+/**
+ * Worker ที่ถือ token ของ NAS — แยกจาก okmd-proxy (ตัว AI/อีเมล)
+ * เพราะ okmd-proxy อยู่บัญชี Cloudflare ที่ตอนนี้ไม่มีใครเข้าได้ ดู workers/nas-entry.js
+ */
+const WORKER_BASE = "https://iephoto-nas.vaumgasem.workers.dev";
 
 /** path บน NAS เท่านั้น ที่เหลือ (data: URL เดิม, ลิงก์ภายนอก) ให้ใช้ src ตรง ๆ */
 export function isNasPath(value: string | null | undefined): value is string {

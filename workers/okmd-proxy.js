@@ -13,7 +13,8 @@
  *
  * สถานะตอนนี้: https://okmd-proxy.wooden-date.workers.dev (claim เข้าบัญชีชุมนุมแล้ว)
  * ตรวจเมื่อ 20 ก.ย. 2026: /send ขึ้นแล้ว (ตอบ "bad json" = เส้นทางมีจริง)
- * ส่วน /nas ยังไม่ขึ้น (ตอบ "path not allowed") ต้อง worker:deploy + worker:nas เพิ่ม
+ * /nas ย้ายไปอยู่ Worker แยก iephoto-nas (workers/nas-entry.js) บัญชีส่วนตัว
+ * เพราะเข้าบัญชีนี้ไม่ได้ โค้ด /nas ในไฟล์นี้คงไว้เผื่อวันหนึ่งกลับมารวมกัน
  *
  * ⚠️ บัญชี Cloudflare ที่ deploy ได้คือบัญชีชุมนุม (account_id 18d2d741… ใน wrangler.toml)
  * ถ้า wrangler ล็อกอินบัญชีอื่นอยู่ deploy จะได้ "Authentication error [code: 10000]"

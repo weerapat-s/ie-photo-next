@@ -293,24 +293,31 @@ export default function MailPage() {
                       <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                         {m.subject}
                       </span>
+                      {/* "ถึงผู้รับแล้ว" เฉพาะเมื่อ Worker ยืนยันว่าไม่ได้ส่งต่อ (forwarded === false)
+                          Worker รุ่นเก่าไม่รายงานเลย (null) — ห้ามเดาว่าถึง เพราะตอนโดเมน
+                          ยังไม่ยืนยัน เมลทุกฉบับถูกส่งต่อเข้ากล่องกลางจริง ๆ */}
                       <Badge
                         className={
                           m.status === "failed"
                             ? "bg-red-100 text-red-700"
-                            : m.forwarded
+                            : m.forwarded === true
                               ? "bg-amber-100 text-amber-700"
-                              : m.status === "sent"
+                              : m.status === "sent" && m.forwarded === false
                                 ? "bg-green-100 text-green-700"
-                                : "bg-amber-100 text-amber-700"
+                                : m.status === "sent"
+                                  ? "bg-gray-100 text-gray-700"
+                                  : "bg-amber-100 text-amber-700"
                         }
                       >
                         {m.status === "failed"
                           ? "ล้มเหลว"
-                          : m.forwarded
+                          : m.forwarded === true
                             ? "เข้ากล่องกลาง"
-                            : m.status === "sent"
+                            : m.status === "sent" && m.forwarded === false
                               ? "ถึงผู้รับแล้ว"
-                              : "รอส่ง"}
+                              : m.status === "sent"
+                                ? "ส่งออกแล้ว"
+                                : "รอส่ง"}
                       </Badge>
                     </div>
                     <p className="mt-0.5 text-sm text-muted-foreground">
