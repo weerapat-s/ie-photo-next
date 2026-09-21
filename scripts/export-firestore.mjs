@@ -22,6 +22,39 @@ const OUT = path.join(import.meta.dirname, "..", ".nas-import");
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(path.join(OUT, "files"), { recursive: true });
 
+/** บัญชีทั้งหมดจาก Firebase Auth (ไม่กินโควตา Firestore) */
+async function listAuthUsers() {
+  const out = [];
+  let pageToken;
+  do {
+    const page = await getAuthAdmin().listUsers(1000, pageToken);
+    for (const u of page.users) out.push({ uid: u.uid, email: (u.email || "").toLowerCase(), disabled: u.disabled });
+    pageToken = page.pageToken;
+  } while (pageToken);
+  return out;
+}
+
+// --auth-only: เอาแค่บัญชีขึ้น NAS ก่อน (ตอนโควตา Firestore หมด) — ลืมรหัส/ล็อกอินใช้ได้ทันที
+// โปรไฟล์และบทบาทจริงมาทีหลังตอนย้ายเต็ม (นำเข้าซ้ำได้ รหัสผ่านที่ตั้งไว้แล้วไม่ถูกรีเซ็ต)
+// --super-admin <อีเมล>  บัญชีที่เป็นประธานตั้งแต่ตอนนี้ (ไม่งั้นทุกคนเป็นสมาชิกธรรมดาไปก่อน)
+if (process.argv.includes("--auth-only")) {
+  const i = process.argv.indexOf("--super-admin");
+  const superEmail = i > 0 ? String(process.argv[i + 1] || "").toLowerCase() : "";
+  const authUsers = await listAuthUsers();
+  const rows = authUsers
+    .filter((u) => u.email)
+    .map((u) => ({
+      id: u.uid,
+      email: u.email,
+      studentId: u.email.split("@")[0],
+      role: u.email === superEmail ? "super_admin" : "member",
+    }));
+  fs.writeFileSync(path.join(OUT, "users.json"), JSON.stringify(rows));
+  fs.writeFileSync(path.join(OUT, "auth-users.json"), JSON.stringify(authUsers));
+  console.log(`บัญชี ${rows.length} บัญชี (ประธาน: ${rows.filter((r) => r.role === "super_admin").length})`);
+  process.exit(0);
+}
+
 const db = getDb();
 
 /** รูปในคำขอยืมเป็นเอกสารส่วนตัว → ย้ายเป็นไฟล์ protected บน NAS (ที่อื่นเป็นรูปสาธารณะ ฝังต่อได้) */
@@ -118,13 +151,7 @@ for (const [name, def] of Object.entries(SCHEMA)) {
 }
 
 // บัญชีจาก Firebase Auth — บางคนอาจมีบัญชีแต่ไม่มีเอกสาร users (สมัครค้าง)
-const authUsers = [];
-let pageToken;
-do {
-  const page = await getAuthAdmin().listUsers(1000, pageToken);
-  for (const u of page.users) authUsers.push({ uid: u.uid, email: (u.email || "").toLowerCase(), disabled: u.disabled });
-  pageToken = page.pageToken;
-} while (pageToken);
+const authUsers = await listAuthUsers();
 fs.writeFileSync(path.join(OUT, "auth-users.json"), JSON.stringify(authUsers));
 console.log(`${"auth-users".padEnd(14)} ${String(authUsers.length).padStart(5)} บัญชี`);
 
