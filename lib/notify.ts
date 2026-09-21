@@ -36,3 +36,30 @@ export async function notifyAssigned(notice: AssignedNotice): Promise<string | n
     return "ติดต่อตัวส่งอีเมลไม่ได้";
   }
 }
+
+/**
+ * สมาชิกส่งคำขอยืมเสร็จ → อีเมลยืนยันถึงตัวเอง + แจ้งกรรมการ
+ *
+ * ส่งแค่รหัสคำขอ — Worker อ่านรายการของจริงจากฐานข้อมูลเอง และส่งถึงอีเมลที่อยู่ใน
+ * token ของคนล็อกอินเท่านั้น หน้าเว็บกำหนดผู้รับหรือเนื้อหาไม่ได้
+ *
+ * keepalive: หน้ายืมเปลี่ยนไปหน้า "ของฉัน" ทันทีหลังส่ง ให้คำขอนี้วิ่งต่อจนจบ
+ * ไม่รอผล — อีเมลล้มต้องไม่ขวางการส่งคำขอยืมที่บันทึกสำเร็จไปแล้ว
+ */
+export async function notifyBorrowRequest(requestId: string): Promise<void> {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+    await fetch(`${WORKER_BASE}/notify/borrow-request`, {
+      method: "POST",
+      keepalive: true,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${await user.getIdToken()}`,
+      },
+      body: JSON.stringify({ requestId }),
+    });
+  } catch {
+    // เงียบไว้ — คำขอยืมบันทึกสำเร็จแล้ว อีเมลเป็นแค่ของแถม
+  }
+}

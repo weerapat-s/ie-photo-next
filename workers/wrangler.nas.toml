@@ -27,10 +27,15 @@ FIREBASE_DATABASE_ID = "default"
 MAIL_FROM = "admin@ienas.site"
 NOTIFY_TO = "68030271@kmitl.ac.th"
 
-# ล็อกผู้รับไว้ที่ binding — Cloudflare ปฏิเสธเองถ้าส่งไปที่อื่น
-# ต้องเป็นที่อยู่ที่ยืนยันใน Email Routing → Destination addresses แล้ว
-# (ส่งถึงที่อยู่ที่ยืนยันแล้วฟรีทุกแผน ส่งถึงที่อยู่อื่นต้องเปิด Workers Paid)
+# ไม่ล็อกผู้รับที่ binding เพราะต้องส่งยืนยันถึงตัวน้องที่ขอยืมด้วย (อีเมลเปลี่ยนไปตามคน)
+# ความปลอดภัยย้ายไปอยู่ที่ workers/notify.js แทน: ผู้รับมีได้แค่ NOTIFY_TO กับ
+# อีเมลของคนที่ล็อกอินอยู่ (จาก ID token) — client กำหนดผู้รับเองไม่ได้
+# ล็อกผู้ส่งไว้ที่ admin@ienas.site ที่เดียว
 [[send_email]]
 name = "EMAIL"
-allowed_destination_addresses = ["68030271@kmitl.ac.th"]
 allowed_sender_addresses = ["admin@ienas.site"]
+
+# จำว่าคำขอไหนส่งอีเมลไปแล้ว — กันกดรัวจนโควตารายวัน (200 ฉบับ) หมด
+[[kv_namespaces]]
+binding = "NOTIFY_SENT"
+id = "a47c1a39a31e4de39e988eaec2ba87d8"

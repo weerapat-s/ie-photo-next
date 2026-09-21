@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { collection, query, where, orderBy, doc, writeBatch, Timestamp, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { uploadBorrowImage } from "@/lib/nas";
-import { notifyAssigned } from "@/lib/notify";
+import { notifyAssigned, notifyBorrowRequest } from "@/lib/notify";
 import { findSlotConflicts, slotPayload } from "@/lib/slots";
 import { needsOvernightApproval, overdueItems, overdueBlockMessage } from "@/lib/borrow-policy";
 import { generateRequestId, requestQrPayload } from "@/lib/qr";
@@ -284,6 +284,8 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
         void notifyAssigned(notice).then((error) => setMailState(error ?? "sent"));
         return;
       }
+      // อีเมลยืนยันถึงน้อง + แจ้งกรรมการ — ยิงหลังบันทึกสำเร็จเท่านั้น ไม่รอผล
+      void notifyBorrowRequest(requestId);
       router.push(`/my-bookings?request=${requestId}`);
     } catch (error) {
       setErr(
