@@ -37,9 +37,15 @@ const PATH_RE = /^borrow\/\d{4}-\d{2}\/(form|return)-[A-Za-z0-9_-]{16,32}\.jpg$/
 
 /* ── Nextcloud ──────────────────────────────────────────────────── */
 
-/** token ของ share ใช้เป็น "ชื่อผู้ใช้" ของ Basic auth รหัสผ่านว่าง */
+/**
+ * token ของ share ใช้เป็น "ชื่อผู้ใช้" ของ Basic auth รหัสผ่านว่าง
+ *
+ * trim() เพราะตั้ง secret ผ่านท่อ (echo "..." | wrangler secret put) จะติด \r\n
+ * ท้ายค่ามาด้วย — ช่องพิมพ์ของ wrangler บนเทอร์มินัล Windows บางตัวไม่รับอินพุตเลย
+ * ท่อจึงเป็นทางเดียวที่ตั้งได้ และ \r\n ที่ติดมาจะทำให้ Nextcloud ปฏิเสธทุกคำขอ
+ */
 function nasAuth(env) {
-  return `Basic ${btoa(`${env.NAS_SHARE_TOKEN}:`)}`;
+  return `Basic ${btoa(`${String(env.NAS_SHARE_TOKEN).trim()}:`)}`;
 }
 
 function nasUrl(env, path) {
