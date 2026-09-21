@@ -39,7 +39,7 @@ fi
 FB_KEY="$(grep -E '^NEXT_PUBLIC_FIREBASE_API_KEY=' "$ROOT/.env.local" | head -1 | cut -d= -f2- | tr -d '"\r')"
 [[ -n "$FB_KEY" ]] || { echo "ไม่พบ NEXT_PUBLIC_FIREBASE_API_KEY ใน .env.local"; exit 1; }
 printf 'FIREBASE_WEB_API_KEY=%s\n' "$FB_KEY" \
-  | ssh "$NAS" "sudo -n install -m 600 /dev/stdin $REMOTE/pb.env"
+  | ssh "$NAS" "sudo -n sh -c 'umask 077; cat > $REMOTE/pb.env'"
 
 # คีย์ VAPID ของ Web Push (ชุดเดิมจาก .env.local — เครื่องที่เคยกดรับแจ้งเตือนไว้ยังใช้ได้ต่อ)
 # ให้เฉพาะ container iephoto-push ซึ่งไม่เปิดพอร์ตออกนอกเครื่อง
@@ -48,7 +48,7 @@ VAPID_PUB="$(env_of NEXT_PUBLIC_VAPID_PUBLIC_KEY)"
 VAPID_PRIV="$(env_of VAPID_PRIVATE_KEY)"
 if [[ -n "$VAPID_PUB" && -n "$VAPID_PRIV" ]]; then
   printf 'VAPID_PUBLIC_KEY=%s\nVAPID_PRIVATE_KEY=%s\n' "$VAPID_PUB" "$VAPID_PRIV" \
-    | ssh "$NAS" "sudo -n install -m 600 /dev/stdin $REMOTE/push.env"
+    | ssh "$NAS" "sudo -n sh -c 'umask 077; cat > $REMOTE/push.env'"
 else
   echo "(ไม่มีคีย์ VAPID ใน .env.local — ข้ามตัวส่ง push)"
 fi

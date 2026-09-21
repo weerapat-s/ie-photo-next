@@ -1,0 +1,3 @@
+{
+  "firestore": [{ "database": "default", "rules": "nas/firestore.freeze.rules", "indexes": "firestore.indexes.json" }]
+}
