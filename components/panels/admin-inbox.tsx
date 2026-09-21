@@ -29,9 +29,11 @@ import { Badge, Button, Alert, useToast } from "@/components/ui";
 import Icon from "@/components/icon";
 import type { BookingDoc, UserDoc, WithId } from "@/lib/types";
 import NasImage from "@/components/nas-image";
+import { approvalBlockReason } from "@/lib/borrow-policy";
+import { approvePatch, approverName, missingLiability } from "@/lib/approve";
 
 export default function AdminInbox() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const { settings } = useSettings();
   const now = useNow(60_000);
   const { show, node: toastNode } = useToast();
@@ -92,12 +94,27 @@ export default function AdminInbox() {
 
   async function approve(b: WithId<BookingDoc>) {
     if (busy) return;
-    setBusy(b.id);
     setErr("");
+    // กติกาเดียวกับสถานีสแกน — คนค้างของอยู่อนุมัติเพิ่มไม่ได้ (ดู lib/borrow-policy.ts)
+    const blocked = now === null ? null : approvalBlockReason(b, bookings, now);
+    if (blocked) return setErr(blocked);
+    if (
+      missingLiability(b) &&
+      !confirm(
+        `"${b.itemName}" ส่งคำขอก่อนมีช่องรับทราบเงื่อนไขชดใช้ในหน้ายืม\n` +
+          "ผู้ยืมยังไม่เคยติ๊กรับทราบว่าของหาย/เสียหายต้องชดใช้เต็มราคา\n\nอนุมัติต่อหรือไม่?"
+      )
+    )
+      return;
+    setBusy(b.id);
     try {
       // booking กับ slot ต้องเปลี่ยนพร้อมกัน ไม่งั้นตารางสาธารณะกับสถานะจริงไม่ตรงกัน
+      // อุปกรณ์: อนุมัติจากปุ่ม = บันทึกส่งมอบไปในตัว ไม่ต้องสแกนซ้ำ (ดู lib/approve.ts)
       const batch = writeBatch(db);
-      batch.update(doc(db, "bookings", b.id), { status: "approved" });
+      batch.update(
+        doc(db, "bookings", b.id),
+        approvePatch(b, { uid: user?.uid, name: approverName(profile, user?.email) })
+      );
       batch.update(doc(db, "slots", b.id), { status: "approved" });
       await batch.commit();
       await addDoc(collection(db, "feeds"), {

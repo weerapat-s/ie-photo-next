@@ -103,6 +103,13 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
   const [reason, setReason] = useState("");
   const [overnightStorage, setOvernightStorage] = useState("");
   /**
+   * ผู้ยืมรับทราบเงื่อนไขชดใช้ — ติ๊กตอนส่งคำขอ
+   * เดิมติ๊กได้ที่สถานีสแกนที่เดียว พอกรรมการอนุมัติจากปุ่มได้โดยไม่ต้องสแกน
+   * ผู้ยืมก็จะไม่เคยได้รับทราบเงื่อนไขเลย จึงย้ายมาไว้ตรงนี้ และ rules บังคับด้วย
+   * (โหมดมอบหมายไม่ใช้ — คนรับของไม่ได้อยู่หน้าจอ ติ๊กที่สถานีตอนมารับแทน)
+   */
+  const [liability, setLiability] = useState(false);
+  /**
    * งานชุมนุมหรืองานส่วนตัว — เก็บลง usageType ใช้ฟิลด์เดียวกับงานถ่าย
    * จึงไปโผล่ในระบบสั่งงาน/ภาระงาน/รายงานได้เหมือนกันโดยไม่ต้องเพิ่มฟิลด์ใหม่
    * และกรรมการเห็นทันทีว่าของออกไปเพื่อชุมนุมหรือเรื่องส่วนตัว
@@ -162,6 +169,7 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
     (!assigning || holder.length === 1) &&
     (!docRequired || file) &&
     (!overnight || overnightStorage.trim().length > 0) &&
+    (assigning || liability) &&
     overdue.length === 0 &&
     range.end > range.start &&
     !busy;
@@ -181,6 +189,7 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
       return;
     }
     if (range.start === null || range.end === null) return setErr("กรุณาเลือกวันและเวลาให้ครบ");
+    if (!assigning && !liability) return setErr("ต้องติ๊กรับทราบเงื่อนไขการชดใช้ก่อน");
     if (needsOvernightApproval(range.start, range.end) && !overnightStorage.trim())
       return setErr("ยืมข้ามคืนต้องระบุที่เก็บของตอนกลางคืน");
     const startDate = new Date(range.start);
@@ -248,6 +257,7 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
           usageReason: reason.trim(),
           overnight,
           overnightStorage: overnight ? overnightStorage.trim() : null,
+          liabilityAcceptedAt: assigning ? null : serverTimestamp(),
           handoverImageUrl: null,
           usageType: forClub ? (clubJob.trim() ? `ชุมนุม: ${clubJob.trim()}` : "งานชุมนุม") : "งานส่วนตัว",
           location: null,
@@ -625,6 +635,22 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
             />
           </Field>
         </Card>
+
+        {!assigning && (
+          <label className="mb-4 flex cursor-pointer items-start gap-2.5 rounded-2xl border border-black/10 bg-white/70 p-3.5">
+            <input
+              type="checkbox"
+              checked={liability}
+              onChange={(e) => setLiability(e.target.checked)}
+              className="mt-0.5 h-5 w-5 flex-shrink-0 accent-[var(--faculty)]"
+            />
+            <span className="text-sm text-[var(--ink)]">
+              ข้าพเจ้ารับทราบว่า{" "}
+              <strong>หากอุปกรณ์สูญหายหรือชำรุดเสียหายระหว่างยืม จะรับผิดชอบชดใช้เต็มจำนวนตามราคาสินค้า</strong>{" "}
+              และจะคืนภายในกำหนด
+            </span>
+          </label>
+        )}
 
         {overdue.length > 0 && now !== null && (
           <Alert>{overdueBlockMessage(overdue, now)}</Alert>

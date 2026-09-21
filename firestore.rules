@@ -217,7 +217,10 @@ service cloud.firestore {
                  || (d.overnightStorage is string && d.overnightStorage.size() <= 200))
              // รูปตอนส่งมอบ เก็บเป็น path บน NAS เหมือน formImageUrl
              && (!('handoverImageUrl' in d) || d.handoverImageUrl == null
-                 || (d.handoverImageUrl is string && d.handoverImageUrl.size() <= 500));
+                 || (d.handoverImageUrl is string && d.handoverImageUrl.size() <= 500))
+             // เวลารับทราบเงื่อนไขชดใช้ — ต้องเป็นเวลาเซิร์ฟเวอร์ตอนเขียนเท่านั้น ย้อนเวลาไม่ได้
+             && (!('liabilityAcceptedAt' in d) || d.liabilityAcceptedAt == null
+                 || d.liabilityAcceptedAt == request.time);
     }
 
     function validBookingCore(d) {
@@ -246,6 +249,9 @@ service cloud.firestore {
              // ยืมอุปกรณ์ยาวกว่า 12 ชม. = คาบเกี่ยวกลางคืน ต้องบอกที่เก็บของเสมอ
              // เทียบ duration ตรง ๆ เพราะ rules คำนวณวันตามเขตเวลาไทยไม่ได้
              // (ต้องตรงกับ OVERNIGHT_AFTER_MS ใน lib/borrow-policy.ts)
+             // สมาชิกยืมอุปกรณ์ต้องติ๊กรับทราบเงื่อนไขชดใช้ตอนส่งคำขอ — กรรมการอนุมัติจาก
+             // ปุ่มได้โดยไม่ผ่านสถานีสแกนแล้ว ถ้าไม่บังคับตรงนี้ ผู้ยืมจะไม่เคยรับทราบเลย
+             && (d.bookingType != 'equipment' || d.liabilityAcceptedAt == request.time)
              && (d.bookingType != 'equipment'
                  || d.endAt <= d.startAt + duration.value(12,'h')
                  || (d.overnight == true

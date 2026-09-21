@@ -102,7 +102,11 @@ export default function ScanStationPage() {
           where("status", "in", ["pending", "approved", "pending_return"])
         )
       );
-      setRows(snap.docs.map((d) => ({ id: d.id, ...(d.data() as BookingDoc) })));
+      const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as BookingDoc) }));
+      setRows(list);
+      // ติ๊กรับทราบเงื่อนไขชดใช้มาแล้วตอนส่งคำขอ — ไม่ต้องให้ติ๊กซ้ำที่เคาน์เตอร์
+      const pre = list.filter((b) => b.liabilityAcceptedAt).map((b) => b.id);
+      if (pre.length) setAccepted((prev) => new Set([...prev, ...pre]));
     } finally {
       setLoading(false);
     }
@@ -220,7 +224,8 @@ export default function ScanStationPage() {
       batch.update(doc(db, "bookings", b.id), {
         status: "approved",
         pickedUpAt: serverTimestamp(),
-        liabilityAcceptedAt: serverTimestamp(),
+        // เก็บเวลาที่รับทราบจริงไว้ ถ้าติ๊กมาแล้วตอนส่งคำขอ ไม่เขียนทับด้วยเวลาที่เคาน์เตอร์
+        ...(b.liabilityAcceptedAt ? {} : { liabilityAcceptedAt: serverTimestamp() }),
         handoverImageUrl: handover,
         approvedById: admin?.uid ?? null,
         approvedByName: approverName,
@@ -263,7 +268,8 @@ export default function ScanStationPage() {
       const batch = writeBatch(db);
       batch.update(doc(db, "bookings", b.id), {
         pickedUpAt: serverTimestamp(),
-        liabilityAcceptedAt: serverTimestamp(),
+        // เก็บเวลาที่รับทราบจริงไว้ ถ้าติ๊กมาแล้วตอนส่งคำขอ ไม่เขียนทับด้วยเวลาที่เคาน์เตอร์
+        ...(b.liabilityAcceptedAt ? {} : { liabilityAcceptedAt: serverTimestamp() }),
         approvedById: b.approvedById ?? admin?.uid ?? null,
         approvedByName: b.approvedByName ?? approverName,
         approvedAt: b.approvedAt ?? serverTimestamp(),
@@ -475,7 +481,12 @@ export default function ScanStationPage() {
                         </div>
                       </div>
 
-                      {/* เงื่อนไขชดใช้ — ให้ผู้ยืมอ่านและติ๊กต่อหน้าแอดมิน ก่อนกดส่งมอบ */}
+                      {/* เงื่อนไขชดใช้ — คำขอใหม่ติ๊กมาแล้วตอนส่งคำขอ ติ๊กที่นี่เฉพาะคำขอเก่า */}
+                      {b.liabilityAcceptedAt ? (
+                        <p className="mt-3 text-sm text-muted-foreground">
+                          ผู้ยืมรับทราบเงื่อนไขชดใช้แล้วตอนส่งคำขอ ({fmtDateTime(b.liabilityAcceptedAt)})
+                        </p>
+                      ) : (
                       <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-border bg-muted/60 p-3">
                         <input
                           type="checkbox"
@@ -495,6 +506,7 @@ export default function ScanStationPage() {
                           {" "}และจะคืนภายในกำหนด
                         </span>
                       </label>
+                      )}
                       {!accepted.has(b.id) && (
                         <p className="mt-1.5 text-xs text-muted-foreground">
                           ต้องให้ผู้ยืมติ๊กรับทราบก่อน จึงจะกดส่งมอบได้
@@ -551,6 +563,7 @@ export default function ScanStationPage() {
                         </div>
                       </div>
 
+                      {!b.liabilityAcceptedAt && (
                       <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-border bg-muted/60 p-3">
                         <input
                           type="checkbox"
@@ -569,6 +582,7 @@ export default function ScanStationPage() {
                           ผู้รับของรับทราบว่า <strong>หากอุปกรณ์สูญหายหรือชำรุดเสียหาย จะรับผิดชอบชดใช้เต็มจำนวนตามราคาสินค้า</strong>
                         </span>
                       </label>
+                      )}
                     </Card>
                   );
                 })}
