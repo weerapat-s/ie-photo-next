@@ -23,6 +23,7 @@ import { Spinner, EmptyState, Badge, Button, Alert, useToast } from "@/component
 import Icon from "@/components/icon";
 import ReturnModal from "@/components/return-modal";
 import type { BookingDoc, UserDoc, WithId } from "@/lib/types";
+import { allUsersQuery } from "@/lib/queries";
 
 export default function BorrowedPanel({ scope = "mine" }: { scope?: "all" | "mine" }) {
   const { user, role, profile } = useAuth();
@@ -33,7 +34,7 @@ export default function BorrowedPanel({ scope = "mine" }: { scope?: "all" | "min
 
   // กรรมการเห็นทุกใบ · สมาชิกอ่านได้เฉพาะใบของตัวเอง (firestore.rules บังคับอยู่แล้ว)
   // รายชื่อสมาชิก — ใช้หาอีเมลคนยืมตอนส่งแจ้งเตือน (กรรมการเท่านั้นที่อ่านได้)
-  const { data: users } = useCollection<UserDoc>(() => (isAdmin ? collection(db, "users") : null), [isAdmin]);
+  const { data: users } = useCollection<UserDoc>(() => (isAdmin ? allUsersQuery() : null), [isAdmin]);
 
   const { data: bookings, loading, error } = useCollection<BookingDoc>(
     () =>

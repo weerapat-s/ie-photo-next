@@ -6,7 +6,6 @@ import { useMemo, useState } from "react";
 import {
   collection,
   query,
-  where,
   orderBy,
   addDoc,
   doc,
@@ -46,6 +45,7 @@ import type {
   UserDoc,
   WithId,
 } from "@/lib/types";
+import { allBookingsQuery, allUsersQuery, useMyDeliveries } from "@/lib/queries";
 
 const STATUS_FLOW: DeliveryStatus[] = ["awaiting_upload", "uploaded", "delivered", "archived"];
 
@@ -61,41 +61,27 @@ export default function DeliveriesPanel() {
     () => (isAdmin ? query(collection(db, "deliveries"), orderBy("createdAt", "desc")) : null),
     [isAdmin]
   );
-  const { data: asCustomer, loading: loadCustomer } = useCollection<DeliveryDoc>(
-    () =>
-      !isAdmin && user
-        ? query(collection(db, "deliveries"), where("customerUserId", "==", user.uid))
-        : null,
-    [isAdmin, user?.uid]
-  );
-  const { data: asCrew, loading: loadCrew } = useCollection<DeliveryDoc>(
-    () =>
-      !isAdmin && user
-        ? query(collection(db, "deliveries"), where("assignedToId", "==", user.uid))
-        : null,
-    [isAdmin, user?.uid]
-  );
+  // เดิมกรองแค่ assignedToId (ของเก่า) ทีมงานที่ถูกมอบหมายผ่าน assigneeIds มองไม่เห็นงานตัวเอง
+  const mine = useMyDeliveries(!isAdmin ? user?.uid : null);
 
   const { data: users } = useCollection<UserDoc>(
-    () => (isAdmin ? query(collection(db, "users"), orderBy("studentId")) : null),
+    () => (isAdmin ? allUsersQuery() : null),
     [isAdmin]
   );
   const { data: bookings } = useCollection<BookingDoc>(
-    () => (isAdmin ? query(collection(db, "bookings"), orderBy("createdAt", "desc")) : null),
+    () => (isAdmin ? allBookingsQuery() : null),
     [isAdmin]
   );
 
-  const loading = isAdmin ? loadAll : loadCustomer || loadCrew;
+  const loading = isAdmin ? loadAll : mine.loading;
 
   const deliveries = useMemo(() => {
     if (isAdmin) return allDeliveries;
-    // รวม 2 ชุดแล้วตัดซ้ำ (คนเดียวเป็นทั้งลูกค้าและทีมงานได้)
-    const map = new Map<string, WithId<DeliveryDoc>>();
-    for (const d of [...asCustomer, ...asCrew]) map.set(d.id, d);
-    return [...map.values()].sort(
+    // useMyDeliveries รวมทุกบทบาทและตัดซ้ำให้แล้ว (คนเดียวเป็นทั้งลูกค้าและทีมงานได้)
+    return [...mine.data].sort(
       (a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0)
     );
-  }, [isAdmin, allDeliveries, asCustomer, asCrew]);
+  }, [isAdmin, allDeliveries, mine.data]);
 
   const [showClosed, setShowClosed] = useState(false);
   const [editing, setEditing] = useState<WithId<DeliveryDoc> | null>(null);

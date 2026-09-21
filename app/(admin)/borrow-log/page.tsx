@@ -7,13 +7,12 @@
 // ต่างจากแท็บ "ถูกยืมอยู่" ใน /resources ตรงที่หน้านั้นเน้นทวงของคืนทีละชิ้น
 // ส่วนหน้านี้เป็นมุมมองภาพรวม + ประวัติย้อนหลัง ไว้ดูว่าใครใช้ของบ่อยแค่ไหน
 import { useMemo, useState } from "react";
-import { collection, query, where, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
 import { useCollection, useNow } from "@/lib/hooks";
 import { PageHeader, Card, Badge, Spinner, EmptyState, ChipBar } from "@/components/ui";
 import { fmtDateTime, fmtRange } from "@/lib/format";
 import { displayName } from "@/lib/roles";
 import type { BookingDoc, UserDoc, WithId } from "@/lib/types";
+import { allBookingsQuery, allUsersQuery } from "@/lib/queries";
 
 type Tab = "out" | "history" | "people";
 
@@ -37,17 +36,14 @@ export default function BorrowLogPage() {
   const now = useNow(60_000);
   const [tab, setTab] = useState<Tab>("out");
 
-  // เฉพาะการยืมอุปกรณ์ — สตูดิโอ/งานตากล้องมีหน้าของตัวเองอยู่แล้ว
-  const { data: bookings, loading, error } = useCollection<BookingDoc>(
-    () =>
-      query(
-        collection(db, "bookings"),
-        where("bookingType", "==", "equipment"),
-        orderBy("createdAt", "desc")
-      ),
-    []
+  // query เดียวกับที่ตัวกวาดแจ้งเตือน (อยู่ทุกหน้าของแอดมิน) ใช้อยู่แล้ว — อ่านครั้งเดียวใช้ร่วมกัน
+  // แล้วกรองเฉพาะการยืมอุปกรณ์ในเครื่อง (สตูดิโอ/งานตากล้องมีหน้าของตัวเองอยู่แล้ว)
+  const { data: allBookings, loading, error } = useCollection<BookingDoc>(() => allBookingsQuery(), []);
+  const bookings = useMemo(
+    () => allBookings.filter((b) => b.bookingType === "equipment"),
+    [allBookings]
   );
-  const { data: users } = useCollection<UserDoc>(() => collection(db, "users"), []);
+  const { data: users } = useCollection<UserDoc>(() => allUsersQuery(), []);
 
   const nameOf = useMemo(() => {
     const map = new Map(users.map((u) => [u.id, u]));

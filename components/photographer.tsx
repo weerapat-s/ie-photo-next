@@ -18,6 +18,7 @@ import GlareHover from "@/components/reactbits/GlareHover";
 import TimePicker, { type TimeRange } from "@/components/time-picker";
 import Icon from "@/components/icon";
 import type { AvailabilityDoc, PhotographerDoc, SlotDoc, UserDoc, WithId } from "@/lib/types";
+import { allUsersQuery } from "@/lib/queries";
 
 /* ═══ การ์ดโปรไฟล์ตากล้อง ═════════════════════════════════════ */
 export function PhotographerCard({
@@ -128,7 +129,7 @@ export function PhotographerBookingModal({
 
   // โหมดมอบหมายต้องรู้ว่ามีใครบ้างและใครกันวันไหนไว้ — โหมดอื่นไม่ query เปล่า ๆ
   const { data: users } = useCollection<UserDoc>(
-    () => (assigning ? collection(db, "users") : null),
+    () => (assigning ? allUsersQuery() : null),
     [assigning]
   );
   // ต้องอ่านเสมอ ไม่ใช่เฉพาะโหมดมอบหมาย — คนนอกที่จองตากล้องคนนี้

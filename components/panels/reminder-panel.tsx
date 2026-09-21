@@ -20,6 +20,7 @@ import { allReminders, describeLeft, type Reminder, type ReminderKind } from "@/
 import { Badge, EmptyState, Spinner } from "@/components/ui";
 import Icon, { type IconName } from "@/components/icon";
 import type { BookingDoc, DeliveryDoc, TaskDoc, UserDoc } from "@/lib/types";
+import { allBookingsQuery, allUsersQuery, useMyDeliveries } from "@/lib/queries";
 
 // href ของปุ่ม "จัดการ" ต้องพาไปหน้าที่ "จัดการได้จริง"
 //  · สมาชิก (mine) → หน้าของตัวเอง /my, /calendar
@@ -42,7 +43,7 @@ export default function ReminderPanel({ scope = "mine" }: { scope?: "all" | "min
   const { data: bookings, loading } = useCollection<BookingDoc>(
     () =>
       all
-        ? collection(db, "bookings")
+        ? allBookingsQuery()
         : user
           ? query(collection(db, "bookings"), where("userId", "==", user.uid))
           : null,
@@ -57,11 +58,14 @@ export default function ReminderPanel({ scope = "mine" }: { scope?: "all" | "min
           : null,
     [all, user?.uid]
   );
-  const { data: deliveries } = useCollection<DeliveryDoc>(
-    () => (user ? collection(db, "deliveries") : null),
-    [user?.uid]
+  // แอดมินดูทั้งหมดได้ · สมาชิกขอทั้งหมดไม่ได้ (กติกาปฏิเสธทั้งก้อน → เดิมขึ้นว่างเปล่า)
+  const { data: allDeliveries } = useCollection<DeliveryDoc>(
+    () => (all ? collection(db, "deliveries") : null),
+    [all]
   );
-  const { data: users } = useCollection<UserDoc>(() => (all ? collection(db, "users") : null), [all]);
+  const mine = useMyDeliveries(all ? null : user?.uid);
+  const deliveries = all ? allDeliveries : mine.data;
+  const { data: users } = useCollection<UserDoc>(() => (all ? allUsersQuery() : null), [all]);
 
   const nameOf = useMemo(() => new Map(users.map((u) => [u.id, displayName(u)])), [users]);
 

@@ -25,6 +25,7 @@ import {
 import Icon from "@/components/icon";
 import { fmtDateTime, BOOKING_STATUS, BOOKING_TYPE_LABEL, DELIVERY_STATUS } from "@/lib/format";
 import type { BookingDoc, DeliveryDoc, FeedDoc, FormResponseDoc } from "@/lib/types";
+import { allBookingsQuery } from "@/lib/queries";
 
 type Kind = "bookings" | "feeds" | "responses" | "deliveries";
 
@@ -49,7 +50,7 @@ export default function DataPanel() {
   const { show, node: toastNode } = useToast();
 
   const { data: bookings, loading: l1 } = useCollection<BookingDoc>(
-    () => query(collection(db, "bookings"), orderBy("createdAt", "desc")),
+    () => allBookingsQuery(),
     []
   );
   const { data: feeds, loading: l2 } = useCollection<FeedDoc>(

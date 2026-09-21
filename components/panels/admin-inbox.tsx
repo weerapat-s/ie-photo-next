@@ -17,8 +17,6 @@ import {
   updateDoc,
   writeBatch,
   Timestamp,
-  query,
-  where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { describeWriteError } from "@/lib/errors";
@@ -33,6 +31,7 @@ import type { BookingDoc, UserDoc, WithId } from "@/lib/types";
 import NasImage from "@/components/nas-image";
 import { approvalBlockReason } from "@/lib/borrow-policy";
 import { approvePatch, approverName, missingLiability } from "@/lib/approve";
+import { allBookingsQuery, allUsersQuery } from "@/lib/queries";
 
 export default function AdminInbox() {
   const { user, profile } = useAuth();
@@ -40,15 +39,11 @@ export default function AdminInbox() {
   const now = useNow(60_000);
   const { show, node: toastNode } = useToast();
 
-  // เฉพาะสถานะที่หน้านี้ใช้จริง — รออนุมัติ · รอตรวจคืน · อนุมัติแล้ว (เช็คของค้าง + งานถ่ายที่ไม่มีคนรับ)
-  // เดิมดึงทั้ง collection รวมประวัติที่คืน/ยกเลิกไปแล้ว ทุกครั้งที่กรรมการเปิดหน้าภาพรวม
-  // Firestore รุ่นนี้คิดโควตาอ่านตามขนาดเอกสาร และคำขอเก่ายังฝังรูป base64 อยู่
-  // หน้านี้หน้าเดียวจึงกินโควตารายวันไปก้อนใหญ่ จนเคยหมดทั้งโปรเจกต์
-  const { data: bookings } = useCollection<BookingDoc>(
-    () => query(collection(db, "bookings"), where("status", "in", ["pending", "pending_return", "approved"])),
-    []
-  );
-  const { data: users } = useCollection<UserDoc>(() => collection(db, "users"), []);
+  // query เดียวกับตัวหน้าภาพรวมและตัวกวาดแจ้งเตือน (lib/queries.ts) — การ์ดนี้อยู่หน้าภาพรวม
+  // เท่านั้น ใช้ listener ร่วมกันได้โดยไม่ต้องอ่านซ้ำ เคยแยกเป็น query ของตัวเอง
+  // (กรองเฉพาะสถานะที่ใช้) แต่นั่นทำให้อ่านเพิ่มอีกรอบ เพราะหน้าภาพรวมโหลดทั้งหมดอยู่แล้ว
+  const { data: bookings } = useCollection<BookingDoc>(() => allBookingsQuery(), []);
+  const { data: users } = useCollection<UserDoc>(() => allUsersQuery(), []);
   // งานส่งไฟล์ที่มีอยู่แล้ว — กันสร้างซ้ำเวลาอนุมัติงานถ่าย
   const { data: deliveries } = useCollection<{ bookingId: string | null }>(
     () => (settings.featureDeliveries ? collection(db, "deliveries") : null),

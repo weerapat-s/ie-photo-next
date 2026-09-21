@@ -35,6 +35,7 @@ import { activeJobNames } from "@/lib/jobs";
 import Icon from "@/components/icon";
 import EquipmentThumb from "@/components/equipment-thumb";
 import type { AvailabilityDoc, BookingDoc, EquipmentDoc, EquipmentType, SlotDoc, UserDoc } from "@/lib/types";
+import { allBookingsQuery, allUsersQuery } from "@/lib/queries";
 
 type TypeFilter = EquipmentType | "all";
 
@@ -55,7 +56,11 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
 
   // งานชุมนุมที่ "ยังไม่จบ" — งานที่เสร็จ/ผ่านเวลาไปแล้วจะหายจากตัวเลือกเอง (ดู lib/jobs.ts)
   // (ระบบไม่มีคอลเลกชัน "งาน" แยก — งานคือชื่อที่ผูกไว้ใน bookings หลายใบ)
-  const { data: allBookings } = useCollection<BookingDoc>(() => collection(db, "bookings"), []);
+  // เฉพาะแอดมิน — สมาชิกอ่านคำขอของคนอื่นไม่ได้ ยิงไปก็โดนกติกาปฏิเสธทั้งก้อน (เปลืองรอบเปล่า ๆ)
+  const { data: allBookings } = useCollection<BookingDoc>(
+    () => (isAdminRole(profile?.role) ? allBookingsQuery() : null),
+    [profile?.role]
+  );
   // now ต้องมาก่อน clubJobs เพราะใช้ตัดงานที่จบแล้วออก (เรียก Date.now() ตอน render ไม่ได้)
   const now = useNow(60_000);
   const clubJobs = useMemo(() => activeJobNames(allBookings, now).slice(0, 30), [allBookings, now]);
@@ -63,7 +68,7 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
   // โหมดมอบหมายต้องเลือกได้ว่าใครถือของ — อุปกรณ์รับผิดชอบได้ทีละคน
   // (ของหายต้องรู้ชัดว่าใครถือ ไม่ใช่หารกันรับผิด)
   const { data: users } = useCollection<UserDoc>(
-    () => (assigning ? collection(db, "users") : null),
+    () => (assigning ? allUsersQuery() : null),
     [assigning]
   );
   const { data: availability } = useCollection<AvailabilityDoc>(

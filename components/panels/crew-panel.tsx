@@ -35,13 +35,14 @@ import {
 import Icon from "@/components/icon";
 import { displayName, titleLine, sortByRank, searchText } from "@/lib/roles";
 import type { PhotographerDoc, UserDoc, WithId } from "@/lib/types";
+import { allUsersQuery } from "@/lib/queries";
 
 export default function CrewPanel() {
   const { data: crew, loading } = useCollection<PhotographerDoc>(
     () => query(collection(db, "photographers"), orderBy("sortOrder")),
     []
   );
-  const { data: users } = useCollection<UserDoc>(() => query(collection(db, "users"), orderBy("studentId")), []);
+  const { data: users } = useCollection<UserDoc>(() => allUsersQuery(), []);
   const { show, node: toastNode } = useToast();
 
   const [editing, setEditing] = useState<WithId<PhotographerDoc> | null>(null);

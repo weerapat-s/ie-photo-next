@@ -7,8 +7,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   collection,
-  query,
-  orderBy,
   doc,
   writeBatch,
   addDoc,
@@ -48,6 +46,7 @@ import { groupByStage, STAGE_META, STAGE_ORDER, type Stage } from "@/lib/analyti
 import { deriveClubJobs, type ClubJob, type JobStatus } from "@/lib/jobs";
 import { slotPayload } from "@/lib/slots";
 import type { AvailabilityDoc, BookingDoc, BookingType, DeliveryDoc, UserDoc, WithId } from "@/lib/types";
+import { allBookingsQuery, allUsersQuery } from "@/lib/queries";
 
 type TypeFilter = BookingType | "all";
 
@@ -56,11 +55,11 @@ export default function WorkflowPage() {
   const { show, node: toastNode } = useToast();
 
   const { data: bookings, loading } = useCollection<BookingDoc>(
-    () => query(collection(db, "bookings"), orderBy("createdAt", "desc")),
+    () => allBookingsQuery(),
     []
   );
   const { data: deliveries } = useCollection<DeliveryDoc>(() => collection(db, "deliveries"), []);
-  const { data: users } = useCollection<UserDoc>(() => query(collection(db, "users"), orderBy("studentId")), []);
+  const { data: users } = useCollection<UserDoc>(() => allUsersQuery(), []);
   const { data: availability } = useCollection<AvailabilityDoc>(() => collection(db, "availability"), []);
   const { user } = useAuth();
   const { settings } = useSettings();
