@@ -21,6 +21,10 @@ migrate(
     // ล็อกอินค้างไว้ 30 วัน (เว็บต่ออายุให้เองทุกครั้งที่เปิด) — ใกล้เคียง Firebase ที่ไม่หลุดเอง
     users.authToken.duration = 30 * 24 * 3600;
 
+    // ปิดอีเมล "มีการล็อกอินจากเครื่องใหม่" ที่ PocketBase ส่งเองอัตโนมัติ
+    // ไม่งั้นหลังย้ายระบบทุกคนจะได้อีเมลนี้ตอนล็อกอินครั้งแรก — โควตาส่งอีเมล 200 ฉบับ/วันหมดทันที
+    users.authAlert.enabled = false;
+
     // ลิงก์ตั้งรหัสใหม่ชี้ไปหน้าของเว็บเอง (app/(auth)/reset-password) ไม่ใช่หน้าแอดมินของ PocketBase
     users.resetPasswordTemplate.subject = "ตั้งรหัสผ่านใหม่ — {APP_NAME}";
     users.resetPasswordTemplate.body =

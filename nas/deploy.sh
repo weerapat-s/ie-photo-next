@@ -19,8 +19,8 @@ ROOT="$(cd "$HERE/.." && pwd)"
 WITH_SITE=0
 [[ "${1:-}" == "--site" ]] && WITH_SITE=1
 
-echo "=== ส่ง migrations + hooks + Dockerfile ==="
-tar -C "$HERE" -czf - Dockerfile pb_migrations pb_hooks \
+echo "=== ส่ง migrations + hooks + Dockerfile + ตัวส่ง push ==="
+tar -C "$HERE" -czf - Dockerfile pb_migrations pb_hooks push \
   | ssh "$NAS" "sudo -n mkdir -p $REMOTE/build && sudo -n tar -C $REMOTE/build -xzf -"
 
 if [[ $WITH_SITE == 1 ]]; then
@@ -41,6 +41,18 @@ FB_KEY="$(grep -E '^NEXT_PUBLIC_FIREBASE_API_KEY=' "$ROOT/.env.local" | head -1 
 printf 'FIREBASE_WEB_API_KEY=%s\n' "$FB_KEY" \
   | ssh "$NAS" "sudo -n install -m 600 /dev/stdin $REMOTE/pb.env"
 
+# คีย์ VAPID ของ Web Push (ชุดเดิมจาก .env.local — เครื่องที่เคยกดรับแจ้งเตือนไว้ยังใช้ได้ต่อ)
+# ให้เฉพาะ container iephoto-push ซึ่งไม่เปิดพอร์ตออกนอกเครื่อง
+env_of() { grep -E "^$1=" "$ROOT/.env.local" | head -1 | cut -d= -f2- | tr -d '"\r'; }
+VAPID_PUB="$(env_of NEXT_PUBLIC_VAPID_PUBLIC_KEY)"
+VAPID_PRIV="$(env_of VAPID_PRIVATE_KEY)"
+if [[ -n "$VAPID_PUB" && -n "$VAPID_PRIV" ]]; then
+  printf 'VAPID_PUBLIC_KEY=%s\nVAPID_PRIVATE_KEY=%s\n' "$VAPID_PUB" "$VAPID_PRIV" \
+    | ssh "$NAS" "sudo -n install -m 600 /dev/stdin $REMOTE/push.env"
+else
+  echo "(ไม่มีคีย์ VAPID ใน .env.local — ข้ามตัวส่ง push)"
+fi
+
 ssh "$NAS" "set -e
   cd $REMOTE
   sudo -n mkdir -p pb_data pb_public
@@ -48,12 +60,20 @@ ssh "$NAS" "set -e
   sudo -n rm -rf pb_migrations pb_hooks
   sudo -n cp -r build/pb_migrations build/pb_hooks .
   sudo -n docker build -q -t $IMAGE build >/dev/null
+  # เครือข่ายภายในให้ PocketBase คุยกับตัวส่ง push (ไม่มีพอร์ตไหนเปิดออกเครื่อง)
+  sudo -n docker network inspect iephoto >/dev/null 2>&1 || sudo -n docker network create iephoto >/dev/null
+  if [ -f $REMOTE/push.env ]; then
+    sudo -n docker build -q -t iephoto-push build/push >/dev/null
+    sudo -n docker rm -f iephoto-push >/dev/null 2>&1 || true
+    sudo -n docker run -d --name iephoto-push --restart unless-stopped --network iephoto \
+      --env-file $REMOTE/push.env iephoto-push >/dev/null
+  fi
   sudo -n docker rm -f iephoto-pb >/dev/null 2>&1 || true
   # 127.0.0.1 = ให้ cloudflared บนเครื่องเข้า · IP Tailscale = ให้ทีมเข้าหน้าแอดมินได้โดยไม่เปิดสู่เน็ตสาธารณะ
   # ห้าม bind 0.0.0.0 — NAS มี IP สาธารณะของมหาลัย
   sudo -n docker run -d --name iephoto-pb --restart unless-stopped \
     -p 127.0.0.1:8096:8090 -p 100.116.118.109:8096:8090 \
-    --env-file $REMOTE/pb.env \
+    --env-file $REMOTE/pb.env --network iephoto \
     -v $REMOTE/pb_data:/pb/pb_data \
     -v $REMOTE/pb_migrations:/pb/pb_migrations:ro \
     -v $REMOTE/pb_hooks:/pb/pb_hooks:ro \
