@@ -14,9 +14,9 @@
 // ส่วนไหนไม่มีของก็ไม่แสดง — หน้าจะสั้นลงเองเมื่อไม่มีอะไรค้าง
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { collection, doc, query, updateDoc, where } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { collection, doc, query, updateDoc, where } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
+import { useAuth } from "@/lib/db/auth-context";
 import { useSettings } from "@/lib/settings-context";
 import { useCollection, useDocument, useNow } from "@/lib/hooks";
 import { canCancel, cancelBooking, cancelPrompt } from "@/lib/bookings";

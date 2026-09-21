@@ -3,8 +3,8 @@
 // ยุบ 3 หน้าเดิม (ตั้งค่าระบบ · สร้างฟอร์ม · คำตอบฟอร์ม) เป็นแท็บ
 // ทั้งสามคือ "งานตั้งค่าที่ทำนาน ๆ ที" ไม่ควรกินช่องเมนูหลักคนละช่อง
 import { Suspense } from "react";
-import { collection, query } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, query } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { useSettings } from "@/lib/settings-context";
 import { useCollection } from "@/lib/hooks";
 import { PageHeader, Spinner } from "@/components/ui";

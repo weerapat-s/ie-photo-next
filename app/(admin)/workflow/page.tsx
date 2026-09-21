@@ -13,8 +13,8 @@ import {
   updateDoc,
   serverTimestamp,
   Timestamp,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+} from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { useCollection, useNow } from "@/lib/hooks";
 import {
   PageHeader,
@@ -32,7 +32,7 @@ import Icon from "@/components/icon";
 import AssignPicker from "@/components/assign-picker";
 import WorkflowMap from "@/components/workflow-map";
 import { buildBusyMap, busyDaysInRange, shortDay } from "@/lib/availability";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { useSettings } from "@/lib/settings-context";
 import {
   fmtRange,

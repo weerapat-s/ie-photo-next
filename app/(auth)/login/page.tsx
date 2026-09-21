@@ -6,8 +6,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
-import { auth } from "@/lib/firebase/client";
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "@/lib/db/auth";
 import { useSettings } from "@/lib/settings-context";
 import { Button, Alert } from "@/components/ui";
 import Icon from "@/components/icon";
@@ -41,7 +40,7 @@ export default function LoginPage() {
     if (!account.trim()) return setError('กรอกรหัสนักศึกษาก่อนกด "ลืมรหัสผ่าน"');
     setResetting(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(email);
       setInfo(`ส่งลิงก์ตั้งรหัสผ่านใหม่ไปที่ ${email} แล้ว`);
     } catch {
       setInfo("ถ้าอีเมลนี้มีในระบบ จะได้รับลิงก์ตั้งรหัสผ่านใหม่ในไม่ช้า");
@@ -58,7 +57,7 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(email, password);
       router.push("/");
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
@@ -66,7 +65,10 @@ export default function LoginPage() {
         setError("รหัสนักศึกษา/อีเมล หรือรหัสผ่านไม่ถูกต้อง");
       else if (code === "auth/invalid-email") setError("รูปแบบอีเมลไม่ถูกต้อง");
       else if (code === "auth/too-many-requests") setError("พยายามเข้าสู่ระบบมากเกินไป กรุณารอสักครู่");
-      else if (code === "auth/network-request-failed") setError("เชื่อมต่อไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองใหม่");
+      else if (code === "auth/network-request-failed" || code === "auth/unavailable")
+        setError("เชื่อมต่อไม่ได้ ตรวจอินเทอร์เน็ตแล้วลองใหม่");
+      // เหตุผลจากเซิร์ฟเวอร์ เช่น "บัญชีนี้ถูกระงับ"
+      else if (code === "auth/rejected") setError((err as Error).message);
       else setError("เข้าสู่ระบบไม่สำเร็จ");
       setLoading(false);
     }

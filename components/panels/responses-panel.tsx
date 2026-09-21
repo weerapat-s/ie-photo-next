@@ -2,8 +2,8 @@
 // components/panels/responses-panel.tsx — ดูคำตอบฟอร์ม + ดาวน์โหลด CSV
 // (เดิมเป็นหน้า /responses — ย้ายมาเป็นแท็บใน /settings)
 import { useMemo, useState } from "react";
-import { collection, query, orderBy, doc, deleteDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, query, orderBy, doc, deleteDoc } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { useCollection } from "@/lib/hooks";
 import {
   Card,

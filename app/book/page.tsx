@@ -3,8 +3,8 @@
 // อยู่นอก (member) group จึงไม่มี RequireAuth ครอบ
 import { useState } from "react";
 import Link from "next/link";
-import { collection, query, orderBy, doc, writeBatch, Timestamp, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, query, orderBy, doc, writeBatch, Timestamp, serverTimestamp } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { findSlotConflicts, slotPayload } from "@/lib/slots";
 import { useSettings } from "@/lib/settings-context";
 import { useCollection } from "@/lib/hooks";

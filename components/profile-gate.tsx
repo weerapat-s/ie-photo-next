@@ -5,10 +5,10 @@
 // ถ้าข้อมูลว่าง กรรมการจะเห็นแค่รหัสนักศึกษาแล้วจ่ายงานผิดคน
 // จึงขึ้นหน้านี้ทับทุกอย่างจนกว่าจะกรอกครบ — ปิดไม่ได้ ข้ามไม่ได้
 import { useState } from "react";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { doc, updateDoc } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { describeWriteError } from "@/lib/errors";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { Button, Field, inputClass, Alert, ImagePicker } from "@/components/ui";
 import { compressImageToDataUrl } from "@/lib/image";
 import Icon from "@/components/icon";

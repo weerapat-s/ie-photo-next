@@ -21,11 +21,15 @@ cleanup() {
 }
 trap cleanup EXIT
 
+FB_KEY="$(grep -E '^NEXT_PUBLIC_FIREBASE_API_KEY=' "$ROOT/.env.local" | head -1 | cut -d= -f2- | tr -d '"\r')"
+
 tar -C "$HERE" -czf - pb_migrations pb_hooks | ssh "$NAS" "set -e
   sudo -n rm -rf /tmp/iephoto-pb-test && mkdir -p /tmp/iephoto-pb-test/data
   tar -C /tmp/iephoto-pb-test -xzf -
   sudo -n docker rm -f iephoto-pb-test >/dev/null 2>&1 || true
+  echo 'FIREBASE_WEB_API_KEY=$FB_KEY' > /tmp/iephoto-pb-test/pb.env
   sudo -n docker run -d --name iephoto-pb-test -p 100.116.118.109:$PORT:8090 \
+    --env-file /tmp/iephoto-pb-test/pb.env \
     -v /tmp/iephoto-pb-test/data:/pb/pb_data \
     -v /tmp/iephoto-pb-test/pb_migrations:/pb/pb_migrations:ro \
     -v /tmp/iephoto-pb-test/pb_hooks:/pb/pb_hooks:ro \
@@ -37,3 +41,6 @@ tar -C "$HERE" -czf - pb_migrations pb_hooks | ssh "$NAS" "set -e
 cd "$ROOT"
 PB_URL="http://100.116.118.109:$PORT" PB_SU_EMAIL="$SU_EMAIL" PB_SU_PASS="$SU_PASS" \
   node scripts/test-pb-rules.mjs
+
+# hook ที่ล้มจะเขียนลง log ของ PocketBase — โชว์ไว้ให้เห็น (ไม่มีอะไร = ปกติ)
+ssh "$NAS" "sudo -n docker logs iephoto-pb-test 2>&1 | grep -iE 'error|legacy-login' | tail -5" || true

@@ -1,9 +1,9 @@
 "use client";
 // app/(member)/photographers/page.tsx — เลือกและจองตากล้อง
 import { useState } from "react";
-import { collection, query, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { collection, query, orderBy } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
+import { useAuth } from "@/lib/db/auth-context";
 import { useSettings } from "@/lib/settings-context";
 import { useCollection, useNow } from "@/lib/hooks";
 import { dateKey, crewStatus } from "@/lib/availability";

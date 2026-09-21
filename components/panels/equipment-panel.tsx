@@ -2,8 +2,8 @@
 // components/panels/equipment-panel.tsx — จัดการคลังอุปกรณ์
 // (เดิมเป็นหน้า /inventory — ย้ายมาเป็นแท็บใน /resources)
 import { useMemo, useState } from "react";
-import { collection, query, orderBy, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, query, orderBy, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { describeWriteError } from "@/lib/errors";
 import { useCollection, useNow } from "@/lib/hooks";
 import {

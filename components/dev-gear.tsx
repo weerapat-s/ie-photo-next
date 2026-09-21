@@ -8,7 +8,7 @@
 // โผล่เฉพาะบัญชีที่เป็นกรรมการอยู่แล้ว — สมาชิกธรรมดาไม่เห็นปุ่มนี้
 // และต่อให้เห็น ก็ปลดล็อกได้แค่ป้าย ไม่ได้สิทธิ์เขียนจริง (ดู lib/dev-mode.ts)
 import { useRef, useState } from "react";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { useDevMode } from "@/lib/hooks";
 import { isAdminRole } from "@/lib/roles";
 import { toggleDevMode } from "@/lib/dev-mode";

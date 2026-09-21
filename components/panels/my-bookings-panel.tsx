@@ -1,10 +1,10 @@
 "use client";
 // app/(member)/my-bookings/page.tsx — การจองของฉัน + คืนอุปกรณ์
 import { useMemo, useState } from "react";
-import { collection, query, where, orderBy, doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, query, where, orderBy, doc, updateDoc } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { uploadBorrowImage } from "@/lib/nas";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { useCollection, useNow } from "@/lib/hooks";
 import { useToast } from "@/components/ui";
 import {

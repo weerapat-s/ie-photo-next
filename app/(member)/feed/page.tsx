@@ -1,9 +1,9 @@
 "use client";
 // app/(member)/feed/page.tsx — หน้าแรกของสมาชิก: ทางลัด + ฟีดกิจกรรม
 import Link from "next/link";
-import { collection, query, orderBy, where, doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { collection, query, orderBy, where, doc, updateDoc, arrayUnion, arrayRemove } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
+import { useAuth } from "@/lib/db/auth-context";
 import { isAdminRole } from "@/lib/roles";
 import { useSettings } from "@/lib/settings-context";
 import { useCollection, useNow } from "@/lib/hooks";

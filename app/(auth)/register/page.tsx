@@ -3,9 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase/client";
+import { createUserWithEmailAndPassword } from "@/lib/db/auth";
 import { useSettings } from "@/lib/settings-context";
 import { Button, Field, inputClass, Alert } from "@/components/ui";
 import Icon from "@/components/icon";
@@ -44,25 +42,14 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      const mail = email;
-      const cred = await createUserWithEmailAndPassword(auth, mail, password);
-      // สร้าง user doc (rules อนุญาตให้สร้าง doc ตัวเอง role=member)
-      await setDoc(doc(db, "users", cred.user.uid), {
-        studentId: mail.split("@")[0],
-        firstName: "",
-        lastName: "",
-        email: mail,
-        phone: "",
-        role: "member",
-        profileImageUrl: null,
-        profileCompleted: false,
-        createdAt: serverTimestamp(),
-      });
+      // บัญชีกับข้อมูลสมาชิกเป็นเรคคอร์ดเดียวกันบน NAS — สร้างพร้อมกันในคำขอเดียว
+      await createUserWithEmailAndPassword(email, password);
       router.push("/profile?first_login=1");
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
       if (code === "auth/email-already-in-use") setError("อีเมลนี้ถูกใช้สมัครแล้ว");
       else if (code === "auth/weak-password") setError("รหัสผ่านอ่อนเกินไป");
+      else if (code === "auth/rejected") setError((err as Error).message);
       else setError((err as Error).message || "สมัครไม่สำเร็จ");
       setLoading(false);
     }

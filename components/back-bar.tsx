@@ -9,7 +9,7 @@
 // เพราะ back อาจพาออกนอกแอปไปเลยถ้าเข้ามาจากลิงก์ตรง
 import { useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { useSettings } from "@/lib/settings-context";
 import { navLinks, norm, samePath } from "@/lib/nav";
 import { subscribePath, getPrevPath } from "@/lib/nav-history";

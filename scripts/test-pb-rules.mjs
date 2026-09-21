@@ -92,9 +92,22 @@ console.log("— users —");
 await expectDenied("สมัครเองเป็น admin", () =>
   guest.collection("users").create({ email: "x1@test.invalid", password: PW, passwordConfirm: PW, role: "admin" }));
 await expectOk("สมัครเองเป็นสมาชิก", async () => {
-  const r = await guest.collection("users").create({ email: "x2@test.invalid", password: PW, passwordConfirm: PW, studentId: "x2" });
+  const r = await guest.collection("users").create({ email: "x2@kmitl.ac.th", password: PW, passwordConfirm: PW, studentId: "x2" });
   if (r.role !== "member") throw new Error("role ไม่ใช่ member: " + r.role);
+  if ("legacyAuth" in r) throw new Error("legacyAuth หลุดออกมาทาง API");
 });
+await expectDenied("สมัครด้วยอีเมลนอกสถาบัน", () =>
+  guest.collection("users").create({ email: "x3@test.invalid", password: PW, passwordConfirm: PW }));
+await expectOk("รหัสผ่าน 6 ตัวใช้ได้ (เท่า Firebase)", () =>
+  guest.collection("users").create({ email: "x4@kmitl.ac.th", password: "Ab1234", passwordConfirm: "Ab1234" }));
+await expectDenied("legacy-login กับบัญชีที่ไม่ใช่บัญชีย้ายมา", () =>
+  guest.send("/api/ie/legacy-login", { method: "POST", body: { email: "x2@kmitl.ac.th", password: PW } }));
+await su.collection("users").create({
+  id: "legacyLLLLLLLLLLLLLLLLLLLLLLL", email: "legacy@kmitl.ac.th", password: PW, passwordConfirm: PW,
+  legacyAuth: true, role: "member",
+});
+await expectDenied("legacy-login รหัสผิด (Firebase ปฏิเสธ)", () =>
+  guest.send("/api/ie/legacy-login", { method: "POST", body: { email: "legacy@kmitl.ac.th", password: "wrong-pass" } }));
 await expectDenied("สมาชิกยกตัวเองเป็น admin", () => memA.collection("users").update(A, { role: "admin" }));
 await expectOk("สมาชิกแก้ชื่อตัวเอง", () => memA.collection("users").update(A, { firstName: "ใหม่" }));
 await expectDenied("สมาชิกแก้ชื่อคนอื่น", () => memA.collection("users").update(B, { firstName: "x" }));

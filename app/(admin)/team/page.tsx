@@ -2,8 +2,8 @@
 // app/(admin)/team/page.tsx — คนในชุมนุมที่เดียวจบ
 // ยุบ 2 หน้าเดิม (จัดการสมาชิก · มอบหมายงาน) เป็นแท็บ — ทั้งคู่คือ "จัดการคน"
 import { Suspense } from "react";
-import { collection, query } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, query } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { useSettings } from "@/lib/settings-context";
 import { useCollection, useNow } from "@/lib/hooks";
 import { PageHeader, Spinner } from "@/components/ui";

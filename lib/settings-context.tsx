@@ -3,8 +3,8 @@
 // ยังไม่มี doc ก็ใช้ DEFAULT_SETTINGS ไปก่อน แอปไม่พัง
 // สีหลัก (accentColor) ถูกยิงกลับเข้า CSS variable → เปลี่ยนสีทั้งเว็บได้จากหน้า /settings
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "./firebase/client";
+import { doc, onSnapshot } from "@/lib/db/firestore";
+import { db } from "./db/client";
 import { DEFAULT_SETTINGS, type AppSettings } from "./types";
 
 interface SettingsState {

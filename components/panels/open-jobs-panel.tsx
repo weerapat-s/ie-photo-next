@@ -7,9 +7,9 @@
 // 1 งานมีทีมงานได้หลายคน (ตามจำนวนที่ระบุ) · 1 คนรับได้หลายงาน
 // ระบบนี้ไม่มีบัญชีลูกค้า — "ผู้ขอถ่าย" เป็นแค่ชื่อ+เบอร์ติดต่อ ไม่ใช่บัญชี
 import { useMemo, useState } from "react";
-import { collection, query, where, orderBy, doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { collection, query, where, orderBy, doc, updateDoc, arrayUnion, arrayRemove } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
+import { useAuth } from "@/lib/db/auth-context";
 import { useCollection, useDocument, useNow } from "@/lib/hooks";
 import { Spinner, EmptyState, Badge, Button, Alert, ChipBar, useToast } from "@/components/ui";
 import Icon from "@/components/icon";

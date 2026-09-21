@@ -17,10 +17,10 @@ import {
   updateDoc,
   writeBatch,
   Timestamp,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+} from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { describeWriteError } from "@/lib/errors";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { useSettings } from "@/lib/settings-context";
 import { useCollection, useNow } from "@/lib/hooks";
 import { fmtRange, fmtRelative, BOOKING_TYPE_LABEL, BOOKING_TYPE_ICON } from "@/lib/format";

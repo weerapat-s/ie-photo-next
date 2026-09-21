@@ -2,7 +2,7 @@
 // components/notification-toggle.tsx — เปิด/ปิดการแจ้งเตือน push (ทำงานแม้ปิดแอพ)
 import { useCallback, useEffect, useState } from "react";
 import { isPushSupported, getNotificationPermission, subscribeToPush, unsubscribeFromPush } from "@/lib/push";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { useBrowserValue } from "@/lib/hooks";
 import { Card, Switch } from "@/components/ui";
 import Icon from "@/components/icon";

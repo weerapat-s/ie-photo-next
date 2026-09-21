@@ -386,6 +386,9 @@ function onCreate(e) {
     case "users":
       // สมัครเองได้แค่สมาชิกธรรมดา — ยกสิทธิ์ต้องให้แอดมินทำ
       if (str(rec, "role") !== "" && str(rec, "role") !== "member") forbid("สมัครได้เฉพาะสมาชิก");
+      // สมัครเองได้เฉพาะอีเมลของสถาบัน (เดิมเช็คแค่ในหน้าเว็บ ยิง API ตรงก็ข้ามได้)
+      if (!/@kmitl\.ac\.th$/.test(rec.email().toLowerCase())) bad("สมัครได้เฉพาะอีเมล @kmitl.ac.th");
+      rec.set("legacyAuth", false);
       rec.set("role", "member");
       // แอดมินต้องเห็นอีเมลสมาชิก (ส่งแจ้งเตือน) — การอ่านถูกคุมด้วย API rules อยู่แล้ว
       rec.setEmailVisibility(true);

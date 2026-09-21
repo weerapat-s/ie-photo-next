@@ -6,10 +6,10 @@
 // ไม่มีทางที่ AI จะแก้ข้อมูลเองโดยไม่ผ่านสายตาคน
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { collection, doc, setDoc, deleteDoc, orderBy, query, limit, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, doc, setDoc, deleteDoc, orderBy, query, limit, serverTimestamp } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { useCollection, useDocument, useNow, useBrowserValue } from "@/lib/hooks";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { useSettings } from "@/lib/settings-context";
 import { fmtRelative } from "@/lib/format";
 import { compressImageToDataUrl } from "@/lib/image";

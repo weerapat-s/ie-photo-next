@@ -13,8 +13,8 @@ import {
   writeBatch,
   setDoc,
   serverTimestamp,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+} from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { describeWriteError } from "@/lib/errors";
 import { compressImageToDataUrl } from "@/lib/image";
 import { useCollection } from "@/lib/hooks";

@@ -3,9 +3,9 @@
 // ใช้ query param แทน dynamic route เพราะ static export ต้องรู้ id ล่วงหน้า
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { doc } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { doc } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
+import { useAuth } from "@/lib/db/auth-context";
 import { useDocument } from "@/lib/hooks";
 import { Spinner, EmptyState, LinkButton } from "@/components/ui";
 import PublicShell from "@/components/public-shell";

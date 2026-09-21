@@ -8,9 +8,9 @@
 //   3. workflow ย่อ — งานค้างอยู่ขั้นไหนบ้าง
 //   4. ภาระทีม — ใครแบกเยอะ ใครว่าง
 import Link from "next/link";
-import { collection } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { collection } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
+import { useAuth } from "@/lib/db/auth-context";
 import { useSettings } from "@/lib/settings-context";
 import { useCollection, useNow } from "@/lib/hooks";
 import { PageHeader, Card, Section, Badge, SkeletonCard, EmptyState, LinkButton } from "@/components/ui";

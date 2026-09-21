@@ -9,8 +9,8 @@
 //   • ส่งทีละฉบับแบบเรียงคิว ไม่ยิงพร้อมกัน — ผู้ให้บริการจำกัดอัตราการส่ง
 //     และถ้าล้มกลางทางจะได้รู้ว่าใครได้แล้วใครยังไม่ได้
 import { useMemo, useState } from "react";
-import { collection, query, orderBy, limit } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, query, orderBy, limit } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { useCollection } from "@/lib/hooks";
 import { useSettings } from "@/lib/settings-context";
 import { resolveMailSender } from "@/lib/mail-sender";

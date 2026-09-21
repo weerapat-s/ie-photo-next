@@ -34,6 +34,13 @@ if [[ $WITH_SITE == 1 ]]; then
       && sudo -n mv $REMOTE/pb_public.new $REMOTE/pb_public"
 fi
 
+# ค่าที่ hook ต้องใช้ — เก็บเป็นไฟล์บน NAS (อ่านได้แค่ root) ไม่ใส่ในคำสั่ง docker run
+# FIREBASE_WEB_API_KEY: คีย์สาธารณะของเว็บเดิม ใช้ตรวจรหัสผ่านเดิมตอนล็อกอินครั้งแรก (pb_hooks/ie_auth.js)
+FB_KEY="$(grep -E '^NEXT_PUBLIC_FIREBASE_API_KEY=' "$ROOT/.env.local" | head -1 | cut -d= -f2- | tr -d '"\r')"
+[[ -n "$FB_KEY" ]] || { echo "ไม่พบ NEXT_PUBLIC_FIREBASE_API_KEY ใน .env.local"; exit 1; }
+printf 'FIREBASE_WEB_API_KEY=%s\n' "$FB_KEY" \
+  | ssh "$NAS" "sudo -n install -m 600 /dev/stdin $REMOTE/pb.env"
+
 ssh "$NAS" "set -e
   cd $REMOTE
   sudo -n mkdir -p pb_data pb_public
@@ -46,6 +53,7 @@ ssh "$NAS" "set -e
   # ห้าม bind 0.0.0.0 — NAS มี IP สาธารณะของมหาลัย
   sudo -n docker run -d --name iephoto-pb --restart unless-stopped \
     -p 127.0.0.1:8096:8090 -p 100.116.118.109:8096:8090 \
+    --env-file $REMOTE/pb.env \
     -v $REMOTE/pb_data:/pb/pb_data \
     -v $REMOTE/pb_migrations:/pb/pb_migrations:ro \
     -v $REMOTE/pb_hooks:/pb/pb_hooks:ro \

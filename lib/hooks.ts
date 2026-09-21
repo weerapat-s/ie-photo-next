@@ -1,10 +1,10 @@
 "use client";
-// lib/hooks.ts — Firestore real-time hooks + helper ทั่วไป
+// lib/hooks.ts — realtime hooks (ฐานข้อมูลบน NAS ผ่าน lib/db) + helper ทั่วไป
 /* eslint-disable react-hooks/set-state-in-effect --
    useCollection/useDocument เป็น subscription hook: ตอน query เปลี่ยนต้องล้างข้อมูลเดิม
    และตั้ง loading ทันทีในรอบเดียวกัน ไม่งั้นหน้าจะค้างข้อมูลของ query ก่อนหน้า */
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { onSnapshot, type Query, type DocumentReference } from "firebase/firestore";
+import { onSnapshot, type Query, type DocumentReference } from "@/lib/db/firestore";
 import type { WithId } from "./types";
 import { subscribeDevMode, getDevMode } from "./dev-mode";
 
@@ -15,8 +15,7 @@ import { subscribeDevMode, getDevMode } from "./dev-mode";
  */
 /** ชื่อ collection จาก Query — ใช้เขียน log ให้รู้ว่าอะไรพัง */
 function describeQuery(q: Query): string {
-  const path = (q as unknown as { _query?: { path?: { segments?: string[] } } })._query?.path?.segments;
-  return Array.isArray(path) && path.length ? path.join("/") : "unknown";
+  return q.path || "unknown";
 }
 
 export function useCollection<T>(

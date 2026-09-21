@@ -2,7 +2,7 @@
 // สีสถานะใช้ 6 โทนกลางของระบบ (.tone-*) ไม่หยิบสี Tailwind ดิบ ๆ มาใช้
 // เพราะ hue คนละตระกูลกับ faculty แล้วป้ายจะดูหลุดจากทั้งเว็บ
 import type { IconName } from "@/components/icon";
-import type { Timestamp } from "firebase/firestore";
+import type { Timestamp } from "@/lib/db/firestore";
 import type {
   BookingStatus,
   BookingType,

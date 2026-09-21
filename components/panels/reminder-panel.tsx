@@ -10,9 +10,9 @@
 // เจตนา: ให้เห็นก่อนที่จะสาย ไม่ใช่รู้ตอนของหายหรืองานเลยกำหนดไปแล้ว
 import { useMemo } from "react";
 import Link from "next/link";
-import { collection, query, where } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { collection, query, where } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
+import { useAuth } from "@/lib/db/auth-context";
 import { useCollection, useNow } from "@/lib/hooks";
 import { isAdminRole, displayName } from "@/lib/roles";
 import { fmtDateTime } from "@/lib/format";

@@ -5,10 +5,10 @@
 // **ห้ามเอาคีย์ไปไว้ใน .env** เพราะ Next export ฝังค่าลงไฟล์ JS ที่ใครก็เปิดดูได้
 // ทางที่ปลอดภัยกว่านั้นอีกคือให้ proxy ถือคีย์เอง แล้วเว้นช่องคีย์ตรงนี้ไว้ว่าง
 import { useState } from "react";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { doc, setDoc, serverTimestamp } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { useCollection, useDocument } from "@/lib/hooks";
-import { collection, orderBy, query, limit } from "firebase/firestore";
+import { collection, orderBy, query, limit } from "@/lib/db/firestore";
 import { useSettings } from "@/lib/settings-context";
 import { Badge } from "@/components/ui";
 import type { MailDoc } from "@/lib/types";
@@ -271,13 +271,12 @@ export default function AiSettingsPanel() {
         <Card>
           <p className="text-sm leading-relaxed text-[var(--ink)]/85">
             ปลายทางของ OKMD ไม่ส่งหัว CORS กลับมา เบราว์เซอร์จึงเรียกตรงจากเว็บนี้ไม่ได้
-            ต้องผ่านตัวกลางที่เติมหัวให้ — โค้ดอยู่ที่{" "}
-            <code className="t-num">workers/okmd-proxy.js</code> และเผยแพร่ไว้ให้แล้ว
+            ต้องผ่านตัวกลาง — ตอนนี้คือเซิร์ฟเวอร์ NAS ของชุมนุมเอง โค้ดอยู่ที่{" "}
+            <code className="t-num">nas/pb_hooks/ie_ai.js</code>
           </p>
           <p className="t-caption mt-3">
-            ติดตั้งครบแล้ว: Worker อยู่ใต้บัญชี Cloudflare ของชุมนุม ถือทั้งคีย์ AI และคีย์อีเมล
-            ไว้เป็น Secret ฝั่งเซิร์ฟเวอร์ คีย์จึงไม่เคยเดินทางผ่านเบราว์เซอร์
-            แก้โค้ดแล้วเผยแพร่ใหม่ด้วย <code className="t-num">npm run worker:deploy</code>
+            ปล่อยช่องที่อยู่ปลายทางว่างไว้ = ใช้ตัวกลางบน NAS ซึ่งอ่านคีย์จากหน้านี้ฝั่งเซิร์ฟเวอร์
+            คีย์จึงไม่เดินทางผ่านเบราว์เซอร์ของคนที่ใช้ผู้ช่วย AI
           </p>
         </Card>
       </Section>

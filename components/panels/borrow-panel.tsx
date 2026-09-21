@@ -2,8 +2,8 @@
 // app/(member)/borrow/page.tsx — ยืมอุปกรณ์ (เลือกหลายชิ้น + แนบเอกสาร)
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { collection, query, where, orderBy, doc, writeBatch, Timestamp, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, query, where, orderBy, doc, writeBatch, Timestamp, serverTimestamp } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { uploadBorrowImage } from "@/lib/nas";
 import { notifyAssigned, notifyBorrowRequest } from "@/lib/notify";
 import { describeWriteError } from "@/lib/errors";
@@ -11,7 +11,7 @@ import { findSlotConflicts, slotPayload } from "@/lib/slots";
 import { needsOvernightApproval, overdueItems, overdueBlockMessage } from "@/lib/borrow-policy";
 import { generateRequestId, requestQrPayload } from "@/lib/qr";
 import QrImage from "@/components/qr-image";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { useSettings } from "@/lib/settings-context";
 import { useCollection, useNow } from "@/lib/hooks";
 import {
