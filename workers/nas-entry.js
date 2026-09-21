@@ -14,10 +14,14 @@
  * ถ้าวันหนึ่งกลับเข้าบัญชีชุมนุมได้ ย้าย /nas กลับไปรวมกับ okmd-proxy ได้เลย
  * (โค้ด handleNas ตัวเดียวกัน) แล้วลบไฟล์นี้กับ wrangler.nas.toml ทิ้ง
  *
+ * + /notify/* อีเมลแจ้งกรรมการตอนมอบหมายอุปกรณ์ (workers/notify.js) — อยู่ Worker นี้
+ *   เพราะเป็นตัวเดียวในบัญชีที่เข้าได้ และโดเมนผู้ส่ง ienas.site ก็อยู่บัญชีเดียวกัน
+ *
  * deploy:  npm run worker:nas-deploy
  * secret:  npm run worker:nas
  */
 import { handleNas } from "./nas-files.js";
+import { handleNotify } from "./notify.js";
 
 export default {
   async fetch(request, env) {
@@ -46,7 +50,7 @@ export default {
       });
     }
 
-    const res = await handleNas(request, env, cors);
+    const res = (await handleNas(request, env, cors)) ?? (await handleNotify(request, env, cors));
     if (res) return res;
 
     return new Response(JSON.stringify({ error: "ไม่รู้จักเส้นทางนี้" }), {

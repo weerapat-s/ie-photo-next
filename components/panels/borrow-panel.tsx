@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { collection, query, where, orderBy, doc, writeBatch, Timestamp, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { uploadBorrowImage } from "@/lib/nas";
+import { notifyAssigned } from "@/lib/notify";
 import { findSlotConflicts, slotPayload } from "@/lib/slots";
 import { needsOvernightApproval, overdueItems, overdueBlockMessage } from "@/lib/borrow-policy";
 import { generateRequestId, requestQrPayload } from "@/lib/qr";
@@ -121,6 +122,8 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
     holderName: string;
     items: string[];
   } | null>(null);
+  /** อีเมลแจ้งกรรมการตอนมอบหมาย — sending · sent · ข้อความ error */
+  const [mailState, setMailState] = useState<"sending" | "sent" | string>("sending");
 
   // อุปกรณ์อาจถูกยืม/ถูกลบระหว่างที่ผู้ใช้กรอกฟอร์ม — คัดเฉพาะที่ยังว่างจริงตอน render
   // (ไม่ sync ด้วย effect เพื่อเลี่ยง render ซ้อน)
@@ -273,8 +276,12 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
       }
       await batch.commit();
       if (assigning) {
-        setAssigned({ requestId, holderName: ownerName, items: items.map((i) => i.name) });
+        const notice = { requestId, holderName: ownerName, items: items.map((i) => i.name) };
+        setAssigned(notice);
         setBusy(false);
+        // ยิงหลังบันทึกสำเร็จแล้วเท่านั้น และไม่รอ — เมลล้มต้องไม่ทำให้การมอบหมายดูเหมือนล้ม
+        setMailState("sending");
+        void notifyAssigned(notice).then((error) => setMailState(error ?? "sent"));
         return;
       }
       router.push(`/my-bookings?request=${requestId}`);
@@ -310,6 +317,23 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
             <li key={n}>· {n}</li>
           ))}
         </ul>
+
+        <p
+          className={`mt-3 text-sm ${
+            mailState === "sent"
+              ? "text-green-700"
+              : mailState === "sending"
+                ? "text-[var(--muted-ink)]"
+                : "text-amber-700"
+          }`}
+          role="status"
+        >
+          {mailState === "sent"
+            ? "ส่งอีเมลแจ้งกรรมการแล้ว"
+            : mailState === "sending"
+              ? "กำลังส่งอีเมลแจ้งกรรมการ…"
+              : `การมอบหมายบันทึกแล้ว แต่อีเมลแจ้งไม่ออก: ${mailState}`}
+        </p>
 
         <div className="mt-4 flex flex-wrap gap-2">
           <Button onClick={() => router.push("/scan")}>ไปสถานีสแกน</Button>

@@ -16,7 +16,7 @@ import { compressImageToBlob } from "@/lib/image";
  * Worker ที่ถือ token ของ NAS — แยกจาก okmd-proxy (ตัว AI/อีเมล)
  * เพราะ okmd-proxy อยู่บัญชี Cloudflare ที่ตอนนี้ไม่มีใครเข้าได้ ดู workers/nas-entry.js
  */
-const WORKER_BASE = "https://iephoto-nas.vaumgasem.workers.dev";
+export const WORKER_BASE = "https://iephoto-nas.vaumgasem.workers.dev";
 
 /** path บน NAS เท่านั้น ที่เหลือ (data: URL เดิม, ลิงก์ภายนอก) ให้ใช้ src ตรง ๆ */
 export function isNasPath(value: string | null | undefined): value is string {
