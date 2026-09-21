@@ -19,3 +19,18 @@ ALLOWED_ORIGIN = "https://iephoto.web.app"
 NAS_WEBDAV_BASE = "https://nextcloud.ienas.site/public.php/webdav"
 # ใช้ตรวจลายเซ็น Firebase ID token ว่าออกให้โปรเจกต์นี้จริง
 FIREBASE_PROJECT_ID = "iephoto"
+# named database "default" (ไม่ใช่ "(default)") — /notify อ่านบทบาทจาก users/{uid}
+FIREBASE_DATABASE_ID = "default"
+
+# ── อีเมลแจ้งเตือน (workers/notify.js) ─────────────────────────
+# ienas.site เปิด Email Sending ไว้แล้วใน Cloudflare (Email Service → Email Sending)
+MAIL_FROM = "admin@ienas.site"
+NOTIFY_TO = "68030271@kmitl.ac.th"
+
+# ล็อกผู้รับไว้ที่ binding — Cloudflare ปฏิเสธเองถ้าส่งไปที่อื่น
+# ต้องเป็นที่อยู่ที่ยืนยันใน Email Routing → Destination addresses แล้ว
+# (ส่งถึงที่อยู่ที่ยืนยันแล้วฟรีทุกแผน ส่งถึงที่อยู่อื่นต้องเปิด Workers Paid)
+[[send_email]]
+name = "EMAIL"
+allowed_destination_addresses = ["68030271@kmitl.ac.th"]
+allowed_sender_addresses = ["admin@ienas.site"]
