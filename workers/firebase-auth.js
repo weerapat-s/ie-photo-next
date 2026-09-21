@@ -86,9 +86,23 @@ export async function verifyIdToken(idToken, projectId) {
 
 /** ดึง uid จากหัว Authorization: Bearer <idToken> */
 export async function uidFromRequest(request, env) {
+  return (await claimsFromRequest(request, env)).uid;
+}
+
+/**
+ * ตรวจ token แล้วคืน uid + อีเมลที่ Firebase Auth รับรอง + ตัว token ดิบ
+ *
+ * อีเมลเอามาจาก token ที่ลายเซ็นผ่านแล้ว ไม่ใช่จาก body หรือเอกสาร users
+ * — client ปลอมไม่ได้ ใช้เป็นปลายทางอีเมลได้โดยไม่กลายเป็นเครื่องส่งเมลหาใครก็ได้
+ * ตัว token ดิบคืนไปด้วย เผื่ออยากอ่าน Firestore ในนามคนนั้น (ให้ rules ตัดสินสิทธิ์)
+ */
+export async function claimsFromRequest(request, env) {
   if (!env.FIREBASE_PROJECT_ID) throw new Error("ยังไม่ได้ตั้ง FIREBASE_PROJECT_ID ใน wrangler.toml");
-  const bearer = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-  return verifyIdToken(bearer, env.FIREBASE_PROJECT_ID);
+  const idToken = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+  const uid = await verifyIdToken(idToken, env.FIREBASE_PROJECT_ID);
+  // ลายเซ็นผ่านแล้วตั้งแต่บรรทัดบน ถอด payload ซ้ำเพื่อเอาอีเมล
+  const payload = b64urlToJson(idToken.split(".")[1]);
+  return { uid, email: typeof payload.email === "string" ? payload.email : null, idToken };
 }
 
 /**
