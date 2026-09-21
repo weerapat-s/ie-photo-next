@@ -12,6 +12,7 @@ import MembersPanel from "@/components/panels/members-panel";
 import TasksPanel from "@/components/panels/tasks-panel";
 import { crewLoad, hrStats, describeBalance } from "@/lib/analytics";
 import type { BookingDoc, DeliveryDoc, PhotographerDoc, TaskDoc, UserDoc } from "@/lib/types";
+import { allBookingsQuery, allUsersQuery } from "@/lib/queries";
 
 type Tab = "members" | "tasks";
 
@@ -27,10 +28,10 @@ function TeamInner() {
   const { settings } = useSettings();
   const now = useNow(60_000);
 
-  const { data: users } = useCollection<UserDoc>(() => collection(db, "users"), []);
+  const { data: users } = useCollection<UserDoc>(() => allUsersQuery(), []);
   const { data: tasks } = useCollection<TaskDoc>(() => query(collection(db, "tasks")), []);
   const { data: crew } = useCollection<PhotographerDoc>(() => collection(db, "photographers"), []);
-  const { data: bookings } = useCollection<BookingDoc>(() => collection(db, "bookings"), []);
+  const { data: bookings } = useCollection<BookingDoc>(() => allBookingsQuery(), []);
   const { data: deliveries } = useCollection<DeliveryDoc>(() => collection(db, "deliveries"), []);
 
   const openTasks = tasks.filter((t) => t.status !== "completed" && t.status !== "cancelled").length;

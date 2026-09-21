@@ -31,6 +31,7 @@ import {
 } from "@/components/ui";
 import { fmtDate, fmtRelative, TASK_STATUS } from "@/lib/format";
 import type { BookingDoc, TaskDoc, TaskStatus, UserDoc, WithId } from "@/lib/types";
+import { allBookingsQuery, allUsersQuery } from "@/lib/queries";
 
 
 export default function TasksPanel() {
@@ -42,9 +43,9 @@ export default function TasksPanel() {
     () => query(collection(db, "tasks"), orderBy("createdAt", "desc")),
     []
   );
-  const { data: users } = useCollection<UserDoc>(() => query(collection(db, "users"), orderBy("studentId")), []);
+  const { data: users } = useCollection<UserDoc>(() => allUsersQuery(), []);
   const { data: bookings } = useCollection<BookingDoc>(
-    () => query(collection(db, "bookings"), orderBy("createdAt", "desc")),
+    () => allBookingsQuery(),
     []
   );
 

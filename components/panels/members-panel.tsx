@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import {
   collection,
   query,
-  orderBy,
   doc,
   updateDoc,
   setDoc,
@@ -37,6 +36,7 @@ import Icon from "@/components/icon";
 import { useSettings } from "@/lib/settings-context";
 import { ROLE_BADGE, ROLE_LABEL, ROLE_SHORT, ROLE_ICON, displayName, searchText, sortByRank } from "@/lib/roles";
 import type { UserDoc, Role, TaskDoc } from "@/lib/types";
+import { allUsersQuery } from "@/lib/queries";
 
 type Filter = Role | "all" | "banned";
 
@@ -48,7 +48,7 @@ export default function MembersPanel() {
   const { show, node: toastNode } = useToast();
 
   const { data: users, loading } = useCollection<UserDoc>(
-    () => query(collection(db, "users"), orderBy("studentId")),
+    () => allUsersQuery(),
     []
   );
   const { data: tasks } = useCollection<TaskDoc>(() => query(collection(db, "tasks")), []);

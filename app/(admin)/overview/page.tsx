@@ -8,7 +8,7 @@
 //   3. workflow ย่อ — งานค้างอยู่ขั้นไหนบ้าง
 //   4. ภาระทีม — ใครแบกเยอะ ใครว่าง
 import Link from "next/link";
-import { collection, query, orderBy } from "firebase/firestore";
+import { collection } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { useSettings } from "@/lib/settings-context";
@@ -41,6 +41,7 @@ import type {
   TaskDoc,
   UserDoc,
 } from "@/lib/types";
+import { allBookingsQuery, allUsersQuery } from "@/lib/queries";
 
 export default function OverviewPage() {
   const { profile, role } = useAuth();
@@ -48,12 +49,12 @@ export default function OverviewPage() {
   const now = useNow(60_000);
 
   const { data: bookings, loading: l1 } = useCollection<BookingDoc>(
-    () => query(collection(db, "bookings"), orderBy("createdAt", "desc")),
+    () => allBookingsQuery(),
     []
   );
   const { data: deliveries, loading: l2 } = useCollection<DeliveryDoc>(() => collection(db, "deliveries"), []);
   const { data: tasks, loading: l3 } = useCollection<TaskDoc>(() => collection(db, "tasks"), []);
-  const { data: users, loading: l4 } = useCollection<UserDoc>(() => collection(db, "users"), []);
+  const { data: users, loading: l4 } = useCollection<UserDoc>(() => allUsersQuery(), []);
   const { data: crew } = useCollection<PhotographerDoc>(() => collection(db, "photographers"), []);
   const { data: equipments } = useCollection<EquipmentDoc>(() => collection(db, "equipments"), []);
 

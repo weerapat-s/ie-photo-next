@@ -17,6 +17,7 @@ import { fmtDate, fmtTime, BOOKING_TYPE_ICON, BOOKING_TYPE_LABEL } from "@/lib/f
 import { dateKey, shortDay } from "@/lib/availability";
 import { isAdminRole } from "@/lib/roles";
 import type { AvailabilityDoc, BookingDoc, BookingType, SlotDoc, UserDoc, WithId } from "@/lib/types";
+import { allBookingsQuery, allUsersQuery } from "@/lib/queries";
 
 type Filter = "all" | "mine" | BookingType;
 
@@ -40,7 +41,7 @@ export default function CalendarPage() {
   const { data: visibleBookings } = useCollection<BookingDoc>(
     () =>
       isAdmin
-        ? query(collection(db, "bookings"), orderBy("createdAt", "desc"))
+        ? allBookingsQuery()
         : user
           ? query(collection(db, "bookings"), where("userId", "==", user.uid))
           : null,
@@ -60,7 +61,7 @@ export default function CalendarPage() {
     [isAdmin, user?.uid]
   );
 
-  const { data: users } = useCollection<UserDoc>(() => (isAdmin ? collection(db, "users") : null), [isAdmin]);
+  const { data: users } = useCollection<UserDoc>(() => (isAdmin ? allUsersQuery() : null), [isAdmin]);
 
   const { data: availability } = useCollection<AvailabilityDoc>(
     () => (user ? collection(db, "availability") : null),

@@ -38,6 +38,7 @@ import type {
   UserDoc,
   WithId,
 } from "@/lib/types";
+import { allBookingsQuery, allUsersQuery } from "@/lib/queries";
 
 /** เว้นระยะก่อนกวาดซ้ำในเซสชันเดียวกัน — เปิดหน้าใหม่ไปมาไม่ต้องกวาดทุกครั้ง */
 const SWEEP_EVERY_MS = 30 * 60_000;
@@ -49,10 +50,10 @@ export default function ReminderSweep() {
   const isAdmin = isAdminRole(role);
   const on = isAdmin && !!user && settings.notifyEmail !== false;
 
-  const { data: bookings } = useCollection<BookingDoc>(() => (on ? collection(db, "bookings") : null), [on]);
+  const { data: bookings } = useCollection<BookingDoc>(() => (on ? allBookingsQuery() : null), [on]);
   const { data: tasks } = useCollection<TaskDoc>(() => (on ? collection(db, "tasks") : null), [on]);
   const { data: deliveries } = useCollection<DeliveryDoc>(() => (on ? collection(db, "deliveries") : null), [on]);
-  const { data: users } = useCollection<UserDoc>(() => (on ? collection(db, "users") : null), [on]);
+  const { data: users } = useCollection<UserDoc>(() => (on ? allUsersQuery() : null), [on]);
 
   const ranRef = useRef(false);
 

@@ -1,7 +1,7 @@
 "use client";
 // app/(admin)/bookings/page.tsx — จัดการการจอง (อนุมัติ/ปฏิเสธ/ตรวจคืน)
 import { useMemo, useState } from "react";
-import { collection, query, orderBy, doc, writeBatch, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, writeBatch, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { useCollection, useNow } from "@/lib/hooks";
 import {
@@ -31,6 +31,7 @@ import NasImage from "@/components/nas-image";
 import { useAuth } from "@/lib/firebase/auth-context";
 import { approvalBlockReason } from "@/lib/borrow-policy";
 import { approvePatch, approverName, missingLiability } from "@/lib/approve";
+import { allBookingsQuery } from "@/lib/queries";
 
 const FILTERS: { key: BookingStatus | "all"; label: string }[] = [
   { key: "pending", label: "รอดำเนินการ" },
@@ -42,7 +43,7 @@ const FILTERS: { key: BookingStatus | "all"; label: string }[] = [
 
 export default function AdminBookingsPage() {
   const { data: bookings, loading } = useCollection<BookingDoc>(
-    () => query(collection(db, "bookings"), orderBy("createdAt", "desc")),
+    () => allBookingsQuery(),
     []
   );
   const { show, node: toastNode } = useToast();

@@ -37,6 +37,7 @@ import type {
   UserDoc,
   WithId,
 } from "@/lib/types";
+import { allBookingsQuery, allUsersQuery } from "@/lib/queries";
 
 /** เก็บย้อนหลังแค่ไม่กี่ตา — โควตา 30k token/วัน ทั้งชุมนุมใช้ร่วมกัน */
 const HISTORY_TURNS = 6;
@@ -101,8 +102,8 @@ export default function Assistant({
     () => (on ? doc(db, "secrets", "ai") : null),
     [on]
   );
-  const { data: users } = useCollection<UserDoc>(() => (on ? collection(db, "users") : null), [on]);
-  const { data: bookings } = useCollection<BookingDoc>(() => (on ? collection(db, "bookings") : null), [on]);
+  const { data: users } = useCollection<UserDoc>(() => (on ? allUsersQuery() : null), [on]);
+  const { data: bookings } = useCollection<BookingDoc>(() => (on ? allBookingsQuery() : null), [on]);
   const { data: availability } = useCollection<AvailabilityDoc>(
     () => (on ? collection(db, "availability") : null),
     [on]

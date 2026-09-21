@@ -27,6 +27,7 @@ import Icon, { type IconName } from "@/components/icon";
 import ReturnModal from "@/components/return-modal";
 import OpenJobsPanel from "@/components/panels/open-jobs-panel";
 import type { BookingDoc, DeliveryDoc, TaskDoc, WithId } from "@/lib/types";
+import { useMyDeliveries } from "@/lib/queries";
 
 export default function MyPage() {
   const { user } = useAuth();
@@ -56,10 +57,9 @@ export default function MyPage() {
     () => (uid ? query(collection(db, "tasks"), where("assignedToId", "==", uid)) : null),
     [uid]
   );
-  const { data: deliveries } = useCollection<DeliveryDoc>(
-    () => (uid ? collection(db, "deliveries") : null),
-    [uid]
-  );
+  // ขอทั้ง collection ไม่ได้ — กติกาให้เห็นเฉพาะงานของตัวเอง query ที่ไม่กรองโดนปฏิเสธทั้งก้อน
+  // (เคยเป็นบั๊ก: งานส่งไฟล์ไม่ขึ้นในหน้านี้เลย) ดู lib/queries.ts
+  const { data: deliveries } = useMyDeliveries(uid);
 
   // เป็นทีมตากล้องไหม (มี doc crew/{uid}) — ใช้ตัดสินว่าจะโชว์ "งานที่เปิดรับ" ไหม
   const { data: crewMark } = useDocument<{ photographerId: string }>(

@@ -28,6 +28,7 @@ import EquipmentThumb from "@/components/equipment-thumb";
 import { compressImageToDataUrl } from "@/lib/image";
 import { displayName } from "@/lib/roles";
 import type { EquipmentDoc, EquipmentStatus, EquipmentType, PairGroup, SlotDoc, UserDoc, WithId } from "@/lib/types";
+import { allUsersQuery } from "@/lib/queries";
 
 type Filter = EquipmentType | "all";
 
@@ -37,7 +38,7 @@ export default function EquipmentPanel() {
     []
   );
   const { data: slots } = useCollection<SlotDoc>(() => query(collection(db, "slots")), []);
-  const { data: users } = useCollection<UserDoc>(() => query(collection(db, "users"), orderBy("studentId")), []);
+  const { data: users } = useCollection<UserDoc>(() => allUsersQuery(), []);
   const { show, node: toastNode } = useToast();
   const now = useNow(60_000);
 
@@ -273,7 +274,10 @@ function EquipmentModal({
     try {
       // ย่อรูปเป็น data URL เก็บใน Firestore ตรง (ไม่ใช้ Storage) — อัปใหม่ค่อยแทนของเดิม
       let finalImage = imageUrl;
-      if (imageFile) finalImage = await compressImageToDataUrl(imageFile, 900, 0.72);
+      // 320px พอ — รูปอุปกรณ์โชว์ใหญ่สุด 96px (EquipmentThumb size="lg") เผื่อจอความละเอียดสูงแล้ว
+      // รูปฝังอยู่ในเอกสาร equipments และหน้ายืมของสมาชิก (หน้าที่เปิดบ่อยสุด) โหลดทุกชิ้นทุกครั้ง
+      // Firestore รุ่นนี้คิดโควตาอ่านตามขนาดเอกสาร เดิม 900px ทำให้แต่ละชิ้นหนักหลายเท่าโดยไม่ได้อะไร
+      if (imageFile) finalImage = await compressImageToDataUrl(imageFile, 320, 0.8);
 
       if (item) {
         await updateDoc(doc(db, "equipments", item.id), {

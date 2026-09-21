@@ -22,6 +22,7 @@ import {
   Alert, EmptyState, ChipBar, Modal,
 } from "@/components/ui";
 import type { MailDoc, UserDoc } from "@/lib/types";
+import { allUsersQuery } from "@/lib/queries";
 
 type Audience = "all" | "admins" | "members" | "pick";
 
@@ -42,7 +43,7 @@ interface Outcome {
 export default function MailPage() {
   const { settings } = useSettings();
 
-  const { data: users, loading } = useCollection<UserDoc>(() => collection(db, "users"), []);
+  const { data: users, loading } = useCollection<UserDoc>(() => allUsersQuery(), []);
   const sender = useMemo(
     () => resolveMailSender(users, settings.mailSenderStudentId, settings.siteName, displayName),
     [users, settings.mailSenderStudentId, settings.siteName]
