@@ -86,8 +86,20 @@ export async function handleNas(request, env, cors) {
       headers: { ...cors, "Content-Type": "application/json; charset=utf-8" },
     });
 
-  if (!env.NAS_SHARE_TOKEN || !env.NAS_WEBDAV_BASE) {
-    return reply({ error: "ยังไม่ได้ตั้งค่า NAS บน worker — รัน npm run worker:nas" }, 503);
+  // แยกให้ชัดว่า "ไม่มี" กับ "มีแต่ว่าง" — วาง token ในช่องที่ซ่อนตัวอักษรของ wrangler
+  // บนเทอร์มินัล Windows บางตัววางไม่ติด แต่ wrangler ก็อัปค่าว่างขึ้นไปแล้วขึ้น Success
+  // (เจอมาแล้ว) บอกแค่ว่าตั้งแล้วหรือยังจึงหาสาเหตุไม่เจอ — ไม่เปิดเผยค่าจริง
+  if (env.NAS_SHARE_TOKEN === undefined) {
+    return reply({ error: "ยังไม่ได้ตั้ง NAS_SHARE_TOKEN — รัน npm run worker:nas" }, 503);
+  }
+  if (!String(env.NAS_SHARE_TOKEN).trim()) {
+    return reply(
+      { error: "NAS_SHARE_TOKEN เป็นค่าว่าง (วางไม่ติดตอนตั้ง) — รัน npm run worker:nas ใหม่ แล้วพิมพ์เองแทนการวาง" },
+      503
+    );
+  }
+  if (!env.NAS_WEBDAV_BASE) {
+    return reply({ error: "ยังไม่ได้ตั้ง NAS_WEBDAV_BASE ใน wrangler.nas.toml" }, 503);
   }
   if (!env.FIREBASE_PROJECT_ID) {
     return reply({ error: "ยังไม่ได้ตั้ง FIREBASE_PROJECT_ID ใน wrangler.toml" }, 503);
