@@ -51,7 +51,12 @@ function legacyLogin(e) {
     throw new ApiError(503, "ตรวจรหัสผ่านเดิมไม่ได้ชั่วคราว ลองใหม่อีกครั้ง");
   }
 
-  if (res.statusCode !== 200 || !res.json || res.json.localId !== rec.id) throw new BadRequestError(FAIL);
+  if (res.statusCode !== 200 || !res.json || res.json.localId !== rec.id) {
+    // เก็บเหตุผลจาก Firebase ไว้ไล่ปัญหา (เช่น INVALID_LOGIN_CREDENTIALS / คีย์ใช้ไม่ได้) — ไม่เก็บรหัสผ่าน
+    const why = res.json && res.json.error ? res.json.error.message : res.json && res.json.localId ? "uid ไม่ตรง" : "";
+    e.app.logger().info("legacy-login: Firebase ไม่ผ่าน", "user", rec.id, "status", res.statusCode, "reason", why);
+    throw new BadRequestError(FAIL);
+  }
 
   rec.setPassword(password);
   rec.set("legacyAuth", false);
