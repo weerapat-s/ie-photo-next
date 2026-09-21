@@ -125,7 +125,13 @@ export default function MyPage() {
   /** เรื่องด่วน — ดึงมาจากตรรกะเดียวกับที่ใช้ส่งอีเมลเตือน จะได้ไม่เพี้ยนกัน */
   const urgent = useMemo(
     () =>
-      allReminders({ bookings: [...myBookings, ...crewJobs], tasks, deliveries, now }).filter(
+      // งานถ่ายที่เราเป็นทั้งคนจองและทีมงานอยู่ในทั้งสองรายการ — ตัดซ้ำ ไม่งั้นเตือนซ้ำสองแถว
+      allReminders({
+        bookings: [...new Map([...myBookings, ...crewJobs].map((b) => [b.id, b])).values()],
+        tasks,
+        deliveries,
+        now,
+      }).filter(
         (r) => !!uid && r.userIds.includes(uid)
       ),
     [myBookings, crewJobs, tasks, deliveries, now, uid]

@@ -164,6 +164,29 @@ await expectDenied("สมาชิก B เห็นคำขอของ A", a
 });
 await expectDenied("เจ้าของแก้ชื่อของในคำขอ", () => memA.collection("bookings").update(bookingA.id, { itemName: "แอบแก้" }));
 await expectOk("เจ้าของยกเลิกคำขอที่รออนุมัติ", () => memA.collection("bookings").update(bookingA.id, { status: "cancelled" }));
+
+// ปุ่ม "ยกเลิก" จริงทำ batch: เปลี่ยนเป็น cancelled + ลบ slot (lib/bookings.ts cancelBooking)
+const slotOf = (b) => ({
+  id: b.id, bookingId: b.id, itemId: b.itemId, itemName: b.itemName, bookingType: b.bookingType,
+  startAt: b.startAt, endAt: b.endAt, status: "pending",
+});
+let cancelB;
+await expectOk("สมาชิกส่งคำขอพร้อม slot ใน batch เดียว (แบบหน้ายืม)", async () => {
+  const id = "cancelTest0000000001";
+  const batch = memA.createBatch();
+  batch.collection("bookings").create({ id, ...baseBooking({ requestId: "REQCANCEL" }) });
+  batch.collection("slots").create(slotOf({ id, ...baseBooking() }));
+  await batch.send();
+  cancelB = await memA.collection("bookings").getOne(id);
+});
+await expectDenied("สมาชิก B ลบ slot ของ A", () => memB.collection("slots").delete(cancelB.id));
+await expectDenied("ลบ slot ทั้งที่คำขอยังไม่ยกเลิก", () => memA.collection("slots").delete(cancelB.id));
+await expectOk("เจ้าของกดยกเลิก (batch: cancelled + ลบ slot)", async () => {
+  const batch = memA.createBatch();
+  batch.collection("bookings").update(cancelB.id, { status: "cancelled" });
+  batch.collection("slots").delete(cancelB.id);
+  await batch.send();
+});
 await expectDenied("สมาชิกอนุมัติคำขอตัวเอง", async () => {
   const b = await memA.collection("bookings").create(baseBooking({ requestId: "REQTEST2" }));
   await memA.collection("bookings").update(b.id, { status: "approved" });

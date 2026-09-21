@@ -118,6 +118,25 @@ export function toFirestoreError(e: unknown): FirestoreError {
     else if (s === 404) code = "not-found";
     else if (s === 429) code = "resource-exhausted";
     else if (s >= 500) code = "internal";
+    // batch ล้ม: เหตุผลจริงซ้อนอยู่ใน data.requests[ลำดับ].response — ดึงออกมาให้เห็น
+    const reqs = (e.response?.data as { requests?: Record<string, { response?: { status?: number; message?: string; data?: unknown } }> })
+      ?.requests;
+    if (reqs && typeof reqs === "object") {
+      const first = Object.entries(reqs)[0];
+      const inner = first?.[1]?.response;
+      if (inner) {
+        const innerStatus = inner.status ?? 400;
+        const innerFields = inner.data && typeof inner.data === "object" && Object.keys(inner.data).length > 0;
+        const innerCode =
+          innerStatus === 404 ? "not-found"
+          : innerStatus === 400 && innerFields ? "invalid-argument"
+          : "permission-denied";
+        const fields = innerFields
+          ? " " + Object.entries(inner.data as Record<string, { message?: string }>).map(([k, v]) => `${k}: ${v?.message ?? ""}`).join("; ")
+          : "";
+        return new FirestoreError(innerCode, `${inner.message ?? msg}${fields} (รายการที่ ${Number(first[0]) + 1} ในชุด)`, innerStatus);
+      }
+    }
     const detail = fieldErrors
       ? " " + Object.entries(e.response.data as Record<string, { message?: string }>)
           .map(([k, v]) => `${k}: ${v?.message ?? ""}`)
@@ -571,8 +590,13 @@ async function fetchRows(q: Query<any>): Promise<Row[]> {
 
 async function fetchDoc(ref: DocumentReference<any>): Promise<DocumentData | null> {
   try {
-    const rec = await pb.collection(ref.parent.collectionName).getOne(ref.id);
-    return fromPb(ref.parent.collectionName, rec);
+    // getList แทน getOne — ไม่มีเอกสาร (เช่น banned/{uid} ของคนที่ไม่ได้ถูกระงับ) ได้ผลว่าง
+    // แทน 404 ที่เบราว์เซอร์พ่นลง console ทุกครั้ง (list กับ view ใช้กติกาเดียวกันทุกตาราง)
+    const res = await pb
+      .collection(ref.parent.collectionName)
+      .getList(1, 1, { filter: pb.filter("id = {:id}", { id: ref.id }), skipTotal: true });
+    const rec = res.items[0];
+    return rec ? fromPb(ref.parent.collectionName, rec) : null;
   } catch (e) {
     if (e instanceof ClientResponseError && e.status === 404) return null;
     throw toFirestoreError(e);

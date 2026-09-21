@@ -63,6 +63,8 @@ const RULES = {
   studios: PUBLIC_READ_ADMIN_WRITE,
   photographers: PUBLIC_READ_ADMIN_WRITE,
   // ตารางเวลาล้วน อ่านสาธารณะ — คนนอกต้องเช็คเวลาซ้อนได้ก่อนส่งคำขอ
+  // ลบ: ตรงนี้แอดมินเท่านั้น — กติกาเต็ม (เจ้าของลบ slot ของคำขอที่ยกเลิกแล้วได้) อยู่ใน
+  // 1758480300_slot_owner_cancel.js เพราะอ้างถึงตาราง bookings ซึ่งยังไม่ถูกสร้างตอนสร้าง slots
   slots: { list: "", view: "", create: "", update: ADMIN, delete: ADMIN },
   bookings: {
     list:
