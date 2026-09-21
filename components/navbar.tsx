@@ -49,8 +49,13 @@ export default function Navbar() {
             <span className="text-gradient">{settings.siteName.toUpperCase()}</span>
           </Link>
 
-          {/* ลิงก์เต็มบนจอใหญ่ — จอเล็กใช้เมนูสไลด์ + แถบล่างแทน */}
-          <div className="ml-3 hidden min-w-0 flex-1 items-center gap-0.5 overflow-x-auto no-scrollbar lg:flex">
+          {/* ลิงก์เต็มบนจอใหญ่ — จอเล็กใช้เมนูสไลด์ + แถบล่างแทน
+              ห้ามใส่ overflow-x-auto กลับมา: ตาม CSS ถ้า overflow-x ไม่ใช่ visible
+              overflow-y จะกลายเป็น auto ตาม เมนูดรอปดาวน์ที่ห้อยลงล่างจะถูกตัดทิ้ง
+              กดแล้วเปิดจริงแต่มองไม่เห็น (เคยพังแบบนี้บนเว็บจริงมาแล้ว)
+              ไม่ต้องมีตัวเลื่อนด้วย — ตั้งแต่รวบเป็นดรอปดาวน์ เหลือ 7 ปุ่ม กว้าง ~520px
+              ที่จอแคบสุดที่แถบนี้โผล่ (1024px) ทั้งแถวใช้ ~908px ยังเหลือที่ว่าง */}
+          <div className="ml-3 hidden min-w-0 flex-1 items-center gap-0.5 lg:flex">
             {groups
               .filter((g) => g.href !== "/profile")
               .map((g) => (
