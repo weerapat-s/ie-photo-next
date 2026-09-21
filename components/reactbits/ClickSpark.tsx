@@ -1,6 +1,6 @@
 "use client";
 // components/reactbits/ClickSpark.tsx — ประกายตอนแตะ/คลิก (ดัดแปลงจาก React Bits)
-// canvas ใบเดียว position:fixed คลุมวิวพอร์ต → พิกัดใช้ clientX/clientY ตรง ๆ
+// canvas ใบเดียว position:fixed คลุมจอ — ขนาดภาพวัดจากขนาดที่แสดงจริง และพิกัดเทียบขอบ canvas
 // (ต้นฉบับวัดจากขนาด parent ซึ่งสูงตามเนื้อหา ทำให้ประกายเหลื่อมเมื่อหน้ายาว)
 import { useRef, useEffect, useCallback } from "react";
 
@@ -35,21 +35,32 @@ export default function ClickSpark({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sparksRef = useRef<Spark[]>([]);
 
-  // ปรับขนาด canvas ให้เท่าวิวพอร์ต (เผื่อ devicePixelRatio ให้เส้นคม)
+  // ขนาดภาพใน canvas ต้องเท่าขนาดที่ canvas "แสดงจริง" บนจอเป๊ะ
+  //
+  // บั๊กเดิม (มือถือ): CSS ตั้ง height:100vh แต่ภาพตั้งตาม window.innerHeight
+  // บน Chrome มือถือตอนแถบที่อยู่เว็บโผล่ 100vh สูงกว่า innerHeight → ภาพถูกยืดแนวตั้ง
+  // ประกายจึงเลื่อนต่ำกว่านิ้ว ยิ่งแตะใกล้ล่างจอยิ่งเพี้ยน
+  // แก้: วัดขนาดจริงของ canvas เอง (ResizeObserver จับตอนแถบที่อยู่โผล่/หุบด้วย)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
 
     const resize = () => {
+      const rect = canvas.getBoundingClientRect();
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.floor(window.innerWidth * dpr);
-      canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.width = Math.max(1, Math.round(rect.width * dpr));
+      canvas.height = Math.max(1, Math.round(rect.height * dpr));
       ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas);
     window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", resize);
+    };
   }, []);
 
   const easeFunc = useCallback(
@@ -119,11 +130,15 @@ export default function ClickSpark({
   useEffect(() => {
     const onPointerUp = (e: PointerEvent) => {
       if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+      // พิกัดเทียบกับขอบ canvas จริง ไม่ใช่ขอบหน้าต่าง
+      const rect = canvasRef.current?.getBoundingClientRect();
+      const x = e.clientX - (rect?.left ?? 0);
+      const y = e.clientY - (rect?.top ?? 0);
       const now = performance.now();
       sparksRef.current.push(
         ...Array.from({ length: sparkCount }, (_, i) => ({
-          x: e.clientX,
-          y: e.clientY,
+          x,
+          y,
           angle: (2 * Math.PI * i) / sparkCount,
           startTime: now,
         }))
@@ -143,10 +158,11 @@ export default function ClickSpark({
         ref={canvasRef}
         aria-hidden
         style={{
+          // inset:0 = เท่ากรอบที่ของ fixed ใช้จริง (ไม่ใช้ 100vh ซึ่งบนมือถือสูงกว่าจอที่เห็น)
           position: "fixed",
           inset: 0,
-          width: "100vw",
-          height: "100vh",
+          width: "100%",
+          height: "100%",
           display: "block",
           userSelect: "none",
           zIndex: 200,
