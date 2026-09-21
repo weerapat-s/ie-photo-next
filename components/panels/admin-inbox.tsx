@@ -17,6 +17,8 @@ import {
   updateDoc,
   writeBatch,
   Timestamp,
+  query,
+  where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { describeWriteError } from "@/lib/errors";
@@ -38,7 +40,14 @@ export default function AdminInbox() {
   const now = useNow(60_000);
   const { show, node: toastNode } = useToast();
 
-  const { data: bookings } = useCollection<BookingDoc>(() => collection(db, "bookings"), []);
+  // เฉพาะสถานะที่หน้านี้ใช้จริง — รออนุมัติ · รอตรวจคืน · อนุมัติแล้ว (เช็คของค้าง + งานถ่ายที่ไม่มีคนรับ)
+  // เดิมดึงทั้ง collection รวมประวัติที่คืน/ยกเลิกไปแล้ว ทุกครั้งที่กรรมการเปิดหน้าภาพรวม
+  // Firestore รุ่นนี้คิดโควตาอ่านตามขนาดเอกสาร และคำขอเก่ายังฝังรูป base64 อยู่
+  // หน้านี้หน้าเดียวจึงกินโควตารายวันไปก้อนใหญ่ จนเคยหมดทั้งโปรเจกต์
+  const { data: bookings } = useCollection<BookingDoc>(
+    () => query(collection(db, "bookings"), where("status", "in", ["pending", "pending_return", "approved"])),
+    []
+  );
   const { data: users } = useCollection<UserDoc>(() => collection(db, "users"), []);
   // งานส่งไฟล์ที่มีอยู่แล้ว — กันสร้างซ้ำเวลาอนุมัติงานถ่าย
   const { data: deliveries } = useCollection<{ bookingId: string | null }>(

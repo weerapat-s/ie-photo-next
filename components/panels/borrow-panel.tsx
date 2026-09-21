@@ -6,6 +6,7 @@ import { collection, query, where, orderBy, doc, writeBatch, Timestamp, serverTi
 import { db } from "@/lib/firebase/client";
 import { uploadBorrowImage } from "@/lib/nas";
 import { notifyAssigned, notifyBorrowRequest } from "@/lib/notify";
+import { describeWriteError } from "@/lib/errors";
 import { findSlotConflicts, slotPayload } from "@/lib/slots";
 import { needsOvernightApproval, overdueItems, overdueBlockMessage } from "@/lib/borrow-policy";
 import { generateRequestId, requestQrPayload } from "@/lib/qr";
@@ -298,10 +299,12 @@ export default function BorrowPanel({ mode = "self" }: { mode?: "self" | "assign
       void notifyBorrowRequest(requestId);
       router.push(`/my-bookings?request=${requestId}`);
     } catch (error) {
+      // บอกสาเหตุจริง — เดิมทุกอย่างกลายเป็น "ส่งคำขอไม่สำเร็จ กรุณาลองใหม่" เหมือนกันหมด
+      // ทั้งโควตาฐานข้อมูลหมด · อัปรูปขึ้น NAS ไม่ได้ · กติกาปฏิเสธ ทำให้ไล่ต้นตอไม่ได้
       setErr(
         error instanceof Error && error.message === "IMAGE_TOO_LARGE"
           ? "รูปมีขนาดใหญ่เกินไป กรุณาเลือกรูปที่เล็กลง"
-          : "ส่งคำขอไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"
+          : describeWriteError(error, assigning ? "มอบหมาย" : "ส่งคำขอยืม")
       );
       setBusy(false);
     }
