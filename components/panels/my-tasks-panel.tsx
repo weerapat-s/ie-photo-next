@@ -1,9 +1,9 @@
 "use client";
 // app/(member)/my-tasks/page.tsx — งานที่ได้รับมอบหมาย + อัปเดตสถานะ
 import { useState } from "react";
-import { collection, query, where, orderBy, doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { collection, query, where, orderBy, doc, updateDoc } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
+import { useAuth } from "@/lib/db/auth-context";
 import { useCollection, useNow } from "@/lib/hooks";
 import {
   Card,

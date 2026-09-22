@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { useSettings } from "@/lib/settings-context";
 import { samePath, tabLinks } from "@/lib/nav";
 import Icon from "@/components/icon";

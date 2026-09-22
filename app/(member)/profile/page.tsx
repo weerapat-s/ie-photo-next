@@ -3,11 +3,11 @@
 import { Suspense, useState } from "react";
 import MemberQrCard from "@/components/member-qr-card";
 import { useRouter, useSearchParams } from "next/navigation";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { doc, updateDoc } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { describeWriteError } from "@/lib/errors";
 import { compressImageToDataUrl } from "@/lib/image";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { useSettings } from "@/lib/settings-context";
 import NotificationToggle from "@/components/notification-toggle";
 import { ROLE_LABEL } from "@/lib/roles";

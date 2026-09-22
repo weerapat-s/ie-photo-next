@@ -1,109 +1,85 @@
 "use client";
-// lib/nas.ts — รูปเอกสารการยืม เก็บบน Nextcloud (NAS ชุมนุม) ไม่ใช่ใน Firestore
+// lib/nas.ts — รูปเอกสารการยืม / รูปตอนคืน / รูปส่งมอบ เก็บเป็นไฟล์บน NAS (PocketBase)
 //
-// เหตุผลย่อ (รายละเอียดเต็มอยู่ใน workers/nas-files.js):
-//   รูป base64 ที่ฝังในเอกสาร booking ทำให้ Firestore คิดโควตาอ่านตามขนาดเอกสาร
-//   booking ที่มีรูป 500KB = อ่านทีเดียวกินเท่าเอกสารเปล่าร้อยกว่าใบ
+// ค่าที่เก็บใน booking (formImageUrl / returnImageUrl / handoverImageUrl) เป็นแค่ที่อยู่ไฟล์
+//   "files/<id>/<ชื่อไฟล์>"  ไฟล์ในตาราง files ของ PocketBase
+// ไม่ฝังรูปลงเรคคอร์ด — เคยฝัง base64 สมัย Firestore จนโควตาอ่านหมดทั้งวัน
 //
-// ทุกอย่างวิ่งผ่าน Cloudflare Worker เพราะ:
-//   • Nextcloud public share ไม่ส่งหัว CORS (preflight ตอบ 401) ยิงตรงไม่ได้
-//   • token ของ share = สิทธิ์อ่าน/ไล่ดูไฟล์ทั้งโฟลเดอร์ ห้ามหลุดมาถึงเบราว์เซอร์เด็ดขาด
+// ไฟล์เป็นเอกสารส่วนตัว (บัตร นศ. ใบขออนุญาต) ตั้ง protected ไว้:
+// เปิดได้ต้องมี file token อายุสั้นของคนที่มีสิทธิ์ (แอดมิน หรือเจ้าของไฟล์) — ลิงก์หลุดไปก็เปิดไม่ได้
+//
+// ค่าเก่าแบบ data: URL หรือลิงก์ภายนอก ยังแสดงได้ตามเดิม (คืนค่ากลับไปตรง ๆ)
 import { useEffect, useState } from "react";
-import { auth } from "@/lib/firebase/client";
+import { pb, PB_URL } from "@/lib/db/client";
 import { compressImageToBlob } from "@/lib/image";
 
-/**
- * Worker ที่ถือ token ของ NAS — แยกจาก okmd-proxy (ตัว AI/อีเมล)
- * เพราะ okmd-proxy อยู่บัญชี Cloudflare ที่ตอนนี้ไม่มีใครเข้าได้ ดู workers/nas-entry.js
- */
-export const WORKER_BASE = "https://iephoto-nas.vaumgasem.workers.dev";
-
-/** path บน NAS เท่านั้น ที่เหลือ (data: URL เดิม, ลิงก์ภายนอก) ให้ใช้ src ตรง ๆ */
+/** ที่อยู่ไฟล์บน NAS — ที่เหลือ (data: URL เดิม, ลิงก์ภายนอก) ให้ใช้ src ตรง ๆ */
 export function isNasPath(value: string | null | undefined): value is string {
-  return !!value && value.startsWith("borrow/");
+  return !!value && value.startsWith("files/");
 }
 
-async function idToken(): Promise<string> {
-  const user = auth.currentUser;
-  if (!user) throw new Error("ยังไม่ได้เข้าสู่ระบบ");
-  return user.getIdToken();
-}
+export type BorrowImageKind = "form" | "return" | "handover";
 
 /**
- * ย่อรูปแล้วอัปขึ้น NAS — คืน path ที่เอาไปเก็บใน booking
+ * ย่อรูปแล้วอัปขึ้น NAS — คืนที่อยู่ไฟล์ที่เอาไปเก็บใน booking
  * โยน Error พร้อมข้อความภาษาไทยถ้าไม่สำเร็จ เพื่อให้ฝั่ง UI เอาไปแสดงได้เลย
  */
-export async function uploadBorrowImage(file: File, kind: "form" | "return"): Promise<string> {
-  const blob = await compressImageToBlob(file, kind === "form" ? 1600 : 1400, 0.8);
-  const token = await idToken();
-
-  const res = await fetch(`${WORKER_BASE}/nas/upload?kind=${kind}`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "image/jpeg" },
-    body: blob,
-  });
-
-  const data = (await res.json().catch(() => ({}))) as { path?: string; error?: string };
-  if (!res.ok || !data.path) {
-    throw new Error(data.error || `อัปโหลดขึ้น NAS ไม่สำเร็จ (${res.status})`);
+export async function uploadBorrowImage(file: File, kind: BorrowImageKind): Promise<string> {
+  if (!pb.authStore.isValid) throw new Error("ยังไม่ได้เข้าสู่ระบบ");
+  const blob = await compressImageToBlob(file, kind === "return" ? 1400 : 1600, 0.8);
+  const form = new FormData();
+  form.append("file", blob, `${kind}.jpg`);
+  form.append("kind", kind);
+  try {
+    const rec = await pb.collection("files").create(form);
+    return `files/${rec.id}/${rec.file}`;
+  } catch (e) {
+    const msg = (e as { response?: { message?: string } })?.response?.message;
+    throw new Error(msg ? `อัปโหลดรูปไม่สำเร็จ: ${msg}` : "อัปโหลดรูปขึ้น NAS ไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองใหม่");
   }
-  return data.path;
 }
 
-/**
- * ดึงรูปจาก NAS มาเป็น object URL
- * ต้อง fetch เองเพราะ <img src> ส่งหัว Authorization ไม่ได้
- * ผู้เรียกต้อง URL.revokeObjectURL() ตอนเลิกใช้ ไม่งั้น blob ค้างในหน่วยความจำ
- */
-export async function fetchNasImage(path: string): Promise<string> {
-  const token = await idToken();
-  const res = await fetch(`${WORKER_BASE}/nas/file?p=${encodeURIComponent(path)}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) {
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(data.error || `โหลดรูปไม่สำเร็จ (${res.status})`);
-  }
-  return URL.createObjectURL(await res.blob());
+// file token อายุราว 3 นาที — ใช้ร่วมกันทั้งหน้า ไม่ขอใหม่ทุกรูป
+let tokenCache: { token: string; at: number; uid: string } | null = null;
+const TOKEN_REUSE_MS = 90_000;
+
+async function fileToken(): Promise<string> {
+  const uid = pb.authStore.record?.id ?? "";
+  if (tokenCache && tokenCache.uid === uid && Date.now() - tokenCache.at < TOKEN_REUSE_MS) return tokenCache.token;
+  const token = await pb.files.getToken();
+  tokenCache = { token, at: Date.now(), uid };
+  return token;
+}
+
+/** ที่อยู่รูปที่ใส่ <img src> ได้ตรง ๆ (แนบ file token) */
+export async function nasFileUrl(path: string): Promise<string> {
+  const [, id, name] = path.split("/");
+  const base = PB_URL.replace(/\/+$/, "");
+  const token = await fileToken();
+  return `${base}/api/files/files/${encodeURIComponent(id)}/${encodeURIComponent(name)}?token=${encodeURIComponent(token)}`;
 }
 
 /**
  * แปลงค่าที่เก็บใน booking ให้เป็น src ที่เอาไปใส่ <img> / <a href> ได้
- *
- * รับได้ทั้งสองแบบ เพราะของเก่ากับของใหม่ใช้ฟิลด์เดียวกัน:
- *   • path บน NAS (ของใหม่)   → ดึงผ่าน Worker แล้วคืน object URL
+ *   • ที่อยู่ไฟล์บน NAS → ลิงก์พร้อม file token
  *   • data: URL หรือลิงก์นอก (ของเก่า) → คืนกลับไปตรง ๆ
  */
 export function useNasSrc(value: string | null | undefined) {
   // ผลลัพธ์ผูกกับค่าที่ขอไว้เสมอ — พอ value เปลี่ยน ของรอบก่อนจะไม่ถูกนับทันที
-  // โดยไม่ต้อง setState ตอนเปลี่ยน (setState ตรง ๆ ใน effect ทำให้ render ซ้อน)
   const [done, setDone] = useState<{ key: string; url: string } | null>(null);
   const [failed, setFailed] = useState<{ key: string; message: string } | null>(null);
 
   useEffect(() => {
     if (!isNasPath(value)) return;
-
     let cancelled = false;
-    let objectUrl = "";
-
-    fetchNasImage(value)
-      .then((url) => {
-        // unmount หรือเปลี่ยนรูปก่อนโหลดเสร็จ — คืนหน่วยความจำทันที ไม่งั้น blob ค้าง
-        if (cancelled) {
-          URL.revokeObjectURL(url);
-          return;
-        }
-        objectUrl = url;
-        setDone({ key: value, url });
-      })
+    nasFileUrl(value)
+      .then((url) => !cancelled && setDone({ key: value, url }))
       .catch((e: unknown) => {
         if (cancelled) return;
         setFailed({ key: value, message: e instanceof Error ? e.message : "โหลดรูปไม่สำเร็จ" });
       });
-
     return () => {
       cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [value]);
 

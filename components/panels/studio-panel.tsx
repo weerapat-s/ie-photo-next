@@ -2,8 +2,8 @@
 // components/panels/studio-panel.tsx — จัดการห้องสตูดิโอ (แท็บใน /resources)
 // ฝั่งแอดมินไม่ต้องมีปุ่มจอง — ใช้การ์ดใบเดียวกับหน้าสมาชิกแต่เปิดโหมดแก้ไข
 import { useState } from "react";
-import { collection, query, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, query, orderBy } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { useCollection } from "@/lib/hooks";
 import { Spinner, EmptyState, Badge, Button } from "@/components/ui";
 import { StudioEditModal } from "@/components/studio";

@@ -6,7 +6,7 @@
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { isAdminRole } from "@/lib/roles";
 import { Spinner } from "@/components/ui";
 

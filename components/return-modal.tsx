@@ -4,8 +4,8 @@
 // รับหลักฐานได้ 2 ทาง: ถ่ายรูปตรงนั้น หรือวางลิงก์รูปที่อัปขึ้นที่เก็บกลางไว้แล้ว
 // (รูปจากกล้องมือถือมักใหญ่เกินขนาดที่ Firestore รับ จึงต้องมีทางเลือกที่สอง)
 import { useState } from "react";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { doc, updateDoc } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { describeWriteError } from "@/lib/errors";
 import { uploadBorrowImage } from "@/lib/nas";
 import { Modal, Alert, Button, ImagePicker } from "@/components/ui";

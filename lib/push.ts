@@ -1,7 +1,7 @@
 "use client";
 // lib/push.ts — Web Push subscription helpers (ทำงานได้แม้ปิดแอพ ผ่าน service worker)
-import { doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { doc, updateDoc, arrayUnion, arrayRemove } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import type { PushSubscriptionData } from "@/lib/types";
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "";

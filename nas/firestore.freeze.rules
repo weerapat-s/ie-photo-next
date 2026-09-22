@@ -1,0 +1,11 @@
+rules_version = '2';
+// ปิด Firestore ทั้งหมดตอนย้ายไป NAS (scripts/cutover-nas.sh)
+// ไม่ให้ใครเขียนอะไรเพิ่มหลัง export — ของที่เขียนหลังจากนี้จะไม่ถูกย้ายไป NAS
+// ระบบฝั่งเซิร์ฟเวอร์ (Admin SDK) ไม่โดนกติกานี้ สคริปต์ export จึงยังอ่านได้
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

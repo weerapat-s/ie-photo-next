@@ -1,36 +1,29 @@
 /**
- * workers/nas-entry.js — Worker ตัวเล็กที่ทำหน้าที่เดียว: รูปเอกสารการยืมบน NAS
+ * workers/nas-entry.js — Worker iephoto-nas (บัญชี Cloudflare ส่วนตัว) : ส่งอีเมลของ IE-Photo
  *
- * ทำไมแยกออกมาจาก okmd-proxy:
- *   okmd-proxy อยู่บัญชี Cloudflare ของชุมนุม (Wooden Date / 18d2d741…) ซึ่งตอนนี้
- *   ไม่มีใครในทีมเข้าได้ — บัญชีที่ใช้งานอยู่ไม่ได้เป็นสมาชิกของบัญชีนั้น (ตรวจแล้ว
- *   ในหน้าเลือกบัญชีของ dashboard มีแค่บัญชีส่วนตัว)
+ * ย้ายเว็บมาอยู่บน NAS (PocketBase) แล้ว Worker นี้เหลือหน้าที่เดียวคือส่งอีเมลจาก
+ * admin@ienas.site ผ่าน Cloudflare Email Service (NAS ส่งเองไม่ได้ — ไม่มี SMTP ที่ใช้ได้)
  *
- *   ย้าย okmd-proxy ทั้งตัวต้องตั้ง secret ใหม่ 5 ตัว และเปลี่ยนปลายทาง AI ของทุกคน
- *   ส่วน /nas ต้องการแค่ NAS_SHARE_TOKEN ตัวเดียว (ตรวจ ID token ด้วย JWKS สาธารณะ
- *   ของ Google ไม่ต้องใช้ service account) จึงแยกเฉพาะส่วนนี้ออกมาก่อน
- *   AI, /send, cron ยังวิ่งที่ okmd-proxy ตัวเดิมตามปกติ
+ *   POST /mail                    อีเมลทั่วไป — กรรมการ หรือระบบบน NAS   (workers/mail.js)
+ *   POST /notify/assigned         แจ้งกรรมการตอนมอบหมายอุปกรณ์          (workers/notify.js)
+ *   POST /notify/borrow-request   ยืนยันถึงคนยืม + แจ้งกรรมการ
  *
- * ถ้าวันหนึ่งกลับเข้าบัญชีชุมนุมได้ ย้าย /nas กลับไปรวมกับ okmd-proxy ได้เลย
- * (โค้ด handleNas ตัวเดียวกัน) แล้วลบไฟล์นี้กับ wrangler.nas.toml ทิ้ง
- *
- * + /notify/* อีเมลแจ้งกรรมการตอนมอบหมายอุปกรณ์ (workers/notify.js) — อยู่ Worker นี้
- *   เพราะเป็นตัวเดียวในบัญชีที่เข้าได้ และโดเมนผู้ส่ง ienas.site ก็อยู่บัญชีเดียวกัน
+ * ทุกเส้นทางยืนยันตัวด้วย token ของ PocketBase — Worker ถาม NAS ว่าเป็นใคร (workers/pb-auth.js)
+ * เดิมตรวจ ID token ของ Firebase และมี /nas (รูปบน Nextcloud) — เลิกใช้แล้วหลังย้ายมา NAS
  *
  * deploy:  npm run worker:nas-deploy
- * secret:  npm run worker:nas
  */
-import { handleNas } from "./nas-files.js";
 import { handleNotify } from "./notify.js";
+import { handleMail } from "./mail.js";
 
 export default {
   async fetch(request, env) {
     const origin = request.headers.get("Origin") || "";
-    const allowed = env.ALLOWED_ORIGIN || "";
-    const originOk = origin === allowed;
+    const allowed = (env.ALLOWED_ORIGIN || "").split(",").map((s) => s.trim()).filter(Boolean);
+    const originOk = allowed.includes(origin);
 
     const cors = {
-      "Access-Control-Allow-Origin": allowed,
+      "Access-Control-Allow-Origin": originOk ? origin : allowed[0] || "",
       "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
       "Access-Control-Max-Age": "86400",
@@ -41,16 +34,16 @@ export default {
       return new Response(null, { status: 204, headers: cors });
     }
 
-    // ด่านแรกกันเว็บอื่นเอาไปใช้ — ด่านจริงคือการตรวจ ID token ใน handleNas
-    // เพราะ Origin ปลอมได้ถ้ายิงจากนอกเบราว์เซอร์
-    if (!originOk) {
+    // ด่านแรกกันเว็บอื่นเอาไปใช้ในเบราว์เซอร์ — ด่านจริงคือ token ที่ NAS ต้องยืนยัน
+    // ไม่มี Origin เลย = เรียกจากเซิร์ฟเวอร์ (hook บน NAS) ให้ผ่านไปตรวจ token
+    if (origin && !originOk) {
       return new Response(JSON.stringify({ error: "origin not allowed" }), {
         status: 403,
         headers: { ...cors, "Content-Type": "application/json" },
       });
     }
 
-    const res = (await handleNas(request, env, cors)) ?? (await handleNotify(request, env, cors));
+    const res = (await handleMail(request, env, cors)) ?? (await handleNotify(request, env, cors));
     if (res) return res;
 
     return new Response(JSON.stringify({ error: "ไม่รู้จักเส้นทางนี้" }), {

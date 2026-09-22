@@ -3,9 +3,9 @@
 // ไม่อยู่ในเมนูหลักแล้ว (เข้าจากทางลัดในหน้าแรก หรือลิงก์ที่แชร์มา)
 // เพราะสมาชิกส่วนใหญ่เข้ามาผ่านลิงก์ตรง ไม่ได้ไล่หาจากเมนู
 import { useState } from "react";
-import { collection, query, where, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { collection, query, where, orderBy } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
+import { useAuth } from "@/lib/db/auth-context";
 import { useCollection } from "@/lib/hooks";
 import { PageHeader, Spinner, Button, Modal, EmptyState, Badge } from "@/components/ui";
 import FormRenderer from "@/components/form-renderer";

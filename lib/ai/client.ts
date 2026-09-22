@@ -6,10 +6,10 @@
 //
 // ข้อควรรู้เรื่องปลายทาง:
 // gen.ai.kku.ac.th ไม่ส่งหัว Access-Control-Allow-Origin กลับมา เบราว์เซอร์จึง
-// บล็อกการเรียกตรงจากหน้าเว็บ (ตรวจแล้วได้ "Failed to fetch") ต้องผ่าน proxy
-// ที่เติมหัว CORS ให้ — ดู workers/okmd-proxy.js
-// ผลพลอยได้คือคีย์ไปอยู่ฝั่ง proxy ไม่ต้องส่งมาถึงเบราว์เซอร์เลย
+// บล็อกการเรียกตรงจากหน้าเว็บ (ตรวจแล้วได้ "Failed to fetch") ต้องผ่านทางผ่าน
+// บน NAS (nas/pb_hooks/ie_ai.js) ซึ่งอยู่โดเมนเดียวกับเว็บ และถือคีย์ไว้ฝั่งเซิร์ฟเวอร์
 import { modelChain, PROVIDER_OF, isQuotaExhausted, isBadKey } from "./models";
+import { pb, PB_URL } from "@/lib/db/client";
 import type { AiConfigDoc } from "@/lib/types";
 
 export { modelChain } from "./models";
@@ -37,17 +37,20 @@ export class AiError extends Error {
 }
 
 /**
- * proxy ของชุมนุม (Cloudflare Worker · โค้ดอยู่ที่ workers/okmd-proxy.js)
+ * ทางผ่านบน NAS (nas/pb_hooks/ie_ai.js) — ใช้ token ล็อกอินของกรรมการ คีย์ OKMD อยู่ฝั่งเซิร์ฟเวอร์
  *
- * ตัวนี้คือ Worker ที่ claim เข้าบัญชีชุมนุมแล้ว จึงอยู่ถาวร
- * ข้อจำกัดตอนนี้: ยังเป็นโค้ดรุ่นแรก — ไม่มี /send และไม่มีคีย์ฝั่งเซิร์ฟเวอร์
- * จึงต้องกรอกคีย์ OKMD ในหน้าตั้งค่า และอีเมลยังส่งไม่ได้จนกว่าจะ
- * `npm run worker:deploy` + `npm run worker:key` + `npm run worker:mail`
- *
- * บทเรียน: อย่าตั้งค่าเริ่มต้นเป็น Worker บนบัญชีชั่วคราวของ Cloudflare
- * บัญชีนั้นหายไปเองเมื่อพ้นเวลา claim แล้วทั้ง AI และอีเมลดับพร้อมกัน
+ * เดิมใช้ Worker okmd-proxy แต่ตัวนั้นอยู่บัญชี Cloudflare ที่ไม่มีใครเข้าได้แล้ว
+ * และรับเฉพาะ iephoto.web.app — ค่าเดิมที่บันทึกไว้ในหน้าตั้งค่าจึงถูกเปลี่ยนมาที่นี่อัตโนมัติ
  */
-export const DEFAULT_BASE_URL = "https://okmd-proxy.wooden-date.workers.dev/v1";
+export const DEFAULT_BASE_URL = `${PB_URL.replace(/\/+$/, "")}/api/ie/ai`;
+const RETIRED_PROXY = "okmd-proxy.wooden-date.workers.dev";
+
+/** ปลายทางจริงที่จะเรียก — ว่าง หรือเป็น Worker เดิมที่เลิกใช้แล้ว = ทางผ่านบน NAS */
+export function resolveBaseUrl(baseUrl: string | null | undefined): string {
+  const b = baseUrl?.trim() ?? "";
+  if (!b || b.includes(RETIRED_PROXY)) return DEFAULT_BASE_URL;
+  return b.replace(/\/+$/, "");
+}
 
 export interface ChatResult {
   text: string;
@@ -90,7 +93,12 @@ async function callOnce(
       signal: opts.signal,
       headers: {
         "Content-Type": "application/json",
-        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+        // ทางผ่านบน NAS ยืนยันตัวด้วย token ล็อกอิน (คีย์ OKMD อยู่ฝั่งเซิร์ฟเวอร์)
+        ...(base === DEFAULT_BASE_URL
+          ? { Authorization: `Bearer ${pb.authStore.token}` }
+          : apiKey
+            ? { Authorization: `Bearer ${apiKey}` }
+            : {}),
       },
       body: JSON.stringify({
         model,
@@ -165,7 +173,7 @@ export async function chat(
   messages: ChatMessage[],
   opts: { signal?: AbortSignal; temperature?: number; onSwitch?: (model: string) => void } = {}
 ): Promise<ChatResult> {
-  const base = (cfg.baseUrl?.trim() || DEFAULT_BASE_URL).replace(/\/+$/, "");
+  const base = resolveBaseUrl(cfg.baseUrl);
   const apiKey = cfg.apiKey?.trim() ?? "";
   const chain = modelChain(cfg);
   const skipped: string[] = [];

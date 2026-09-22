@@ -1,10 +1,10 @@
 "use client";
 // app/(member)/studio/page.tsx — จองสตูดิโอ + แอดมินแก้ไขข้อมูลห้อง
 import { useState } from "react";
-import { collection, query, orderBy, doc, writeBatch, Timestamp, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, query, orderBy, doc, writeBatch, Timestamp, serverTimestamp } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { findSlotConflicts, slotPayload } from "@/lib/slots";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { useSettings } from "@/lib/settings-context";
 import { useCollection } from "@/lib/hooks";
 import { Spinner, Button, Modal, Field, inputClass, Alert, EmptyState } from "@/components/ui";

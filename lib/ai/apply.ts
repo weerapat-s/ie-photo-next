@@ -3,8 +3,8 @@
 //
 // แยกออกจาก UI เพื่อให้เห็นชัดว่า "AI แตะข้อมูลได้แค่ 3 อย่างนี้เท่านั้น"
 // ทุกอย่างเขียนใน batch เดียว — ถ้าพังก็พังทั้งชุด ไม่เหลือแผนที่ทำครึ่ง ๆ กลาง ๆ
-import { collection, doc, writeBatch, arrayUnion, serverTimestamp, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, doc, writeBatch, arrayUnion, serverTimestamp, Timestamp } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { displayName } from "@/lib/roles";
 import { sendMail, assigned, taskNew } from "@/lib/mail";
 import { fmtRange } from "@/lib/format";

@@ -1,0 +1,10 @@
+{
+  "hosting": {
+    "public": "nas/redirect-site",
+    "ignore": ["**/.*"],
+    "redirects": [
+      { "regex": "^/(?P<rest>.*)$", "destination": "https://iephoto.ienas.site/:rest", "type": 302 }
+    ],
+    "headers": [{ "source": "**", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }]
+  }
+}

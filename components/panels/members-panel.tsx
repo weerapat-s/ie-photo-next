@@ -11,12 +11,12 @@ import {
   deleteDoc,
   serverTimestamp,
   writeBatch,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+} from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { describeWriteError } from "@/lib/errors";
 import { useDevMode } from "@/lib/hooks";
 import { DEV_BADGE } from "@/lib/dev-mode";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { useCollection } from "@/lib/hooks";
 import {
   Card,

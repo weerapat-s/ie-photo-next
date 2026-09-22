@@ -11,10 +11,10 @@
 import { useMemo, useRef, useState } from "react";
 import {
   collection, query, where, limit, getDocs, getDoc, doc, writeBatch, addDoc, serverTimestamp,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+} from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { useNow } from "@/lib/hooks";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { PageHeader, Card, Badge, Spinner, Button, Modal, EmptyState, ImagePicker } from "@/components/ui";
 import QrScanner from "@/components/qr-scanner";
 import { parseScan } from "@/lib/qr";
@@ -86,7 +86,7 @@ export default function ScanStationPage() {
   async function ensureHandoverPath(): Promise<string> {
     if (handoverPath) return handoverPath;
     if (!handoverFile) throw new Error("ถ่ายรูปตอนส่งมอบก่อนจึงจะกดส่งมอบได้");
-    const path = await uploadBorrowImage(handoverFile, "form");
+    const path = await uploadBorrowImage(handoverFile, "handover");
     setHandoverPath(path);
     return path;
   }

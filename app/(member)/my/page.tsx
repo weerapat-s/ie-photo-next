@@ -14,9 +14,9 @@
 // ส่วนไหนไม่มีของก็ไม่แสดง — หน้าจะสั้นลงเองเมื่อไม่มีอะไรค้าง
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { collection, doc, query, updateDoc, where } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { collection, doc, query, updateDoc, where } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
+import { useAuth } from "@/lib/db/auth-context";
 import { useSettings } from "@/lib/settings-context";
 import { useCollection, useDocument, useNow } from "@/lib/hooks";
 import { canCancel, cancelBooking, cancelPrompt } from "@/lib/bookings";
@@ -125,7 +125,13 @@ export default function MyPage() {
   /** เรื่องด่วน — ดึงมาจากตรรกะเดียวกับที่ใช้ส่งอีเมลเตือน จะได้ไม่เพี้ยนกัน */
   const urgent = useMemo(
     () =>
-      allReminders({ bookings: [...myBookings, ...crewJobs], tasks, deliveries, now }).filter(
+      // งานถ่ายที่เราเป็นทั้งคนจองและทีมงานอยู่ในทั้งสองรายการ — ตัดซ้ำ ไม่งั้นเตือนซ้ำสองแถว
+      allReminders({
+        bookings: [...new Map([...myBookings, ...crewJobs].map((b) => [b.id, b])).values()],
+        tasks,
+        deliveries,
+        now,
+      }).filter(
         (r) => !!uid && r.userIds.includes(uid)
       ),
     [myBookings, crewJobs, tasks, deliveries, now, uid]

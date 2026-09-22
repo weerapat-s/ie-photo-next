@@ -7,8 +7,8 @@ import {
   increment,
   serverTimestamp,
   writeBatch,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+} from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { compressImageToDataUrl } from "@/lib/image";
 import { Button, Field, inputClass, Alert, ImagePicker } from "@/components/ui";
 import Icon from "@/components/icon";

@@ -7,8 +7,8 @@
 //   3. บอกล่วงหน้าว่าจะลบอะไรตามไปด้วย (เช่น ลบการจอง = ลบคิวใน slots ด้วย)
 //   4. ลบทีละชุดด้วย batch — ครึ่ง ๆ กลาง ๆ ไม่เกิด
 import { useMemo, useState } from "react";
-import { collection, query, orderBy, doc, writeBatch } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, query, orderBy, doc, writeBatch } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { useCollection, useNow } from "@/lib/hooks";
 import {
   Spinner,

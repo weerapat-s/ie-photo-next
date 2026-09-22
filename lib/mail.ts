@@ -1,19 +1,19 @@
 "use client";
 // lib/mail.ts — แจ้งเตือนทางอีเมล
 //
-// สถาปัตยกรรม: แอปเป็น static export ไม่มีเซิร์ฟเวอร์ของตัวเอง ส่งอีเมลตรงจาก
-// เบราว์เซอร์ไม่ได้ (ต้องมีคีย์ผู้ให้บริการ ซึ่งห้ามหลุดมาฝั่ง client)
-// จึงใช้ Cloudflare Worker ตัวเดิมที่ทำ proxy ให้ AI อยู่แล้วเป็นคนส่ง
+// สถาปัตยกรรม: ส่งอีเมลตรงจากเบราว์เซอร์ไม่ได้ จึงให้ Cloudflare Worker iephoto-nas
+// ส่งผ่าน Cloudflare Email Service จาก admin@ienas.site (โดเมนของชุมนุมเอง)
 //
-//   เบราว์เซอร์ → Worker /send (ถือคีย์ผู้ให้บริการ) → ผู้ให้บริการอีเมล
+//   เบราว์เซอร์ → Worker /mail (ถาม NAS ว่า token นี้เป็นกรรมการจริงไหม) → ผู้รับ
 //        ↓
-//   mailQueue/{id} ใน Firestore = สมุดบันทึกว่าส่งอะไรไปแล้วบ้าง
+//   mailQueue/{id} บน NAS = สมุดบันทึกว่าส่งอะไรไปแล้วบ้าง
 //
-// ถ้า Worker ยังไม่ได้ตั้งคีย์ อีเมลจะค้างสถานะ "queued" ให้กรรมการเห็นในหน้าตั้งค่า
-// ว่ามีอะไรรอส่งอยู่ — ดีกว่าเงียบหายแล้วไม่มีใครรู้
-import { addDoc, collection, doc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase/client";
-import { DEFAULT_BASE_URL } from "@/lib/ai/client";
+// ส่งไม่ออก อีเมลจะค้างสถานะ "failed" พร้อมเหตุผลให้กรรมการเห็นในหน้าอีเมล
+// — ดีกว่าเงียบหายแล้วไม่มีใครรู้
+import { addDoc, collection, doc, updateDoc, serverTimestamp } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
+import { currentUser } from "@/lib/db/auth";
+import { WORKER_BASE } from "@/lib/notify";
 
 export interface MailInput {
   to: string;
@@ -33,20 +33,16 @@ export interface MailInput {
   fromName?: string | null;
 }
 
-/** ที่อยู่ Worker /send — อิงจาก baseUrl ของ AI (Worker ตัวเดียวกัน) */
-function sendUrl(aiBaseUrl?: string): string {
-  const base = (aiBaseUrl?.trim() || DEFAULT_BASE_URL).replace(/\/+$/, "").replace(/\/v1$/, "");
-  return `${base}/send`;
-}
 
 /**
  * หย่อนอีเมลลงคิวแล้วพยายามส่งทันที
  * ไม่ throw — การแจ้งเตือนล้มเหลวต้องไม่ทำให้การมอบหมายงานล้มตาม
  * @returns true = ส่งออกไปแล้ว · false = ค้างคิวรอคีย์
  */
-export async function sendMail(mail: MailInput, aiBaseUrl?: string): Promise<boolean> {
-  // Worker ตรวจบทบาทจาก users/{uid} ก่อนยอมส่ง — ไม่มี token = ส่งไม่ได้
-  const me = auth.currentUser;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- พารามิเตอร์เดิม (ที่อยู่ Worker ของ AI) ผู้เรียกยังส่งมา
+export async function sendMail(mail: MailInput, _aiBaseUrl?: string): Promise<boolean> {
+  // Worker ตรวจบทบาทกับ NAS ก่อนยอมส่ง — ไม่มี token = ส่งไม่ได้
+  const me = currentUser();
 
   let ref;
   try {
@@ -69,7 +65,7 @@ export async function sendMail(mail: MailInput, aiBaseUrl?: string): Promise<boo
 
   try {
     const idToken = me ? await me.getIdToken() : "";
-    const res = await fetch(sendUrl(aiBaseUrl), {
+    const res = await fetch(`${WORKER_BASE}/mail`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
       body: JSON.stringify({
@@ -87,7 +83,7 @@ export async function sendMail(mail: MailInput, aiBaseUrl?: string): Promise<boo
         status: "failed",
         error:
           res.status === 404
-            ? "Worker ยังไม่มีปลายทาง /send — รัน npm run worker:deploy แล้ว npm run worker:mail"
+            ? "Worker ยังไม่มีปลายทาง /mail — รัน npm run worker:nas-deploy"
             : res.status === 401
               ? `Worker ปฏิเสธสิทธิ์ส่งอีเมล: ${text.slice(0, 160)}`
               : `${res.status} ${text.slice(0, 200)}`,

@@ -14,8 +14,8 @@
 // ตามขนาดเอกสาร และคำขอเก่ายังฝังรูปอยู่ — จนโควตารายวันหมดทั้งโปรเจกต์
 //
 // กฎ: อยากได้ "ทั้งหมด" ของ bookings / users ให้เรียกจากที่นี่เท่านั้น
-import { collection, query, where, orderBy, type Query } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, query, where, orderBy, type Query } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { useMemo } from "react";
 import { useCollection } from "@/lib/hooks";
 import type { DeliveryDoc, WithId } from "@/lib/types";

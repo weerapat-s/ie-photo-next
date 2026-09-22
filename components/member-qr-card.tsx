@@ -5,9 +5,9 @@
 // ตั้งได้ครั้งเดียวจากฝั่งเจ้าของ — จะแก้เองภายหลังไม่ได้ (บังคับที่ firestore.rules)
 // ถ้าทำหลุด/โดนถ่ายรูปไป ต้องให้แอดมินออกรหัสใหม่ให้
 import { useEffect, useRef, useState } from "react";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { doc, updateDoc } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
+import { useAuth } from "@/lib/db/auth-context";
 import QrImage from "@/components/qr-image";
 import { generateMemberCode, memberQrPayload } from "@/lib/qr";
 

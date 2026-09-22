@@ -7,9 +7,9 @@
 // กันส่งซ้ำด้วยคีย์ kind:refId:uid:วันที่ — เปิดแอปกี่รอบต่อวันก็ได้อีเมลฉบับเดียว
 // ตัวนี้เรนเดอร์ไม่มีอะไรเลย ทำงานเงียบ ๆ ข้างหลัง ล้มก็ไม่กระทบการใช้งาน
 import { useEffect, useRef } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { collection, getDocs, query, where } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
+import { useAuth } from "@/lib/db/auth-context";
 import { useSettings } from "@/lib/settings-context";
 import { useCollection } from "@/lib/hooks";
 import { isAdminRole } from "@/lib/roles";
@@ -154,7 +154,7 @@ async function sweep(input: {
   // ตั้งค่า AI ถือ baseUrl ของ Worker ที่เป็นตัวส่งอีเมลด้วย
   let aiBaseUrl: string | undefined;
   try {
-    const { getDoc, doc } = await import("firebase/firestore");
+    const { getDoc, doc } = await import("@/lib/db/firestore");
     const cfg = await getDoc(doc(db, "secrets", "ai"));
     aiBaseUrl = (cfg.data() as AiConfigDoc | undefined)?.baseUrl;
   } catch {

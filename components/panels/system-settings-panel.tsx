@@ -3,10 +3,10 @@
 // (เดิมเป็นทั้งหน้า /settings — ตอนนี้เป็นแท็บแรกของหน้านั้น)
 // แก้แล้วมีผลทันทีทุกเครื่องผ่าน onSnapshot ใน SettingsProvider
 import { useState } from "react";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { doc, setDoc, serverTimestamp } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { describeWriteError } from "@/lib/errors";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { useSettings } from "@/lib/settings-context";
 import {
   Card,

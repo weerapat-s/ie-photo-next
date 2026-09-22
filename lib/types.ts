@@ -1,6 +1,6 @@
 // lib/types.ts
 // TypeScript types ของ Firestore collections
-import type { Timestamp } from "firebase/firestore";
+import type { Timestamp } from "@/lib/db/firestore";
 
 export type Role = "member" | "admin" | "super_admin";
 

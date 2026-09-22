@@ -7,9 +7,9 @@
 //   3. availability — วันที่ตัวเองกันไว้ว่าไม่ว่าง
 // สิ่งที่มองไม่เห็นก็แค่ไม่มีรายละเอียดเพิ่ม ไม่ทำให้ปฏิทินพัง
 import { useMemo, useState } from "react";
-import { collection, query, orderBy, where } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { collection, query, orderBy, where } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
+import { useAuth } from "@/lib/db/auth-context";
 import { useCollection, useNow } from "@/lib/hooks";
 import { PageHeader, Badge, Spinner, EmptyState, ChipBar } from "@/components/ui";
 import Icon from "@/components/icon";

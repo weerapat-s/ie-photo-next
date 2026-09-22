@@ -1,26 +1,20 @@
-# workers/wrangler.nas.toml — Worker รูปเอกสารการยืมบน NAS (แยกจาก okmd-proxy)
+# workers/wrangler.nas.toml — Worker ส่งอีเมลของ IE-Photo จาก admin@ienas.site
 #
-# ทำไมแยก: ดูหัวไฟล์ workers/nas-entry.js — okmd-proxy อยู่บัญชีชุมนุมที่ตอนนี้ไม่มีใครเข้าได้
-# ตัวนี้อยู่บัญชีส่วนตัวที่ทีมใช้งานอยู่ (vaumgasem@gmail.com)
+# ตัวนี้อยู่บัญชีส่วนตัวที่ทีมใช้งานอยู่ (vaumgasem@gmail.com) — okmd-proxy เดิมอยู่บัญชีชุมนุม
+# ที่ไม่มีใครเข้าได้แล้ว ดูหัวไฟล์ workers/nas-entry.js
 #
 # deploy:  npm run worker:nas-deploy
-# ใส่ token ของ share:  npm run worker:nas   (เก็บเป็น Secret ฝั่ง Cloudflare ไม่อยู่ในไฟล์นี้)
-#
-# ไม่มี [triggers] ตั้งใจ — cron เตือนอีเมลรันอยู่ที่ okmd-proxy แล้ว
-# ถ้าใส่ตรงนี้ด้วยจะได้อีเมลเตือนซ้ำสองฉบับ
+# ไม่ต้องตั้ง Secret — ยืนยันตัวด้วยการถาม PocketBase บน NAS (PB_URL)
 account_id = "c120ec1f85adbda4cb1a94e4e79cf22d"
 name = "iephoto-nas"
 main = "nas-entry.js"
 compatibility_date = "2026-09-01"
 
 [vars]
-ALLOWED_ORIGIN = "https://iephoto.web.app"
-# ปลายทาง WebDAV ของ public share — ไม่ลับ (ไม่มี token อยู่ในนี้)
-NAS_WEBDAV_BASE = "https://nextcloud.ienas.site/public.php/webdav"
-# ใช้ตรวจลายเซ็น Firebase ID token ว่าออกให้โปรเจกต์นี้จริง
-FIREBASE_PROJECT_ID = "iephoto"
-# named database "default" (ไม่ใช่ "(default)") — /notify อ่านบทบาทจาก users/{uid}
-FIREBASE_DATABASE_ID = "default"
+# เว็บย้ายมา NAS แล้ว — คงโดเมนเดิมไว้ช่วงเปลี่ยนผ่าน (คั่นด้วย ,)
+ALLOWED_ORIGIN = "https://iephoto.ienas.site,https://iephoto.web.app"
+# PocketBase บน NAS (ผ่าน Cloudflare Tunnel) — ใช้ยืนยัน token ของคนที่ยิงมา
+PB_URL = "https://iephoto.ienas.site"
 
 # ── อีเมลแจ้งเตือน (workers/notify.js) ─────────────────────────
 # ienas.site เปิด Email Sending ไว้แล้วใน Cloudflare (Email Service → Email Sending)
@@ -28,8 +22,8 @@ MAIL_FROM = "admin@ienas.site"
 NOTIFY_TO = "68030271@kmitl.ac.th"
 
 # ไม่ล็อกผู้รับที่ binding เพราะต้องส่งยืนยันถึงตัวน้องที่ขอยืมด้วย (อีเมลเปลี่ยนไปตามคน)
-# ความปลอดภัยย้ายไปอยู่ที่ workers/notify.js แทน: ผู้รับมีได้แค่ NOTIFY_TO กับ
-# อีเมลของคนที่ล็อกอินอยู่ (จาก ID token) — client กำหนดผู้รับเองไม่ได้
+# ความปลอดภัยอยู่ที่โค้ดแทน: /notify ส่งได้แค่ NOTIFY_TO กับอีเมลของคนที่ล็อกอิน
+# ส่วน /mail (กำหนดผู้รับได้) ยอมเฉพาะกรรมการหรือระบบบน NAS — NAS เป็นคนยืนยันบทบาท
 # ล็อกผู้ส่งไว้ที่ admin@ienas.site ที่เดียว
 [[send_email]]
 name = "EMAIL"

@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Kanit, Inter } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/lib/firebase/auth-context";
+import { AuthProvider } from "@/lib/db/auth-context";
 import { SettingsProvider } from "@/lib/settings-context";
 import SwRegister from "@/components/sw-register";
 import ClickSpark from "@/components/reactbits/ClickSpark";

@@ -2,8 +2,8 @@
 // app/(admin)/labels/page.tsx — พิมพ์สติกเกอร์ QR ติดอุปกรณ์
 // เลือกชิ้นที่จะพิมพ์ได้ แล้วกดพิมพ์ผ่าน print dialog ของเบราว์เซอร์ (ไม่ต้องลงโปรแกรมอะไร)
 import { useMemo, useState } from "react";
-import { collection, query, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, query, orderBy } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { useCollection } from "@/lib/hooks";
 import { PageHeader, Card, Spinner, Button, EmptyState } from "@/components/ui";
 import QrImage from "@/components/qr-image";

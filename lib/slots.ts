@@ -2,8 +2,8 @@
 // lib/slots.ts — ตารางเวลาสาธารณะ (slot 1 ใบ = booking 1 ใบ, ใช้ id เดียวกันเสมอ)
 // Rules ยืนยันผ่าน getAfter() ว่า slot ใหม่ต้องมี booking คู่ใน batch เดียวกัน
 // slot ยังเป็นข้อมูลตารางสาธารณะ ส่วนการอนุมัติสุดท้ายอยู่ที่ทีมแอดมิน
-import { collection, query, where, getDocs, type Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, query, where, getDocs, type Timestamp } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import type { BookingType, SlotDoc, WithId } from "@/lib/types";
 
 export function slotPayload(input: {

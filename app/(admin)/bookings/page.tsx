@@ -1,8 +1,8 @@
 "use client";
 // app/(admin)/bookings/page.tsx — จัดการการจอง (อนุมัติ/ปฏิเสธ/ตรวจคืน)
 import { useMemo, useState } from "react";
-import { collection, doc, writeBatch, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, doc, writeBatch, addDoc, serverTimestamp } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { useCollection, useNow } from "@/lib/hooks";
 import {
   PageHeader,
@@ -28,7 +28,7 @@ import {
 } from "@/lib/format";
 import type { BookingDoc, BookingStatus, WithId } from "@/lib/types";
 import NasImage from "@/components/nas-image";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { approvalBlockReason } from "@/lib/borrow-policy";
 import { approvePatch, approverName, missingLiability } from "@/lib/approve";
 import { allBookingsQuery } from "@/lib/queries";

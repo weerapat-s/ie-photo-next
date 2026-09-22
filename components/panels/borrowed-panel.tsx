@@ -10,9 +10,9 @@
 // ปุ่มคืนกดได้ทั้งคนที่ยืมเองและกรรมการ — ของหายบ่อยเพราะคนยืมลืมกด
 // กรรมการที่รับของคืนหน้างานจึงต้องปิดรายการแทนได้
 import { useMemo, useState } from "react";
-import { collection, doc, query, where, updateDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { collection, doc, query, where, updateDoc, serverTimestamp } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
+import { useAuth } from "@/lib/db/auth-context";
 import { useSettings } from "@/lib/settings-context";
 import { useCollection, useNow } from "@/lib/hooks";
 import { isAdminRole } from "@/lib/roles";

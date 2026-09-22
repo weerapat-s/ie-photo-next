@@ -1,11 +1,11 @@
 "use client";
 // components/photographer.tsx — การ์ดตากล้อง + ฟอร์มจอง (ใช้ร่วมกันทั้งหน้าสมาชิกและหน้าสาธารณะ)
 import { useMemo, useState } from "react";
-import { collection, doc, writeBatch, Timestamp, serverTimestamp, query } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, doc, writeBatch, Timestamp, serverTimestamp, query } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { findSlotConflicts, slotPayload } from "@/lib/slots";
 import { useSettings } from "@/lib/settings-context";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { useCollection, useNow } from "@/lib/hooks";
 import { isAdminRole } from "@/lib/roles";
 import { Badge, Button, Modal, Field, inputClass, Alert } from "@/components/ui";

@@ -3,8 +3,8 @@
 // ยุบ 3 หน้าเดิม (คลังอุปกรณ์ · สตูดิโอ · ทีมตากล้อง) เป็นแท็บ
 // เพราะทั้งสามคือ "ของที่เอาไปให้จอง" งานเดียวกัน แค่คนละชนิด
 import { Suspense } from "react";
-import { collection, query, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, query, orderBy } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { useSettings } from "@/lib/settings-context";
 import { useCollection, useNow } from "@/lib/hooks";
 import { PageHeader, Spinner } from "@/components/ui";

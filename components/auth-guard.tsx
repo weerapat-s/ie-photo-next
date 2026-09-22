@@ -2,7 +2,7 @@
 // components/auth-guard.tsx — กันคนไม่ login / ไม่มีสิทธิ์ เข้าหน้าที่ป้องกัน
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import Navbar from "./navbar";
 import Dock from "./dock";
 import { AssistantProvider } from "./ai/assistant-context";

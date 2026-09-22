@@ -4,10 +4,10 @@
 // กติกา: **ไม่ระบุ = ว่าง** — กันเฉพาะวันที่ติดธุระ ไม่ต้องมาเช็กอินว่าว่างทุกวัน
 // กรรมการเห็นวันที่กันไว้ตอนสั่งงาน ถ้าไม่ได้กัน ระบบสั่งงานได้ทันที
 import { useMemo, useState } from "react";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { doc, setDoc, serverTimestamp } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { describeWriteError } from "@/lib/errors";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { useDocument, useNow } from "@/lib/hooks";
 import { Spinner, Alert, Button, Badge, useToast } from "@/components/ui";
 import Icon from "@/components/icon";

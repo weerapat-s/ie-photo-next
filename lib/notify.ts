@@ -3,9 +3,14 @@
 //
 // ส่งผ่าน Worker iephoto-nas (workers/notify.js) จาก admin@ienas.site
 // ผู้รับถูกล็อกไว้ฝั่ง Worker ไม่ได้กำหนดจากตรงนี้ — ส่งแค่ข้อมูลการมอบหมายไป
-// Worker ประกอบข้อความเองและตรวจว่าคนกดเป็นกรรมการจริง
-import { auth } from "@/lib/firebase/client";
-import { WORKER_BASE } from "@/lib/nas";
+// Worker ประกอบข้อความเองและตรวจว่าคนกดเป็นกรรมการจริง (ถาม NAS ด้วย token ของคนกด)
+import { currentUser } from "@/lib/db/auth";
+
+/**
+ * Worker ส่งอีเมล (บัญชี Cloudflare ส่วนตัว — โดเมนผู้ส่ง ienas.site อยู่บัญชีเดียวกัน)
+ * ดู workers/nas-entry.js
+ */
+export const WORKER_BASE = "https://iephoto-nas.vaumgasem.workers.dev";
 
 export interface AssignedNotice {
   requestId: string;
@@ -19,7 +24,7 @@ export interface AssignedNotice {
  */
 export async function notifyAssigned(notice: AssignedNotice): Promise<string | null> {
   try {
-    const user = auth.currentUser;
+    const user = currentUser();
     if (!user) return "ยังไม่ได้เข้าสู่ระบบ";
     const res = await fetch(`${WORKER_BASE}/notify/assigned`, {
       method: "POST",
@@ -48,7 +53,7 @@ export async function notifyAssigned(notice: AssignedNotice): Promise<string | n
  */
 export async function notifyBorrowRequest(requestId: string): Promise<void> {
   try {
-    const user = auth.currentUser;
+    const user = currentUser();
     if (!user) return;
     await fetch(`${WORKER_BASE}/notify/borrow-request`, {
       method: "POST",

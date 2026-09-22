@@ -1,7 +1,7 @@
 "use client";
 // lib/bookings.ts — การกระทำกับใบจองที่ใช้ร่วมกันหลายหน้า
-import { doc, writeBatch, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { doc, writeBatch, Timestamp } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import type { BookingDoc, WithId } from "@/lib/types";
 
 /**

@@ -1,8 +1,8 @@
 "use client";
 // components/studio.tsx — การ์ดห้องสตูดิโอ + กล่องแก้ไขข้อมูลห้อง (ใช้ร่วมหน้าสมาชิก/สาธารณะ)
 import { useState } from "react";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { doc, updateDoc } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { Badge, Button, Modal, Field, inputClass, Alert } from "@/components/ui";
 import { stripEmoji } from "@/lib/format";
 import GlareHover from "@/components/reactbits/GlareHover";

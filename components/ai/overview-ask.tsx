@@ -4,8 +4,8 @@
 // วางไว้บนสุดเพราะหน้าภาพรวมคือหน้าแรกที่กรรมการเปิด — สั่งงานได้ทันทีโดยไม่ต้องหาเมนู
 // พิมพ์แล้วกดส่ง แผงผู้ช่วยจะเด้งขึ้นพร้อมยิงคำสั่งนั้นให้เลย ไม่ต้องพิมพ์ซ้ำ
 import { useState } from "react";
-import { collection, orderBy, query, limit } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { collection, orderBy, query, limit } from "@/lib/db/firestore";
+import { db } from "@/lib/db/client";
 import { useCollection } from "@/lib/hooks";
 import { fmtRelative } from "@/lib/format";
 import Icon, { type IconName } from "@/components/icon";

@@ -2,7 +2,7 @@
 // app/page.tsx — หน้าแรก: redirect ตามสถานะ login
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/firebase/auth-context";
+import { useAuth } from "@/lib/db/auth-context";
 import { useSettings } from "@/lib/settings-context";
 
 export default function Home() {

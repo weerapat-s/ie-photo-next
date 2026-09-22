@@ -7,7 +7,7 @@
 // เดิมอนุมัติแล้วยังค้างสถานะ "ยังไม่มารับ" จนกว่าจะมีคนสแกนที่เคาน์เตอร์
 // ทำให้ดูเหมือนต้องสแกนทุกครั้งถึงจะใช้งานได้ สถานีสแกนยังใช้ได้เหมือนเดิม
 // สำหรับคนที่มารับหน้าเคาน์เตอร์และอยากถ่ายรูปตอนส่งมอบเก็บไว้
-import { serverTimestamp, type Timestamp } from "firebase/firestore";
+import { serverTimestamp, type Timestamp } from "@/lib/db/firestore";
 import type { BookingDoc, UserDoc } from "@/lib/types";
 
 export function approverName(
