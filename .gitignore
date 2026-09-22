@@ -45,4 +45,4 @@ next-env.d.ts
 .firebase/
 
 # ข้อมูลที่ export จาก Firestore เตรียมย้ายขึ้น NAS — มีข้อมูลส่วนตัวสมาชิก ห้าม commit
-.nas-import/
+.nas-import*/
