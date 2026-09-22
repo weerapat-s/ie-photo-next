@@ -37,6 +37,7 @@ import { useSettings } from "@/lib/settings-context";
 import { ROLE_BADGE, ROLE_LABEL, ROLE_SHORT, ROLE_ICON, displayName, searchText, sortByRank } from "@/lib/roles";
 import type { UserDoc, Role, TaskDoc } from "@/lib/types";
 import { allUsersQuery } from "@/lib/queries";
+import TitlesManager from "./titles-manager";
 
 type Filter = Role | "all" | "banned";
 
@@ -82,6 +83,7 @@ export default function MembersPanel() {
   }, [users, filter, search, devOn, me]);
 
   const [editing, setEditing] = useState<(UserDoc & { id: string }) | null>(null);
+  const [titlesOpen, setTitlesOpen] = useState(false);
 
   async function changeTitle(uid: string, title: string) {
     setErr("");
@@ -176,7 +178,17 @@ export default function MembersPanel() {
 
       {err && <Alert onClose={() => setErr("")}>{err}</Alert>}
 
-      <SearchInput value={search} onChange={setSearch} placeholder="ค้นหาชื่อ / รหัสนักศึกษา / อีเมล" className="mb-3" />
+      <div className="mb-3 flex gap-2">
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="ค้นหาชื่อ / รหัสนักศึกษา / อีเมล"
+          className="min-w-0 flex-1"
+        />
+        <Button variant="outline" icon="edit" onClick={() => setTitlesOpen(true)} className="shrink-0 whitespace-nowrap">
+          จัดการยศ
+        </Button>
+      </div>
 
       <ChipBar
         className="mb-4"
@@ -382,14 +394,15 @@ export default function MembersPanel() {
       )}
 
       <p className="mt-6 text-center text-xs leading-relaxed text-[var(--muted-ink)]">
-        <b>สิทธิ์</b> คุมว่าเข้าหน้าไหนได้ · <b>ตำแหน่ง</b> ในชุมนุมโชว์ให้คนอื่นเห็น
-        (แก้ตัวเลือกตำแหน่งได้ที่หน้าตั้งค่าระบบ)
+        <b>สิทธิ์</b> คุมว่าเข้าหน้าไหนได้ · <b>ยศ/ตำแหน่ง</b> ในชุมนุมโชว์ให้คนอื่นเห็น
+        (เพิ่ม/แก้/ลบยศได้ที่ปุ่ม &ldquo;จัดการยศ&rdquo; ด้านบน)
       </p>
       <p className="mt-2 text-center text-xs leading-relaxed text-[var(--muted-ink)]">
         ระงับแล้วล็อกอินและเขียนข้อมูลไม่ได้ทันที · ลบบัญชี = ลบบัญชีล็อกอินทิ้งด้วย กู้คืนไม่ได้
       </p>
 
       {editing && <EditMemberModal member={editing} onClose={() => setEditing(null)} />}
+      <TitlesManager open={titlesOpen} onClose={() => setTitlesOpen(false)} users={users} onSaved={show} />
 
       <Modal
         open={!!deleting}
