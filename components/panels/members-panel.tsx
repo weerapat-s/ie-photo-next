@@ -30,8 +30,10 @@ import {
   SearchInput,
   Modal,
   Field,
-  inputClass
+  inputClass,
+  ImagePicker,
 } from "@/components/ui";
+import { compressImageToDataUrl } from "@/lib/image";
 import Icon from "@/components/icon";
 import { useSettings } from "@/lib/settings-context";
 import { ROLE_BADGE, ROLE_LABEL, ROLE_SHORT, ROLE_ICON, displayName, searchText, sortByRank } from "@/lib/roles";
@@ -91,7 +93,7 @@ export default function MembersPanel() {
       await updateDoc(doc(db, "users", uid), { title: title || null });
       show(title ? `ตั้งตำแหน่งเป็น "${title}"` : "ล้างตำแหน่งแล้ว");
     } catch {
-      setErr("ตั้งตำแหน่งไม่สำเร็จ — ประธานตั้งตำแหน่งให้ตัวเองไม่ได้ ต้องให้คนอื่นตั้งให้");
+      setErr("ตั้งยศไม่สำเร็จ — แอดมินตั้งยศของตัวเองหรือของประธานไม่ได้ ต้องให้ประธานตั้งให้");
     }
   }
 
@@ -215,9 +217,11 @@ export default function MembersPanel() {
             const isMe = u.id === me?.uid;
             // จัดการสิทธิ์/ระงับ/ลบ — admin แตะ super_admin ไม่ได้ (ต้องเป็น super เอง)
             const canManage = !isMe && !(u.role === "super_admin" && !isSuper);
-            // แก้ข้อมูลส่วนตัว (ชื่อ/เบอร์) — แอดมินคนไหนก็แก้ของใครก็ได้รวมประธาน
+            // แก้ข้อมูลส่วนตัว (ชื่อ/เบอร์/รูป) — แอดมินแก้ของใครก็ได้รวมประธาน และแก้ของตัวเองได้
             // (hook บน NAS คุมไว้ว่าแตะได้แค่ช่องข้อมูล ไม่ให้แตะสิทธิ์/ระงับ)
-            const canEditInfo = !isMe;
+            const canEditInfo = true;
+            // ยศ — จัดการคนอื่นได้ตามสิทธิ์ · ของตัวเองตั้งได้เฉพาะประธาน (ตรงกับ usersUpdateOk ใน ie_lib.js)
+            const canSetTitle = canManage || (isMe && isSuper);
             const isBanned = !!u.disabled;
             const fullName = `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim();
 
@@ -304,34 +308,34 @@ export default function MembersPanel() {
                   {(canEditInfo || canManage) && (
                     <div className="mt-auto flex flex-col gap-2 border-t border-black/6 pt-3">
                       {canManage && (
-                        <>
-                          <select
-                            value={u.role}
-                            onChange={(e) => changeRole(u.id, e.target.value as Role)}
-                            className="glass-input min-h-[40px] w-full rounded-xl px-3 py-1.5 !text-sm"
-                            aria-label={`สิทธิ์ของ ${u.studentId}`}
-                          >
-                            <option value="member">{ROLE_LABEL.member}</option>
-                            <option value="admin">{ROLE_LABEL.admin}</option>
-                            {isSuper && <option value="super_admin">{ROLE_LABEL.super_admin}</option>}
-                          </select>
-                          <select
-                            value={u.title ?? ""}
-                            onChange={(e) => changeTitle(u.id, e.target.value)}
-                            className="glass-input min-h-[40px] w-full rounded-xl px-3 py-1.5 !text-sm"
-                            aria-label={`ตำแหน่งในชุมนุมของ ${u.studentId}`}
-                          >
-                            <option value="">— ไม่มีตำแหน่ง —</option>
-                            {settings.memberTitles.map((t) => (
-                              <option key={t} value={t}>
-                                {t}
-                              </option>
-                            ))}
-                            {u.title && !settings.memberTitles.includes(u.title) && (
-                              <option value={u.title}>{u.title}</option>
-                            )}
-                          </select>
-                        </>
+                        <select
+                          value={u.role}
+                          onChange={(e) => changeRole(u.id, e.target.value as Role)}
+                          className="glass-input min-h-[40px] w-full rounded-xl px-3 py-1.5 !text-sm"
+                          aria-label={`สิทธิ์ของ ${u.studentId}`}
+                        >
+                          <option value="member">{ROLE_LABEL.member}</option>
+                          <option value="admin">{ROLE_LABEL.admin}</option>
+                          {isSuper && <option value="super_admin">{ROLE_LABEL.super_admin}</option>}
+                        </select>
+                      )}
+                      {canSetTitle && (
+                        <select
+                          value={u.title ?? ""}
+                          onChange={(e) => changeTitle(u.id, e.target.value)}
+                          className="glass-input min-h-[40px] w-full rounded-xl px-3 py-1.5 !text-sm"
+                          aria-label={`ตำแหน่งในชุมนุมของ ${u.studentId}`}
+                        >
+                          <option value="">— ไม่มีตำแหน่ง —</option>
+                          {settings.memberTitles.map((t) => (
+                            <option key={t} value={t}>
+                              {t}
+                            </option>
+                          ))}
+                          {u.title && !settings.memberTitles.includes(u.title) && (
+                            <option value={u.title}>{u.title}</option>
+                          )}
+                        </select>
                       )}
                       {canEditInfo && (
                         <Button
@@ -401,7 +405,9 @@ export default function MembersPanel() {
         ระงับแล้วล็อกอินและเขียนข้อมูลไม่ได้ทันที · ลบบัญชี = ลบบัญชีล็อกอินทิ้งด้วย กู้คืนไม่ได้
       </p>
 
-      {editing && <EditMemberModal member={editing} onClose={() => setEditing(null)} />}
+      {editing && (
+        <EditMemberModal member={editing} isSelf={editing.id === me?.uid} onClose={() => setEditing(null)} />
+      )}
       <TitlesManager open={titlesOpen} onClose={() => setTitlesOpen(false)} users={users} onSaved={show} />
 
       <Modal
@@ -469,15 +475,19 @@ export default function MembersPanel() {
 /** แก้ข้อมูลส่วนตัวของสมาชิก — แอดมินแก้ doc คนอื่นได้ตาม firestore.rules */
 function EditMemberModal({
   member,
+  isSelf,
   onClose,
 }: {
   member: UserDoc & { id: string };
+  isSelf: boolean;
   onClose: () => void;
 }) {
   const [firstName, setFirstName] = useState(member.firstName ?? "");
   const [lastName, setLastName] = useState(member.lastName ?? "");
   const [nickname, setNickname] = useState(member.nickname ?? "");
   const [phone, setPhone] = useState(member.phone ?? "");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(member.profileImageUrl ?? null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -485,22 +495,40 @@ function EditMemberModal({
     setBusy(true);
     setErr("");
     try {
-      await updateDoc(doc(db, "users", member.id), {
+      const patch: Record<string, unknown> = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         nickname: nickname.trim(),
         phone: phone.trim(),
-      });
+      };
+      // 256px เท่าหน้าโปรไฟล์ — รายชื่อสมาชิกโหลดรูปทุกคนพร้อมกัน ไม่ควรหนัก
+      if (photo) patch.profileImageUrl = await compressImageToDataUrl(photo, 256, 0.8);
+      await updateDoc(doc(db, "users", member.id), patch);
       onClose();
     } catch (e) {
-      setErr(describeWriteError(e, "แก้ข้อมูล"));
+      setErr(
+        e instanceof Error && e.message === "IMAGE_TOO_LARGE"
+          ? "รูปใหญ่เกินไป เลือกรูปที่เล็กลง"
+          : describeWriteError(e, "แก้ข้อมูล")
+      );
       setBusy(false);
     }
   }
 
   return (
-    <Modal open onClose={onClose} title={`แก้ข้อมูล ${member.studentId}`}>
+    <Modal open onClose={onClose} title={isSelf ? "แก้ข้อมูลของฉัน" : `แก้ข้อมูล ${member.studentId}`}>
       {err && <Alert onClose={() => setErr("")}>{err}</Alert>}
+      <Field label="รูปโปรไฟล์">
+        <ImagePicker
+          file={photo}
+          preview={preview}
+          onPick={(f) => {
+            setPhoto(f);
+            setPreview(f ? URL.createObjectURL(f) : member.profileImageUrl ?? null);
+          }}
+          hint="รูปหน้าตรงชัด ๆ — เว้นไว้ = ใช้รูปเดิม"
+        />
+      </Field>
       <div className="grid gap-0 sm:grid-cols-2 sm:gap-3">
         <Field label="ชื่อจริง">
           <input value={firstName} onChange={(e) => setFirstName(e.target.value)} className={inputClass} maxLength={60} />
