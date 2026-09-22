@@ -55,6 +55,12 @@ export default function MembersPanel() {
     []
   );
   const { data: tasks } = useCollection<TaskDoc>(() => query(collection(db, "tasks")), []);
+  // สถานะระงับจริงอยู่ที่ตาราง banned (NAS ใช้ตัวนี้กันล็อกอิน) — users.disabled เป็นแค่ป้ายเสริม
+  // บัญชีที่เคยถูกลบสมัย Firebase แล้วถูกสร้างคืนตอนย้ายระบบ มี banned แต่ disabled = false
+  // ถ้าดูแค่ disabled จะไม่เห็นว่าโดนระงับ และไม่มีปุ่มปลดให้กด (เจอจริง ก.ย. 2026)
+  const { data: bans } = useCollection<{ deletedAccount?: boolean }>(() => collection(db, "banned"), []);
+  const bannedIds = useMemo(() => new Set(bans.map((b) => b.id)), [bans]);
+  const isBannedUser = (u: { id: string; disabled?: boolean }) => !!u.disabled || bannedIds.has(u.id);
 
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
@@ -68,7 +74,7 @@ export default function MembersPanel() {
       filter === "all"
         ? users
         : filter === "banned"
-          ? users.filter((u) => u.disabled)
+          ? users.filter(isBannedUser)
           : users.filter((u) => u.role === filter);
     const q = search.trim().toLowerCase();
     const found = !q
@@ -82,7 +88,8 @@ export default function MembersPanel() {
       if (i > 0) sorted.unshift(...sorted.splice(i, 1));
     }
     return sorted;
-  }, [users, filter, search, devOn, me]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- isBannedUser อ่านจาก bannedIds ที่อยู่ใน deps แล้ว
+  }, [users, filter, search, devOn, me, bannedIds]);
 
   const [editing, setEditing] = useState<(UserDoc & { id: string }) | null>(null);
   const [titlesOpen, setTitlesOpen] = useState(false);
@@ -200,7 +207,7 @@ export default function MembersPanel() {
           { key: "all", label: "ทั้งหมด", count: users.length },
           { key: "member", label: "สมาชิก", count: users.filter((u) => u.role === "member").length },
           { key: "admin", label: "Admin", count: users.filter((u) => u.role === "admin").length },
-          { key: "banned", label: "ถูกระงับ", count: users.filter((u) => u.disabled).length },
+          { key: "banned", label: "ถูกระงับ", count: users.filter(isBannedUser).length },
         ]}
       />
 
@@ -222,7 +229,7 @@ export default function MembersPanel() {
             const canEditInfo = true;
             // ยศ — จัดการคนอื่นได้ตามสิทธิ์ · ของตัวเองตั้งได้เฉพาะประธาน (ตรงกับ usersUpdateOk ใน ie_lib.js)
             const canSetTitle = canManage || (isMe && isSuper);
-            const isBanned = !!u.disabled;
+            const isBanned = isBannedUser(u);
             const fullName = `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim();
 
             return (
