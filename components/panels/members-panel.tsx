@@ -218,7 +218,7 @@ export default function MembersPanel() {
                     <img src={u.profileImageUrl} alt="" className="h-11 w-11 shrink-0 rounded-2xl object-cover" />
                   ) : (
                     <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-black/5 text-lg">
-                      {ROLE_ICON[u.role]}
+                      <Icon name={ROLE_ICON[u.role]} size={20} />
                     </span>
                   )}
                   <div className="min-w-0 flex-1">
@@ -246,8 +246,11 @@ export default function MembersPanel() {
                       </a>
                     )}
                   </div>
-                  <Badge className={isMe && devOn ? "tone-brand" : ROLE_BADGE[u.role]}>
-                    {isMe && devOn ? DEV_BADGE : `${ROLE_ICON[u.role]} ${ROLE_SHORT[u.role]}`}
+                  <Badge
+                    className={isMe && devOn ? "tone-brand" : ROLE_BADGE[u.role]}
+                    icon={isMe && devOn ? undefined : ROLE_ICON[u.role]}
+                  >
+                    {isMe && devOn ? DEV_BADGE : ROLE_SHORT[u.role]}
                   </Badge>
                 </div>
 
