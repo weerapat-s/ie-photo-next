@@ -57,7 +57,8 @@ export const SCHEMA = {
     pushSubscriptions: json,
     memberCode: t,
   },
-  banned: { bannedAt: date, by: tn },
+  // deletedAccount: ลบบัญชีทิ้งแล้วกันสมัครซ้ำ (members-panel)
+  banned: { bannedAt: date, by: tn, deletedAccount: bool },
   crew: { photographerId: t, addedAt: daten },
   availability: { busyDates: json, notes: json, updatedAt: daten },
   equipments: {
@@ -70,6 +71,7 @@ export const SCHEMA = {
     responsibleUserId: tn,
     responsibleUserName: tn,
     assignedAt: daten,
+    createdAt: daten,
     pairGroups: json,
   },
   studios: {
@@ -137,6 +139,8 @@ export const SCHEMA = {
     overnight: bool,
     overnightStorage: tn,
     handoverImageUrl: ltn,
+    // กรรมการกดรับคืนเมื่อไร (borrowed-panel)
+    returnedAt: daten,
   },
   tasks: {
     title: t,
@@ -272,6 +276,7 @@ export const SCHEMA = {
     enabled: bool,
     // webhook ของ Discord สำหรับแจ้งเตือนจากเซิร์ฟเวอร์ — เดิมอยู่ใน GitHub Actions secret
     discordWebhookUrl: t,
+    updatedAt: daten,
   },
 } satisfies Record<string, CollectionDef>;
 

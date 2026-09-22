@@ -14,7 +14,8 @@ set -euo pipefail
 NAS="nas@100.116.118.109"
 CT="${1:-iephoto-pb}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
-SRC="$(cd "$HERE/.." && pwd)/.nas-import"
+# IMPORT_DIR=... ใช้โฟลเดอร์อื่นได้ (เช่น เติมเฉพาะบางช่องทีหลัง — importer ใส่เฉพาะช่องที่มีในไฟล์)
+SRC="${IMPORT_DIR:-$(cd "$HERE/.." && pwd)/.nas-import}"
 # โฟลเดอร์ที่ share "ยืมของ" ของ Nextcloud ชี้อยู่ (รูปเอกสารการยืมรุ่นที่เก็บบน Nextcloud: borrow/...)
 NC_ROOT="/var/www/html/data/68030271/files/ยืมของ"
 

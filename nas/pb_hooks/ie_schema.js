@@ -22,7 +22,8 @@ module.exports = {
     ],
     "banned": [
       "bannedAt",
-      "by"
+      "by",
+      "deletedAccount"
     ],
     "crew": [
       "photographerId",
@@ -43,6 +44,7 @@ module.exports = {
       "responsibleUserId",
       "responsibleUserName",
       "assignedAt",
+      "createdAt",
       "pairGroups"
     ],
     "studios": [
@@ -109,7 +111,8 @@ module.exports = {
       "requestId",
       "overnight",
       "overnightStorage",
-      "handoverImageUrl"
+      "handoverImageUrl",
+      "returnedAt"
     ],
     "tasks": [
       "title",
@@ -241,7 +244,8 @@ module.exports = {
       "model",
       "models",
       "enabled",
-      "discordWebhookUrl"
+      "discordWebhookUrl",
+      "updatedAt"
     ],
     "files": [
       "file",
@@ -264,7 +268,8 @@ module.exports = {
       "updatedAt"
     ],
     "equipments": [
-      "assignedAt"
+      "assignedAt",
+      "createdAt"
     ],
     "studios": [],
     "photographers": [],
@@ -280,7 +285,8 @@ module.exports = {
       "discordNotifiedAt",
       "pickedUpAt",
       "liabilityAcceptedAt",
-      "approvedAt"
+      "approvedAt",
+      "returnedAt"
     ],
     "tasks": [
       "dueDate",
@@ -314,7 +320,9 @@ module.exports = {
     "settings": [
       "updatedAt"
     ],
-    "secrets": [],
+    "secrets": [
+      "updatedAt"
+    ],
     "files": [
       "createdAt"
     ]
