@@ -298,7 +298,7 @@ export default function OverviewPage() {
                   <img src={u.profileImageUrl} alt="" className="h-9 w-9 shrink-0 rounded-xl object-cover" />
                 ) : (
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-black/5 text-base">
-                    {ROLE_ICON[u.role]}
+                    <Icon name={ROLE_ICON[u.role]} size={18} />
                   </span>
                 )}
                 <div className="min-w-0 flex-1">

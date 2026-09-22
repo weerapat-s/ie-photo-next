@@ -3,6 +3,7 @@
 //
 // ทำไมต้องบังคับ: ระบบมอบหมายงานตัดสินใจจากชื่อเล่น เบอร์ติดต่อ และความถนัด
 // ถ้าข้อมูลว่าง กรรมการจะเห็นแค่รหัสนักศึกษาแล้วจ่ายงานผิดคน
+// รูปโปรไฟล์ก็บังคับ (ก.ย. 2026) — กรรมการต้องจำหน้าคนมารับของ/ลงงานได้
 // จึงขึ้นหน้านี้ทับทุกอย่างจนกว่าจะกรอกครบ — ปิดไม่ได้ ข้ามไม่ได้
 import { useState } from "react";
 import { doc, updateDoc } from "@/lib/db/firestore";
@@ -35,14 +36,21 @@ const SLOW_MSG =
   "ระบบฐานข้อมูลตอบช้าผิดปกติ — ข้อมูลเก็บไว้ในเครื่องแล้ว จะบันทึกขึ้นระบบให้เองเมื่อกลับมาใช้ได้ " +
   "กดรีเฟรชหน้าเพื่อใช้งานต่อ";
 
-/** ช่องที่ต้องมีค่าถึงจะถือว่าโปรไฟล์ครบ */
-export function missingFields(p: WithId<UserDoc> | null): string[] {
-  if (!p) return [];
+/** ช่องข้อความที่ต้องมีค่า (ขั้นที่ 1) */
+function missingBasics(p: WithId<UserDoc>): string[] {
   const miss: string[] = [];
   if (!p.firstName?.trim()) miss.push("ชื่อจริง");
   if (!p.lastName?.trim()) miss.push("นามสกุล");
   if (!p.nickname?.trim()) miss.push("ชื่อเล่น");
   if (!p.phone?.trim()) miss.push("เบอร์โทร");
+  return miss;
+}
+
+/** ทุกอย่างที่ต้องมีถึงจะถือว่าโปรไฟล์ครบ — ข้อความ + รูปโปรไฟล์ */
+export function missingFields(p: WithId<UserDoc> | null): string[] {
+  if (!p) return [];
+  const miss = missingBasics(p);
+  if (!p.profileImageUrl) miss.push("รูปโปรไฟล์");
   return miss;
 }
 
@@ -65,8 +73,8 @@ function OnboardingForm({ profile }: { profile: WithId<UserDoc> }) {
   const [skills, setSkills] = useState((profile.skills ?? []).join(", "));
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(profile.profileImageUrl);
-  /** ขั้นตอน: 1 = ข้อมูลที่บังคับ · 2 = รูปโปรไฟล์ (ข้ามได้) */
-  const [step, setStep] = useState<1 | 2>(1);
+  /** ขั้นตอน: 1 = ข้อมูลส่วนตัว · 2 = รูปโปรไฟล์ — ข้อมูลครบแล้วขาดแค่รูป เริ่มที่ขั้น 2 เลย */
+  const [step, setStep] = useState<1 | 2>(missingBasics(profile).length ? 1 : 2);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   /** เซิร์ฟเวอร์ไม่ยืนยันการบันทึกในเวลาที่ควร — โชว์ปุ่มรีเฟรชแทนปุ่มหมุนค้าง */
@@ -105,12 +113,12 @@ function OnboardingForm({ profile }: { profile: WithId<UserDoc> }) {
   }
 
   /**
-   * จบขั้นตอน — รูปไม่บังคับ กด "ข้ามไปก่อน" ได้
-   * พอ profileCompleted เป็น true และช่องบังคับครบ gate จะปล่อยผ่านเอง
-   * (ไม่ต้อง redirect — auth-context ฟัง doc อยู่แล้ว)
+   * จบขั้นตอน — ต้องมีรูปถึงไปต่อได้
+   * พอ profileCompleted เป็น true และทุกช่องครบ gate จะปล่อยผ่านเอง
+   * (ไม่ต้อง redirect — auth-context ฟังเรคคอร์ดอยู่แล้ว)
    */
-  async function finish(withPhoto: boolean) {
-    if (busy) return;
+  async function finish() {
+    if (busy || !photo) return;
     setBusy(true);
     setErr("");
     try {
@@ -119,7 +127,7 @@ function OnboardingForm({ profile }: { profile: WithId<UserDoc> }) {
       // เดิม 600px ทำให้เอกสาร users หนักหลายเท่า และทุกหน้าที่ดึงรายชื่อสมาชิก
       // (ภาพรวม · ทะเบียนการยืม · ทีมงาน · ส่งอีเมล) ต้องโหลดรูปของทุกคนมาด้วย
       // Firestore รุ่นนี้คิดโควตาอ่านตามขนาดเอกสาร — ขนาดเดียวกับหน้าโปรไฟล์
-      if (withPhoto && photo) patch.profileImageUrl = await compressImageToDataUrl(photo, 256, 0.8);
+      patch.profileImageUrl = await compressImageToDataUrl(photo, 256, 0.8);
       const result = await settleWithin(updateDoc(doc(db, "users", profile.id), patch), SAVE_WAIT_MS);
       if (result === "slow") {
         setSlow(true);
@@ -128,7 +136,7 @@ function OnboardingForm({ profile }: { profile: WithId<UserDoc> }) {
     } catch (e) {
       setErr(
         e instanceof Error && e.message === "IMAGE_TOO_LARGE"
-          ? "รูปใหญ่เกินไป เลือกรูปที่เล็กลง หรือกดข้ามไปก่อน"
+          ? "รูปใหญ่เกินไป เลือกรูปที่เล็กลง"
           : "บันทึกไม่สำเร็จ — ตรวจการเชื่อมต่อแล้วลองใหม่"
       );
       setBusy(false);
@@ -146,7 +154,7 @@ function OnboardingForm({ profile }: { profile: WithId<UserDoc> }) {
           </span>
           <h1 className="t-title text-[var(--ink)]">ใส่รูปโปรไฟล์</h1>
           <p className="t-caption mx-auto mt-1.5 max-w-sm">
-            ช่วยให้เพื่อนในชุมนุมจำได้ตอนดูตารางงาน — ไม่ใส่ตอนนี้ก็ได้ ใส่ทีหลังที่หน้าโปรไฟล์
+            ต้องใส่ก่อนใช้งาน — กรรมการใช้ยืนยันตัวตอนมารับของ และเพื่อนในชุมนุมจำได้ตอนดูตารางงาน
           </p>
         </div>
 
@@ -169,19 +177,10 @@ function OnboardingForm({ profile }: { profile: WithId<UserDoc> }) {
             }}
             hint="รูปหน้าตรงชัด ๆ พอ"
           />
-          <Button
-            onClick={() => void finish(true)}
-            loading={busy}
-            disabled={!photo}
-            fullWidth
-            size="lg"
-            className="mt-4"
-          >
+          <Button onClick={() => void finish()} loading={busy} disabled={!photo} fullWidth size="lg" className="mt-4">
             บันทึกรูปแล้วเริ่มใช้งาน
           </Button>
-          <Button onClick={() => void finish(false)} variant="ghost" fullWidth className="mt-2">
-            ข้ามไปก่อน
-          </Button>
+          {!photo && <p className="t-caption mt-2 text-center">เลือกรูปก่อนถึงจะไปต่อได้</p>}
         </div>
       </div>
     );
