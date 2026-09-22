@@ -267,5 +267,20 @@ await expectOk("admin ระงับสมาชิก B", () => adminC.collect
 await expectDenied("B ที่ถูกระงับแก้โปรไฟล์ตัวเอง", () => memB.collection("users").update(B, { firstName: "x" }));
 await expectDenied("B ที่ถูกระงับล็อกอินใหม่", () => client().collection("users").authWithPassword(`${B}@test.invalid`, PW));
 
+// ── ลบบัญชี (ปุ่ม "ลบ" หน้าทีมงาน: banned + ลบ users ใน batch เดียว) ──────
+// ชั้นข้อมูลฝั่งเว็บตัดการลบ crew ที่ไม่มีอยู่จริงทิ้งก่อนส่ง (lib/db/firestore.ts) — ตรงนี้ทดสอบส่วนที่ถึงเซิร์ฟเวอร์
+console.log("— delete account —");
+const delC = await mkUser("deleteMeDDDDDDDDDDDDDDDDDDDD", "member");
+const D = delC.authStore.record.id;
+await expectDenied("สมาชิกลบบัญชีคนอื่น", () => memA.collection("users").delete(D));
+await expectDenied("admin ธรรมดาลบบัญชีประธาน", () => adminC.collection("users").delete(superC.authStore.record.id));
+await expectOk("admin ลบบัญชีสมาชิก (batch: banned + ลบ users)", async () => {
+  const batch = adminC.createBatch();
+  batch.collection("banned").upsert({ id: D, bannedAt: NOW, by: adminC.authStore.record.id, deletedAccount: true });
+  batch.collection("users").delete(D);
+  await batch.send();
+});
+await expectDenied("บัญชีที่ถูกลบล็อกอินไม่ได้", () => client().collection("users").authWithPassword(`${D}@test.invalid`, PW));
+
 console.log(`\nPB rules: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

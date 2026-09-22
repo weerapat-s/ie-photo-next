@@ -966,6 +966,21 @@ type BatchOp =
   | { kind: "update"; ref: DocumentReference<any>; data: DocumentData }
   | { kind: "delete"; ref: DocumentReference<any> };
 
+/**
+ * มีเรคคอร์ดนี้อยู่จริงไหม (เท่าที่เรามีสิทธิ์เห็น)
+ * เช็คไม่ได้ (เน็ต/สิทธิ์) ให้ถือว่ามี — ปล่อยให้เซิร์ฟเวอร์ตัดสินเหมือนเดิม ไม่เงียบกลืน error จริง
+ */
+async function recordExists(c: CollectionName, id: string): Promise<boolean> {
+  try {
+    const res = await pb
+      .collection(c)
+      .getList(1, 1, { filter: pb.filter("id = {:id}", { id }), fields: "id", skipTotal: true });
+    return res.items.length > 0;
+  } catch {
+    return true;
+  }
+}
+
 /** ตรงกับ batch.maxRequests ใน nas/pb_migrations/1758480000_settings.js */
 const BATCH_MAX = 100;
 
@@ -988,9 +1003,16 @@ export class WriteBatch {
     try {
       // เตรียม body ทั้งหมดก่อน (arrayUnion ต้องอ่านค่าเดิม)
       const prepared = await Promise.all(
-        this.ops.map(async (op) => {
+        this.ops.map(async (op, idx) => {
           const c = op.ref.parent.collectionName;
-          if (op.kind === "delete") return { op, c, body: null };
+          if (op.kind === "delete") {
+            // Firestore ลบของที่ไม่มีอยู่ = สำเร็จเฉย ๆ แต่ PocketBase ตอบ 404 แล้วทั้ง batch ล้ม
+            // (เจอจริง: ปุ่มลบบัญชีลบ crew/{uid} ด้วย คนที่ไม่ได้เป็นทีมงานไม่มีเรคคอร์ดนั้น → ลบใครไม่ได้เลย)
+            // ข้ามการลบที่ไม่มีเรคคอร์ดจริง — ยกเว้นเรคคอร์ดที่ batch นี้สร้างเองก่อนหน้า
+            const madeHere = this.ops.slice(0, idx).some((o) => o.kind !== "delete" && o.ref.path === op.ref.path);
+            if (!madeHere && !(await recordExists(c, op.ref.id))) return null;
+            return { op, c, body: null };
+          }
           const { body, arrayOps } = toPb(c, op.data, op.kind === "set" ? "create" : "update");
           if (arrayOps.length) {
             const rec = await pb.collection(c).getOne(op.ref.id).catch(() => null);
@@ -999,9 +1021,11 @@ export class WriteBatch {
           return { op, c, body };
         })
       );
-      for (let i = 0; i < prepared.length; i += BATCH_MAX) {
+      const ready = prepared.filter((p): p is NonNullable<typeof p> => p !== null);
+      if (!ready.length) return;
+      for (let i = 0; i < ready.length; i += BATCH_MAX) {
         const batch = pb.createBatch();
-        for (const { op, c, body } of prepared.slice(i, i + BATCH_MAX)) {
+        for (const { op, c, body } of ready.slice(i, i + BATCH_MAX)) {
           const col = batch.collection(c);
           if (op.kind === "delete") col.delete(op.ref.id);
           else if (op.kind === "update") col.update(op.ref.id, body!);
