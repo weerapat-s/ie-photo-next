@@ -3,7 +3,7 @@
     "public": "nas/redirect-site",
     "ignore": ["**/.*"],
     "redirects": [
-      { "source": "/:path*", "destination": "https://iephoto.ienas.site/:path*", "type": 302 }
+      { "regex": "^/(?P<rest>.*)$", "destination": "https://iephoto.ienas.site/:rest", "type": 302 }
     ],
     "headers": [{ "source": "**", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }]
   }
