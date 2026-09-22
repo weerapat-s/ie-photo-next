@@ -612,6 +612,18 @@ select.glass-input {
   padding-bottom: calc(var(--dock-h) + 5rem);
 }
 
+/* หน้าที่ต้องการความกว้างเต็มจอ (เช่น การ์ดสมาชิก) ใส่ class page-wide ที่ตัวหน้า
+   — ปลดเพดาน max-w-6xl ของกรอบหน้าแอดมิน (components/auth-guard.tsx) เฉพาะหน้านั้น หน้าอื่นไม่โดน */
+main:has(.page-wide) {
+  max-width: none;
+}
+@media (min-width: 1024px) {
+  main:has(.page-wide) {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
 /* เป้ากดขั้นต่ำ 44px ตามแนวทาง Apple HIG */
 .tap {
   min-height: 44px;

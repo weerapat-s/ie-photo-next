@@ -50,7 +50,8 @@ function TeamInner() {
   const toneCls = { ok: "tone-ok", warn: "tone-warn", bad: "tone-bad" }[balance.tone];
 
   return (
-    <div className="mx-auto max-w-4xl">
+    // แท็บสมาชิกเป็นกริดการ์ด — ใช้ความกว้างเต็มจอ (page-wide ใน globals.css) · แท็บงานคงกว้างแบบอ่านง่าย
+    <div className={tab === "members" ? "page-wide w-full" : "mx-auto max-w-4xl"}>
       <PageHeader eyebrow="ADMIN" title="ทีมงาน" subtitle="สมาชิก สิทธิ์ ยศ และการกระจายงาน" />
 
       {/* ── สรุปทรัพยากรบุคคล — บรรทัดเดียว ไม่ใช้การ์ด ── */}

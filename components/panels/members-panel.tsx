@@ -196,8 +196,9 @@ export default function MembersPanel() {
         <EmptyState icon="members" text="ไม่พบสมาชิกที่ตรงเงื่อนไข" />
       ) : (
         // การ์ดแนวตั้งคนละใบ — รูปด้านบน ข้อมูลติดต่อครบในการ์ด (ชื่อจริง · ชื่อเล่น · ตำแหน่ง · เบอร์ · อีเมล)
+        // มือถือ 2 คอลัมน์ · จอใหญ่ขึ้นเพิ่มคอลัมน์เองตามความกว้าง (การ์ดกว้างอย่างน้อย 210px)
         // ปุ่มจัดการอยู่ท้ายการ์ด เฉพาะคนที่มีสิทธิ์แตะบัญชีนั้น
-        <div className="stagger grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-3 xl:grid-cols-4">
+        <div className="stagger grid grid-cols-2 gap-2.5 sm:grid-cols-[repeat(auto-fill,minmax(210px,1fr))] sm:gap-3">
           {shown.map((u, i) => {
             const isMe = u.id === me?.uid;
             // จัดการสิทธิ์/ระงับ/ลบ — admin แตะ super_admin ไม่ได้ (ต้องเป็น super เอง)
